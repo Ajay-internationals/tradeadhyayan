@@ -1,0 +1,334 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model AIInsight {
+  id           String   @id
+  userId       String
+  insightType  String
+  inputHash    String
+  content      String
+  tokensUsed   Int      @default(0)
+  costEstimate Float    @default(0)
+  createdAt    DateTime @default(now())
+  User         User     @relation(fields: [userId], references: [id])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model BrokerConnection {
+  id                    String       @id
+  userId                String
+  brokerName            String
+  status                BrokerStatus @default(DISCONNECTED)
+  accessTokenEncrypted  String?
+  refreshTokenEncrypted String?
+  tokenExpiry           DateTime?
+  lastSyncAt            DateTime?
+  autoSyncEnabled       Boolean      @default(false)
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime
+  User                  User         @relation(fields: [userId], references: [id])
+  SyncLog               SyncLog[]
+  Trade                 Trade[]
+}
+
+model CalendarEvent {
+  id        String   @id
+  userId    String
+  eventType String
+  title     String
+  startTime DateTime
+  status    String   @default("UPCOMING")
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model DailyAnalytics {
+  id                String   @id
+  userId            String
+  date              DateTime
+  totalTrades       Int      @default(0)
+  winningTrades     Int      @default(0)
+  losingTrades      Int      @default(0)
+  totalPnl          Float    @default(0)
+  winRate           Float    @default(0)
+  avgWin            Float    @default(0)
+  avgLoss           Float    @default(0)
+  profitFactor      Float    @default(0)
+  avgRR             Float    @default(0)
+  mistakeCount      Int      @default(0)
+  disciplineScore   Float    @default(0)
+  tradeQualityScore Float    @default(0)
+  createdAt         DateTime @default(now())
+  User              User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, date])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model Goal {
+  id           String     @id
+  userId       String
+  title        String
+  category     String
+  targetValue  Float
+  currentValue Float      @default(0)
+  progress     Float      @default(0)
+  status       GoalStatus @default(NOT_STARTED)
+  targetDate   DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime
+  User         User       @relation(fields: [userId], references: [id])
+}
+
+model ManualImportBatch {
+  id          String   @id
+  userId      String
+  sourceType  String
+  totalRows   Int
+  validRows   Int
+  invalidRows Int
+  createdAt   DateTime @default(now())
+  User        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model MarketSnapshot {
+  id                  String   @id
+  userId              String
+  score               Int
+  marketBias          String
+  marketType          String
+  trendProbability    Float
+  resistance          Int
+  support             Int
+  executionStrategy   String
+  macroIndicators     Json
+  flowIndicators      Json
+  structureIndicators Json
+  createdAt           DateTime @default(now())
+  User                User     @relation(fields: [userId], references: [id])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model MentorReview {
+  id                                String   @id
+  mentorId                          String
+  studentId                         String
+  tradeId                           String   @unique
+  score                             Float
+  feedback                          String
+  strengthsJson                     Json?
+  improvementAreasJson              Json?
+  createdAt                         DateTime @default(now())
+  User_MentorReview_mentorIdToUser  User     @relation("MentorReview_mentorIdToUser", fields: [mentorId], references: [id])
+  User_MentorReview_studentIdToUser User     @relation("MentorReview_studentIdToUser", fields: [studentId], references: [id])
+  Trade                             Trade    @relation(fields: [tradeId], references: [id])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model Mistake {
+  id                    String          @id
+  userId                String
+  tradeId               String
+  mistakeType           String
+  severity              MistakeSeverity
+  reason                String?
+  estimatedLoss         Float?
+  improvementTip        String?
+  detectedAutomatically Boolean         @default(true)
+  confidenceScore       Float           @default(100)
+  createdAt             DateTime        @default(now())
+  Trade                 Trade           @relation(fields: [tradeId], references: [id])
+  User                  User            @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([userId])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model Strategy {
+  id          String   @id
+  userId      String
+  name        String
+  description String?
+  rulesJson   Json?
+  status      String   @default("ACTIVE")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+  category    String   @default("Custom")
+  User        User     @relation(fields: [userId], references: [id])
+  Trade       Trade[]
+
+  @@index([userId])
+}
+
+model SyncLog {
+  id               String           @id
+  connectionId     String
+  dataType         String
+  recordsCount     Int              @default(0)
+  status           String
+  errorMessage     String?
+  createdAt        DateTime         @default(now())
+  BrokerConnection BrokerConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model Trade {
+  id                 String            @id
+  userId             String
+  brokerConnectionId String?
+  source             String            @default("MANUAL")
+  symbol             String
+  instrumentType     InstrumentType
+  optionType         OptionType?
+  expiryDate         DateTime?
+  direction          TradeDirection
+  entryTime          DateTime
+  exitTime           DateTime
+  entryPrice         Float
+  exitPrice          Float
+  quantity           Int
+  stopLoss           Float?
+  target             Float?
+  setup              String?
+  strategyId         String?
+  result             TradeResult
+  pnl                Float
+  charges            Float
+  netPnl             Float
+  rr                 Float?
+  mood               String?
+  notes              String?
+  screenshotUrl      String?
+  followedPlan       Boolean           @default(true)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime
+  MentorReview       MentorReview?
+  Mistake            Mistake[]
+  BrokerConnection   BrokerConnection? @relation(fields: [brokerConnectionId], references: [id])
+  Strategy           Strategy?         @relation(fields: [strategyId], references: [id])
+  User               User              @relation(fields: [userId], references: [id])
+  TradePlan          TradePlan?
+
+  @@index([userId, entryTime])
+  @@index([userId, exitTime])
+  @@index([userId])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model TradePlan {
+  id                 String   @id
+  userId             String
+  tradeId            String?  @unique
+  plannedEntry       Float
+  plannedStopLoss    Float
+  plannedTarget      Float
+  maxRiskAmount      Float
+  maxRiskPercent     Float
+  maxTradesPerDay    Int      @default(3)
+  allowedStartTime   String?
+  allowedEndTime     String?
+  checklistCompleted Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  Trade              Trade?   @relation(fields: [tradeId], references: [id])
+  User               User     @relation(fields: [userId], references: [id])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model User {
+  id                                        String              @id
+  name                                      String
+  email                                     String              @unique
+  passwordHash                              String
+  timezone                                  String              @default("Asia/Kolkata")
+  currency                                  String              @default("INR")
+  plan                                      Plan                @default(FREE)
+  createdAt                                 DateTime            @default(now())
+  updatedAt                                 DateTime
+  initialCapital                            Float               @default(100000)
+  AIInsight                                 AIInsight[]
+  BrokerConnection                          BrokerConnection[]
+  CalendarEvent                             CalendarEvent[]
+  DailyAnalytics                            DailyAnalytics[]
+  Goal                                      Goal[]
+  ManualImportBatch                         ManualImportBatch[]
+  MarketSnapshot                            MarketSnapshot[]
+  MentorReview_MentorReview_mentorIdToUser  MentorReview[]      @relation("MentorReview_mentorIdToUser")
+  MentorReview_MentorReview_studentIdToUser MentorReview[]      @relation("MentorReview_studentIdToUser")
+  Mistake                                   Mistake[]
+  Strategy                                  Strategy[]
+  Trade                                     Trade[]
+  TradePlan                                 TradePlan[]
+  UserSetting                               UserSetting?
+}
+
+model UserSetting {
+  userId           String   @id
+  theme            String   @default("Light")
+  currency         String   @default("INR")
+  timezone         String   @default("Asia/Kolkata")
+  defaultRisk      Float    @default(1.0)
+  defaultRr        Float    @default(2.0)
+  includeBrokerage Boolean  @default(true)
+  defaultDateRange String   @default("This Week")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime
+  User             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum BrokerStatus {
+  CONNECTED
+  DISCONNECTED
+  FAILED
+}
+
+enum GoalStatus {
+  NOT_STARTED
+  ON_TRACK
+  AT_RISK
+  ACHIEVED
+}
+
+enum InstrumentType {
+  NIFTY
+  BANKNIFTY
+  STOCK
+  OPTION
+  FUTURE
+}
+
+enum MistakeSeverity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum OptionType {
+  CE
+  PE
+}
+
+enum Plan {
+  FREE
+  PRO
+  MENTOR
+}
+
+enum TradeDirection {
+  LONG
+  SHORT
+}
+
+enum TradeResult {
+  WIN
+  LOSS
+  BREAKEVEN
+}
