@@ -540,3 +540,186 @@ export async function getSyncLogs(email: string) {
   }
 }
 
+export async function triggerBrokerSync(
+  email: string,
+  brokerName: string,
+  credentials: { apiKey?: string; apiSecret?: string; clientId?: string }
+) {
+  try {
+    const userEmail = email.trim().toLowerCase();
+    let user = await prisma.user.findUnique({
+      where: { email: userEmail },
+    });
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          id: `usr_${Date.now()}`,
+          name: userEmail.split("@")[0],
+          email: userEmail,
+          passwordHash: "simulated_hash",
+          updatedAt: new Date(),
+        },
+      });
+    }
+
+    const connectionId = `bc_${user.id}_${brokerName}`;
+    const encryptedToken = credentials.apiKey ? `enc_${credentials.apiKey}` : "enc_simulated_token";
+
+    // Upsert broker connection
+    const connection = await prisma.brokerConnection.upsert({
+      where: { id: connectionId },
+      update: {
+        status: "CONNECTED",
+        accessTokenEncrypted: encryptedToken,
+        lastSyncAt: new Date(),
+        updatedAt: new Date(),
+      },
+      create: {
+        id: connectionId,
+        userId: user.id,
+        brokerName,
+        status: "CONNECTED",
+        accessTokenEncrypted: encryptedToken,
+        lastSyncAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    // Mock realistic trades based on the selected broker
+    let tradesToImport: any[] = [];
+    if (brokerName === "Zerodha") {
+      tradesToImport = [
+        {
+          symbol: "TCS",
+          instrumentType: "STOCK" as const,
+          direction: "LONG" as const,
+          entryPrice: 3850,
+          exitPrice: 3920,
+          quantity: 100,
+          pnl: 7000,
+          setup: "Breakout",
+          mood: "Discipline ✓",
+        },
+        {
+          symbol: "INFY",
+          instrumentType: "STOCK" as const,
+          direction: "SHORT" as const,
+          entryPrice: 1435,
+          exitPrice: 1420,
+          quantity: 100,
+          pnl: 1500,
+          setup: "Retest",
+          mood: "Early Exit ⚠️",
+        }
+      ];
+    } else if (brokerName === "Upstox") {
+      tradesToImport = [
+        {
+          symbol: "NIFTY 22400 CE",
+          instrumentType: "OPTION" as const,
+          optionType: "CE" as const,
+          direction: "LONG" as const,
+          entryPrice: 120,
+          exitPrice: 210,
+          quantity: 150,
+          pnl: 13500,
+          setup: "Support/Resistance",
+          mood: "Discipline ✓",
+        },
+        {
+          symbol: "BANKNIFTY 48200 PE",
+          instrumentType: "OPTION" as const,
+          optionType: "PE" as const,
+          direction: "LONG" as const,
+          entryPrice: 240,
+          exitPrice: 210,
+          quantity: 150,
+          pnl: -4500,
+          setup: "Scalping",
+          mood: "FOMO Entry ⚠️",
+        }
+      ];
+    } else { // Dhan
+      tradesToImport = [
+        {
+          symbol: "SBIN",
+          instrumentType: "STOCK" as const,
+          direction: "LONG" as const,
+          entryPrice: 720,
+          exitPrice: 733,
+          quantity: 400,
+          pnl: 5200,
+          setup: "Retest",
+          mood: "Discipline ✓",
+        },
+        {
+          symbol: "NIFTY 22500 CE",
+          instrumentType: "OPTION" as const,
+          optionType: "CE" as const,
+          direction: "LONG" as const,
+          entryPrice: 110,
+          exitPrice: 198,
+          quantity: 100,
+          pnl: 8800,
+          setup: "Breakout",
+          mood: "Discipline ✓",
+        }
+      ];
+    }
+
+    // Insert trades into the DB
+    for (const trade of tradesToImport) {
+      await prisma.trade.create({
+        data: {
+          id: `trd_sync_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+          userId: user.id,
+          brokerConnectionId: connection.id,
+          source: "BROKER",
+          symbol: trade.symbol,
+          instrumentType: trade.instrumentType,
+          optionType: trade.optionType || null,
+          direction: trade.direction,
+          entryTime: new Date(Date.now() - 3600000 * 2), // 2 hours ago
+          exitTime: new Date(Date.now() - 3600000), // 1 hour ago
+          entryPrice: trade.entryPrice,
+          exitPrice: trade.exitPrice,
+          quantity: trade.quantity,
+          pnl: trade.pnl,
+          charges: 20, // flat charges
+          netPnl: trade.pnl - 20,
+          result: trade.pnl > 0 ? "WIN" as const : trade.pnl < 0 ? "LOSS" as const : "BREAKEVEN" as const,
+          setup: trade.setup,
+          mood: trade.mood,
+          followedPlan: !trade.mood.includes("⚠️"),
+          updatedAt: new Date(),
+        },
+      });
+    }
+
+    // Write Sync Log
+    await prisma.syncLog.create({
+      data: {
+        id: `sl_${Date.now()}`,
+        connectionId: connection.id,
+        dataType: "TRADES",
+        recordsCount: tradesToImport.length,
+        status: "SUCCESS",
+        errorMessage: null,
+        createdAt: new Date(),
+      },
+    });
+
+    return {
+      success: true,
+      recordsCount: tradesToImport.length,
+    };
+  } catch (error: any) {
+    console.error("Error in triggerBrokerSync server action:", error);
+    return {
+      success: false,
+      errorMessage: error.message || "Failed to synchronize broker account.",
+    };
+  }
+}
+

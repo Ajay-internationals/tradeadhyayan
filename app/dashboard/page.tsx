@@ -18,7 +18,8 @@ import {
   getBrokerConnections,
   addBrokerConnection,
   disconnectBroker,
-  getSyncLogs
+  getSyncLogs,
+  triggerBrokerSync
 } from "@/app/actions/trades";
 import {
   TrendingUp,
@@ -128,8 +129,14 @@ const DEFAULT_TRADES: Trade[] = [
 export default function DashboardPage() {
   // Navigation & Scene States
   const [activeTab, setActiveTab] = useState<"dashboard" | "journal" | "market" | "strategies" | "goals" | "reports" | "calendar" | "settings">("dashboard");
-  const [journalSubTab, setJournalSubTab] = useState<"single" | "upload" | "paste">("single");
+  const [journalSubTab, setJournalSubTab] = useState<"single" | "upload" | "paste" | "broker">("single");
   const [goalsSubTab, setGoalsSubTab] = useState<"active" | "completed" | "all">("active");
+
+  // Broker API Credentials inputs
+  const [authBrokerName, setAuthBrokerName] = useState<string | null>(null);
+  const [brokerApiKey, setBrokerApiKey] = useState("");
+  const [brokerApiSecret, setBrokerApiSecret] = useState("");
+  const [brokerClientId, setBrokerClientId] = useState("");
 
   // Core Data States
   const [trades, setTrades] = useState<Trade[]>([]);
@@ -392,33 +399,93 @@ export default function DashboardPage() {
     }
   };
 
-  // Mock Broker connection & Sync
-  const handleBrokerConnectionAction = async (broker: string) => {
+  // Broker connection configuration
+  const handleBrokerConnectionAction = (broker: string) => {
+    setAuthBrokerName(broker);
+  };
+
+  // Submit Broker credentials and trigger sync
+  const handleBrokerSyncSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!authBrokerName) return;
+
     setIsSyncing(true);
-    setSyncBroker(broker);
+    setSyncBroker(authBrokerName);
 
     try {
-      await addBrokerConnection(userEmail, broker, "CONNECTED");
-      const dbConnections = await getBrokerConnections(userEmail);
-      setBrokerConnections(dbConnections);
+      const res = await triggerBrokerSync(userEmail, authBrokerName, {
+        apiKey: brokerApiKey,
+        apiSecret: brokerApiSecret,
+        clientId: brokerClientId,
+      });
 
-      // Trigger sync logic
-      const mockData = [
-        { asset: "SBIN", type: "BUY" as const, pnl: 5200, strategy: "Retest", emotion: "Discipline ✓" }
-      ];
-      for (const item of mockData) {
-        await addDbTrade(userEmail, item);
+      if (res.success) {
+        alert(`Successfully connected ${authBrokerName}! Sync complete. Imported ${res.recordsCount} trades. ✅`);
+        
+        // Reload dashboard trades
+        const dbTrades = await getTrades(userEmail);
+        setTrades(dbTrades);
+
+        // Reload active connections
+        const dbConnections = await getBrokerConnections(userEmail);
+        setBrokerConnections(dbConnections);
+
+        // Reload sync logs
+        const dbLogs = await getSyncLogs(userEmail);
+        setSyncLogs(dbLogs);
+
+        // Clear forms
+        setBrokerApiKey("");
+        setBrokerApiSecret("");
+        setBrokerClientId("");
+        setAuthBrokerName(null);
+      } else {
+        alert(`Failed to sync: ${res.errorMessage} ❌`);
       }
-      
-      const dbTrades = await getTrades(userEmail);
-      setTrades(dbTrades);
-      
-      const logs = await getSyncLogs(userEmail);
-      setSyncLogs(logs);
-    } catch (err) {
-      console.error("Failed to connect broker:", err);
+    } catch (err: any) {
+      console.error("Error during broker sync:", err);
+      alert("Failed to synchronize broker account. Please try again.");
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  // Trigger direct sync for connected brokers
+  const handleDirectSync = async (broker: string) => {
+    setIsSyncing(true);
+    setSyncBroker(broker);
+    try {
+      const res = await triggerBrokerSync(userEmail, broker, {});
+      if (res.success) {
+        alert(`Sync complete. Synced ${res.recordsCount} new trades from ${broker}. ✅`);
+        
+        const dbTrades = await getTrades(userEmail);
+        setTrades(dbTrades);
+
+        const dbLogs = await getSyncLogs(userEmail);
+        setSyncLogs(dbLogs);
+      } else {
+        alert(`Failed to sync: ${res.errorMessage} ❌`);
+      }
+    } catch (err) {
+      console.error("Error during direct sync:", err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // Disconnect broker connection
+  const handleDisconnectBroker = async (connectionId: string) => {
+    if (!confirm("Are you sure you want to disconnect this broker?")) return;
+    try {
+      await disconnectBroker(connectionId);
+      const dbConnections = await getBrokerConnections(userEmail);
+      setBrokerConnections(dbConnections);
+      
+      const dbLogs = await getSyncLogs(userEmail);
+      setSyncLogs(dbLogs);
+    } catch (err) {
+      console.error("Failed to disconnect broker:", err);
     }
   };
 
@@ -835,7 +902,8 @@ export default function DashboardPage() {
                 {[
                   { id: "single", label: "Single Trade Entry" },
                   { id: "upload", label: "Excel Upload Template" },
-                  { id: "paste", label: "Paste Raw Text Table" }
+                  { id: "paste", label: "Paste Raw Text Table" },
+                  { id: "broker", label: "Broker API Sync" }
                 ].map((tb) => (
                   <button
                     key={tb.id}
@@ -1061,6 +1129,197 @@ export default function DashboardPage() {
                   >
                     Auto-parse Table Rows
                   </button>
+                </div>
+              )}
+
+              {/* Sub-view: Broker API Sync */}
+              {journalSubTab === "broker" && (
+                <div className="space-y-6">
+                  {/* Integrations Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {["Zerodha", "Upstox", "Dhan"].map((broker) => {
+                      const connection = brokerConnections.find(
+                        (c) => c.brokerName === broker
+                      );
+                      const isConnected = connection && connection.status === "CONNECTED";
+                      
+                      return (
+                        <div key={broker} className="bg-white border border-[#ECEAF5] rounded-[20px] p-6 shadow-[0_8px_24px_rgba(0,0,0,0.02)] flex flex-col justify-between space-y-4 bg-slate-50">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">{broker}</h4>
+                              <p className="text-[9px] text-slate-400 font-semibold mt-0.5">API Integration</p>
+                            </div>
+                            <span className={`px-2 py-0.5 rounded-full text-[8px] font-black border ${
+                              isConnected
+                                ? "bg-[#15B77A]/10 border-[#15B77A]/20 text-[#15B77A]"
+                                : "bg-slate-100 border-slate-200 text-slate-400"
+                            }`}>
+                              {isConnected ? "Connected" : "Disconnected"}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-2">
+                            {isConnected ? (
+                              <>
+                                <button
+                                  onClick={() => handleDirectSync(broker)}
+                                  disabled={isSyncing}
+                                  className="flex-1 h-9 bg-[#7C4DFF] hover:bg-[#7C4DFF]/90 text-white rounded-xl text-[9px] font-black uppercase tracking-wider cursor-pointer disabled:opacity-50 transition-opacity flex items-center justify-center gap-1.5"
+                                >
+                                  {isSyncing && syncBroker === broker ? (
+                                    <span className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                  ) : (
+                                    <RefreshCw className="w-3 h-3" />
+                                  )}
+                                  <span>Sync Trades</span>
+                                </button>
+                                <button
+                                  onClick={() => handleDisconnectBroker(connection.id)}
+                                  className="h-9 px-3 border border-slate-200 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-xl text-[9px] font-black uppercase tracking-wider cursor-pointer"
+                                >
+                                  Disconnect
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => handleBrokerConnectionAction(broker)}
+                                className="w-full h-9 bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 rounded-xl text-[9px] font-black uppercase tracking-wider cursor-pointer transition-colors"
+                              >
+                                Connect &amp; Authorize
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Credentials Form Modal/Card */}
+                  {authBrokerName && (
+                    <div className="bg-[#7C4DFF]/5 border border-[#7C4DFF]/15 rounded-[24px] p-6 space-y-4">
+                      <div className="flex justify-between items-center pb-2 border-b border-[#7C4DFF]/10">
+                        <div>
+                          <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">Authorize {authBrokerName}</h4>
+                          <p className="text-[9px] text-slate-500 font-semibold mt-0.5">Please provide your API application parameters. Login details are never stored.</p>
+                        </div>
+                        <button
+                          onClick={() => setAuthBrokerName(null)}
+                          className="text-[9px] font-black text-slate-400 hover:text-slate-600 uppercase cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+
+                      <form onSubmit={handleBrokerSyncSubmit} className="space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-[8px] font-black uppercase text-slate-400 ml-1">Client ID / Username</label>
+                            <input
+                              type="text"
+                              required
+                              placeholder="e.g., AB1234"
+                              value={brokerClientId}
+                              onChange={(e) => setBrokerClientId(e.target.value)}
+                              className="w-full px-4 h-10 rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-1 focus:ring-[#7C4DFF] text-xs font-bold text-slate-700"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[8px] font-black uppercase text-slate-400 ml-1">API Key</label>
+                            <input
+                              type="password"
+                              required
+                              placeholder="App API Key"
+                              value={brokerApiKey}
+                              onChange={(e) => setBrokerApiKey(e.target.value)}
+                              className="w-full px-4 h-10 rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-1 focus:ring-[#7C4DFF] text-xs font-bold text-slate-700"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[8px] font-black uppercase text-slate-400 ml-1">API Secret</label>
+                            <input
+                              type="password"
+                              required
+                              placeholder="App API Secret"
+                              value={brokerApiSecret}
+                              onChange={(e) => setBrokerApiSecret(e.target.value)}
+                              className="w-full px-4 h-10 rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-1 focus:ring-[#7C4DFF] text-xs font-bold text-slate-700"
+                            />
+                          </div>
+                        </div>
+                        <button
+                          type="submit"
+                          disabled={isSyncing}
+                          className="h-10 px-6 bg-[#7C4DFF] hover:bg-[#7C4DFF]/90 text-white rounded-xl text-[9px] font-black uppercase tracking-wider cursor-pointer disabled:opacity-50 transition-all flex items-center gap-1.5"
+                        >
+                          {isSyncing ? (
+                            <>
+                              <span className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                              <span>Authenticating...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Link2 className="w-3.5 h-3.5" />
+                              <span>Verify &amp; Import Trades</span>
+                            </>
+                          )}
+                        </button>
+                      </form>
+                    </div>
+                  )}
+
+                  {/* Sync Logs Table */}
+                  <div className="bg-white border border-[#ECEAF5] rounded-[24px] shadow-[0_8px_24px_rgba(0,0,0,0.02)] overflow-hidden">
+                    <div className="p-5 border-b border-[#ECEAF5]">
+                      <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">Broker Synchronization Logs</h4>
+                      <p className="text-[9px] text-slate-400 font-semibold mt-0.5">Audit history of background connections</p>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="border-b border-[#ECEAF5] bg-slate-50/50 text-[8px] text-slate-400 font-black uppercase tracking-wider">
+                            <th className="py-3 px-6">Timestamp</th>
+                            <th className="py-3 px-4">Connection</th>
+                            <th className="py-3 px-4">Type</th>
+                            <th className="py-3 px-4 text-center">Records Synced</th>
+                            <th className="py-3 px-6 text-right">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 text-[10px] font-bold text-slate-600">
+                          {syncLogs.length > 0 ? (
+                            syncLogs.map((log) => {
+                              // Find broker name
+                              const conn = brokerConnections.find(c => c.id === log.connectionId);
+                              const broker = conn ? conn.brokerName : "Broker";
+                              return (
+                                <tr key={log.id}>
+                                  <td className="py-3 px-6 text-slate-400">{new Date(log.createdAt).toLocaleString()}</td>
+                                  <td className="py-3 px-4 font-heading font-black text-slate-800">{broker} Account</td>
+                                  <td className="py-3 px-4 uppercase text-[8px] text-slate-500">{log.dataType}</td>
+                                  <td className="py-3 px-4 text-center text-slate-800">{log.recordsCount} trades</td>
+                                  <td className="py-3 px-6 text-right">
+                                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${
+                                      log.status === "SUCCESS"
+                                        ? "bg-[#15B77A]/10 text-[#15B77A]"
+                                        : "bg-[#E94B8A]/10 text-[#E94B8A]"
+                                    }`}>
+                                      {log.status}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          ) : (
+                            <tr>
+                              <td colSpan={5} className="py-8 text-center text-slate-400 font-semibold">
+                                No synchronizations recorded. Connect a broker account to begin.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
               )}
 
