@@ -4,22 +4,35 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { TrendingUp, Mail, Lock, ShieldCheck, Zap, ArrowRight } from "lucide-react";
+import { loginUser } from "@/app/actions/auth";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    localStorage.setItem("ta_user_email", email);
-    // Simulate login and redirect to dashboard
-    setTimeout(() => {
+    setError(null);
+    
+    try {
+      const res = await loginUser(email, password);
+      if (res.success && res.user) {
+        localStorage.setItem("ta_user_email", res.user.email);
+        localStorage.setItem("ta_user_name", res.user.name);
+        router.push("/dashboard");
+      } else {
+        setError(res.error || "Invalid email or password.");
+        setIsLoading(false);
+      }
+    } catch (err) {
+      console.error("Login client error:", err);
+      setError("Failed to connect to the authentication server.");
       setIsLoading(false);
-      router.push("/dashboard");
-    }, 800);
+    }
   };
 
   return (
@@ -53,6 +66,11 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {error && (
+            <div className="p-4 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 text-xs font-bold text-center">
+              {error}
+            </div>
+          )}
           <div className="space-y-2">
             <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">
               Email Address

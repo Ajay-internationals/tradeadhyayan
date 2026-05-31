@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/db";
-import { InstrumentType, TradeDirection, TradeResult } from "@/lib/generated/prisma";
+import { InstrumentType, TradeDirection, TradeResult, MistakeSeverity } from "@/lib/generated/prisma";
 
 // Map database trade object to frontend dashboard format
 function mapDbTradeToFrontend(dbTrade: any) {
@@ -30,6 +30,15 @@ function mapDbTradeToFrontend(dbTrade: any) {
     pnl: dbTrade.pnl,
     strategy: dbTrade.setup || "Breakout",
     emotion: dbTrade.mood || "Discipline ✓",
+    quantity: dbTrade.quantity,
+    entryPrice: dbTrade.entryPrice,
+    exitPrice: dbTrade.exitPrice,
+    stopLoss: dbTrade.stopLoss,
+    target: dbTrade.target,
+    charges: dbTrade.charges,
+    netPnl: dbTrade.netPnl,
+    rr: dbTrade.rr,
+    followedPlan: dbTrade.followedPlan,
   };
 }
 
@@ -67,6 +76,14 @@ export async function addDbTrade(
     pnl: number;
     strategy: string;
     emotion: string;
+    quantity?: number;
+    entryPrice?: number;
+    exitPrice?: number;
+    stopLoss?: number;
+    target?: number;
+    charges?: number;
+    netPnl?: number;
+    rr?: number;
   }
 ) {
   try {
@@ -89,8 +106,10 @@ export async function addDbTrade(
     }
 
     const direction: TradeDirection = tradeData.type === "BUY" ? "LONG" : "SHORT";
+    
+    const finalNetPnl = tradeData.netPnl !== undefined ? tradeData.netPnl : tradeData.pnl;
     const result: TradeResult =
-      tradeData.pnl > 0 ? "WIN" : tradeData.pnl < 0 ? "LOSS" : "BREAKEVEN";
+      finalNetPnl > 0 ? "WIN" : finalNetPnl < 0 ? "LOSS" : "BREAKEVEN";
 
     // Determine instrument type
     const assetUpper = tradeData.asset.toUpperCase();
@@ -118,13 +137,16 @@ export async function addDbTrade(
         direction,
         entryTime: new Date(),
         exitTime: new Date(),
-        entryPrice: 100, // mock entry price
-        exitPrice: 100 + (tradeData.pnl / 50), // mock exit price
-        quantity: 50, // mock quantity
+        entryPrice: tradeData.entryPrice !== undefined ? tradeData.entryPrice : 100,
+        exitPrice: tradeData.exitPrice !== undefined ? tradeData.exitPrice : 100,
+        quantity: tradeData.quantity !== undefined ? tradeData.quantity : 1,
+        stopLoss: tradeData.stopLoss !== undefined ? tradeData.stopLoss : null,
+        target: tradeData.target !== undefined ? tradeData.target : null,
         result,
         pnl: tradeData.pnl,
-        charges: 0,
-        netPnl: tradeData.pnl,
+        charges: tradeData.charges !== undefined ? tradeData.charges : 0,
+        netPnl: finalNetPnl,
+        rr: tradeData.rr !== undefined ? tradeData.rr : null,
         setup: tradeData.strategy,
         mood: tradeData.emotion,
         followedPlan: !tradeData.emotion.includes("⚠️"),
@@ -720,6 +742,290 @@ export async function triggerBrokerSync(
       success: false,
       errorMessage: error.message || "Failed to synchronize broker account.",
     };
+  }
+}
+
+// ---------------- MISTAKES ACTIONS ----------------
+
+export async function getMistakes(email: string) {
+  try {
+    const userEmail = email.trim().toLowerCase();
+    const user = await prisma.user.findUnique({
+      where: { email: userEmail },
+    });
+    if (!user) return [];
+
+    return await prisma.mistake.findMany({
+      where: { userId: user.id },
+      include: {
+        Trade: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  } catch (error) {
+    console.error("Error in getMistakes:", error);
+    return [];
+  }
+}
+
+export async function addMistake(
+  email: string,
+  tradeId: string,
+  mistakeType: string,
+  severity: "LOW" | "MEDIUM" | "HIGH",
+  reason: string,
+  estimatedLoss?: number,
+  improvementTip?: string
+) {
+  try {
+    const userEmail = email.trim().toLowerCase();
+    const user = await prisma.user.findUnique({
+      where: { email: userEmail },
+    });
+    if (!user) throw new Error("User not found");
+
+    const sev = severity as MistakeSeverity;
+
+    return await prisma.mistake.create({
+      data: {
+        id: `mst_${Date.now()}`,
+        userId: user.id,
+        tradeId,
+        mistakeType,
+        severity: sev,
+        reason,
+        estimatedLoss: estimatedLoss || 0,
+        improvementTip,
+        detectedAutomatically: false,
+        confidenceScore: 100,
+      },
+    });
+  } catch (error) {
+    console.error("Error in addMistake:", error);
+    throw new Error("Failed to add mistake.");
+  }
+}
+
+export async function runAutoDetectMistakes(email: string) {
+  try {
+    const userEmail = email.trim().toLowerCase();
+    const user = await prisma.user.findUnique({
+      where: { email: userEmail },
+    });
+    if (!user) return [];
+
+    const trades = await prisma.trade.findMany({
+      where: { userId: user.id },
+      orderBy: { entryTime: "asc" },
+    });
+
+    const existingMistakes = await prisma.mistake.findMany({
+      where: { userId: user.id },
+    });
+
+    const existingTradeIdTypes = new Set(
+      existingMistakes.map((m) => `${m.tradeId}_${m.mistakeType}`)
+    );
+
+    const newMistakesData = [];
+
+    // Let's analyze trades
+    for (let i = 0; i < trades.length; i++) {
+      const currentTrade = trades[i];
+
+      // 1. FOMO Entry
+      if (currentTrade.mood && (currentTrade.mood.toLowerCase().includes("fomo") || currentTrade.mood.toLowerCase().includes("fomo entry"))) {
+        const key = `${currentTrade.id}_FOMO Entry`;
+        if (!existingTradeIdTypes.has(key)) {
+          newMistakesData.push({
+            id: `mst_auto_${Date.now()}_fomo_${i}`,
+            userId: user.id,
+            tradeId: currentTrade.id,
+            mistakeType: "FOMO Entry",
+            severity: "MEDIUM" as MistakeSeverity,
+            reason: "Entered trade without waiting for confirmation setup, triggered by fear of missing out.",
+            estimatedLoss: currentTrade.pnl < 0 ? Math.abs(currentTrade.pnl) : 0,
+            improvementTip: "Wait for the candle to close and confirm setup entry parameters before execution.",
+            detectedAutomatically: true,
+            confidenceScore: 90,
+          });
+        }
+      }
+
+      // 2. Early Exit
+      if (currentTrade.mood && (currentTrade.mood.toLowerCase().includes("early exit") || currentTrade.mood.toLowerCase().includes("early"))) {
+        const key = `${currentTrade.id}_Early Exit`;
+        if (!existingTradeIdTypes.has(key)) {
+          newMistakesData.push({
+            id: `mst_auto_${Date.now()}_early_${i}`,
+            userId: user.id,
+            tradeId: currentTrade.id,
+            mistakeType: "Early Exit",
+            severity: "LOW" as MistakeSeverity,
+            reason: "Exited trade before it reached the technical target, leaving profits on the table.",
+            estimatedLoss: 0,
+            improvementTip: "Use trailing stop losses to secure profits while letting the position run to the target.",
+            detectedAutomatically: true,
+            confidenceScore: 85,
+          });
+        }
+      }
+
+      // 3. Revenge Trading (Trade entered within 1 hour of a loss)
+      if (i > 0) {
+        const prevTrade = trades[i - 1];
+        if (prevTrade.pnl < 0) {
+          const timeDiff = currentTrade.entryTime.getTime() - prevTrade.exitTime.getTime();
+          if (timeDiff > 0 && timeDiff < 60 * 60 * 1000) {
+            const key = `${currentTrade.id}_Revenge Trading`;
+            if (!existingTradeIdTypes.has(key)) {
+              newMistakesData.push({
+                id: `mst_auto_${Date.now()}_revenge_${i}`,
+                userId: user.id,
+                tradeId: currentTrade.id,
+                mistakeType: "Revenge Trading",
+                severity: "HIGH" as MistakeSeverity,
+                reason: `Entered trade within ${Math.round(timeDiff / 60000)} minutes of a previous loss, indicating emotional trading.`,
+                estimatedLoss: currentTrade.pnl < 0 ? Math.abs(currentTrade.pnl) : 0,
+                improvementTip: "Implement a cooling-off period of at least 1 hour or stop trading for the day after a loss.",
+                detectedAutomatically: true,
+                confidenceScore: 95,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    // 4. Overtrading (More than 3 trades in a single day)
+    const tradesByDate: Record<string, typeof trades> = {};
+    trades.forEach((t) => {
+      const dateStr = t.entryTime.toDateString();
+      if (!tradesByDate[dateStr]) tradesByDate[dateStr] = [];
+      tradesByDate[dateStr].push(t);
+    });
+
+    Object.keys(tradesByDate).forEach((dateStr) => {
+      const dayTrades = tradesByDate[dateStr];
+      if (dayTrades.length > 3) {
+        for (let idx = 3; idx < dayTrades.length; idx++) {
+          const currentTrade = dayTrades[idx];
+          const key = `${currentTrade.id}_Overtrading`;
+          if (!existingTradeIdTypes.has(key)) {
+            newMistakesData.push({
+              id: `mst_auto_${Date.now()}_over_${idx}`,
+              userId: user.id,
+              tradeId: currentTrade.id,
+              mistakeType: "Overtrading",
+              severity: "MEDIUM" as MistakeSeverity,
+              reason: `Exceeded the daily recommended trade count of 3 trades (This was trade #${idx + 1} of the day).`,
+              estimatedLoss: currentTrade.pnl < 0 ? Math.abs(currentTrade.pnl) : 0,
+              improvementTip: "Stick to your maximum daily limit. Lock your terminal after 3 trades.",
+              detectedAutomatically: true,
+              confidenceScore: 100,
+            });
+          }
+        }
+      }
+    });
+
+    if (newMistakesData.length > 0) {
+      await prisma.mistake.createMany({
+        data: newMistakesData,
+      });
+    }
+
+    return await prisma.mistake.findMany({
+      where: { userId: user.id },
+      include: {
+        Trade: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  } catch (error) {
+    console.error("Error in runAutoDetectMistakes:", error);
+    return [];
+  }
+}
+
+// ---------------- MENTOR REVIEW ACTIONS ----------------
+
+export async function getMentorReviews(email: string) {
+  try {
+    const userEmail = email.trim().toLowerCase();
+    const user = await prisma.user.findUnique({
+      where: { email: userEmail },
+    });
+    if (!user) return [];
+
+    return await prisma.mentorReview.findMany({
+      where: { studentId: user.id },
+      include: {
+        Trade: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  } catch (error) {
+    console.error("Error in getMentorReviews:", error);
+    return [];
+  }
+}
+
+export async function addMentorReview(
+  email: string,
+  tradeId: string,
+  score: number,
+  feedback: string,
+  strengths: string[],
+  improvements: string[]
+) {
+  try {
+    const userEmail = email.trim().toLowerCase();
+    const user = await prisma.user.findUnique({
+      where: { email: userEmail },
+    });
+    if (!user) throw new Error("Student not found");
+
+    const mentorId = "usr_mentor";
+    const mentor = await prisma.user.findUnique({
+      where: { id: mentorId },
+    });
+    if (!mentor) {
+      await prisma.user.create({
+        data: {
+          id: mentorId,
+          name: "Senior Mentor",
+          email: "mentor@tradeadhyayan.com",
+          passwordHash: "simulated_hash",
+          updatedAt: new Date(),
+        },
+      });
+    }
+
+    return await prisma.mentorReview.upsert({
+      where: { tradeId },
+      update: {
+        score,
+        feedback,
+        strengthsJson: strengths,
+        improvementAreasJson: improvements,
+        createdAt: new Date(),
+      },
+      create: {
+        id: `mr_${Date.now()}`,
+        mentorId,
+        studentId: user.id,
+        tradeId,
+        score,
+        feedback,
+        strengthsJson: strengths,
+        improvementAreasJson: improvements,
+        createdAt: new Date(),
+      },
+    });
+  } catch (error) {
+    console.error("Error in addMentorReview:", error);
+    throw new Error("Failed to add mentor review.");
   }
 }
 
