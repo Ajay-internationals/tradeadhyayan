@@ -176,7 +176,7 @@ export default function DashboardPage() {
   const [settings, setSettings] = useState<any>(null);
 
   const [userEmail, setUserEmail] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Manual Add Form
   const [asset, setAsset] = useState("");
