@@ -1,32 +1,15 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
-  --background: #FFFFFF;
+  --background: #F8FAFC;
   --foreground: #0F172A;
   
-  --brand-purple: #6C3BFF;
+  --brand-purple: #7C4DFF;
   --brand-blue: #2563EB;
-  --brand-green: #10B981;
+  --brand-green: #15B77A;
   --brand-orange: #F59E0B;
-}
-
-@theme {
-  --font-sans: var(--font-quicksand), var(--font-inter), system-ui, sans-serif;
-  --font-heading: var(--font-quicksand), var(--font-outfit), system-ui, sans-serif;
-  
-  --color-brand-purple: #6C3BFF;
-  --color-brand-blue: #2563EB;
-  --color-brand-green: #10B981;
-  --color-brand-orange: #F59E0B;
-  --color-brand-pink: #EC4899;
-  
-  --animate-float: float 6s ease-in-out infinite;
-  --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  
-  @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
-  }
 }
 
 body {
@@ -61,15 +44,15 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(108, 59, 255, 0.1);
+  background: rgba(124, 77, 255, 0.1);
   border-radius: 99px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(108, 59, 255, 0.25);
+  background: rgba(124, 77, 255, 0.25);
 }
 
-/* Tab and drawer animations */
+/* Tab animations */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
@@ -77,8 +60,4 @@ body {
 
 .animate-fade-in {
   animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.animate-fadeIn {
-  animation: fadeIn 0.2s ease-out forwards;
 }
