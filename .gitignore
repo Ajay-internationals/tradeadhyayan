@@ -33,3 +33,6 @@ next-env.d.ts
 # installers & executables
 .installers/
 node.zip
+
+# prisma generated client (regenerated at build time)
+lib/generated/
