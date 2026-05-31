@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import Link from "next/link";
 import {
   getTrades,
@@ -62,7 +63,9 @@ import {
   Layers3,
   CheckSquare,
   FileSpreadsheet,
-  Download
+  Download,
+  Menu,
+  X as XIcon
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -155,6 +158,7 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<"dashboard" | "market" | "journal" | "mistakes" | "mentor" | "reports" | "strategies" | "tools" | "goals" | "calendar" | "settings">("dashboard");
   const [journalSubTab, setJournalSubTab] = useState<"single" | "upload" | "paste" | "broker">("single");
   const [goalsSubTab, setGoalsSubTab] = useState<"active" | "completed" | "all">("active");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [authBrokerName, setAuthBrokerName] = useState<string | null>(null);
   const [brokerApiKey, setBrokerApiKey] = useState("");
@@ -323,21 +327,21 @@ export default function DashboardPage() {
     };
 
     loadAllData();
-  }, [activeTab]);
+  }, [userEmail]);
 
-  // Load mistakes and auto-detect when Mistakes tab is active
+  // Load mistakes when Mistakes tab is active (No heavy auto-detect scanner runs on click)
   useEffect(() => {
     if (activeTab === "mistakes" && userEmail) {
-      const detect = async () => {
+      const loadMistakes = async () => {
         try {
-          const updatedMistakes = await runAutoDetectMistakes(userEmail);
-          setMistakes(updatedMistakes);
+          const dbMistakes = await getMistakes(userEmail);
+          setMistakes(dbMistakes);
           await fetchMistakeSummary();
         } catch (e) {
-          console.error("Error auto-detecting mistakes:", e);
+          console.error("Error loading mistakes:", e);
         }
       };
-      detect();
+      loadMistakes();
     }
   }, [activeTab, userEmail]);
 
@@ -440,9 +444,10 @@ export default function DashboardPage() {
       setNewStratName("");
       setNewStratDesc("");
       setNewStratEntryRules("");
-      alert("Strategy saved to database! ✅");
+      toast.success("Strategy saved to database!");
     } catch (err) {
       console.error("Failed to save strategy:", err);
+      toast.error("Failed to save strategy. Please try again.");
     }
   };
 
@@ -461,9 +466,10 @@ export default function DashboardPage() {
       setNewGoalTitle("");
       setNewGoalValue("");
       setNewGoalDate("");
-      alert("Goal saved successfully! 🎯");
+      toast.success("Goal saved successfully! 🎯");
     } catch (err) {
       console.error("Failed to save goal:", err);
+      toast.error("Failed to save goal.");
     }
   };
 
@@ -480,20 +486,40 @@ export default function DashboardPage() {
       setCalendarEvents((prev) => [newEv, ...prev]);
       setNewEvTitle("");
       setNewEvDate("");
-      alert("Calendar event created! 📅");
+      toast.success("Calendar event created! 📅");
     } catch (err) {
       console.error("Failed to add calendar event:", err);
+      toast.error("Failed to create event.");
     }
   };
 
   const handleDeleteTradeRecord = async (tradeId: string) => {
-    if (!confirm("Are you sure you want to delete this trade?")) return;
-    try {
-      await deleteDbTrade(tradeId);
-      setTrades((prev) => prev.filter((t) => t.id !== tradeId));
-    } catch (err) {
-      console.error("Failed to delete trade from database", err);
-    }
+    const toastId = toast(
+      (t) => (
+        <span className="flex items-center gap-3">
+          Delete this trade?
+          <button
+            className="px-2 py-1 bg-[#E94B8A] text-white text-[10px] font-bold rounded-lg"
+            onClick={async () => {
+              toast.dismiss(t.id);
+              try {
+                await deleteDbTrade(tradeId);
+                setTrades((prev) => prev.filter((tr) => tr.id !== tradeId));
+                toast.success("Trade deleted.");
+              } catch (err) {
+                toast.error("Failed to delete trade.");
+              }
+            }}
+          >Delete</button>
+          <button
+            className="px-2 py-1 bg-slate-600 text-white text-[10px] font-bold rounded-lg"
+            onClick={() => toast.dismiss(t.id)}
+          >Cancel</button>
+        </span>
+      ),
+      { duration: 8000 }
+    );
+    void toastId;
   };
 
   const handleSaveSettings = async (e: React.FormEvent) => {
@@ -511,9 +537,10 @@ export default function DashboardPage() {
         includeBrokerage: settingsBrokerage,
         defaultDateRange: settingsDateRange,
       });
-      alert("Settings saved successfully! ⚙️");
+      toast.success("Settings saved successfully! ⚙️");
     } catch (err) {
       console.error("Failed to save settings", err);
+      toast.error("Failed to save settings.");
     }
   };
 
@@ -522,9 +549,10 @@ export default function DashboardPage() {
       await addBrokerConnection(userEmail, broker, "CONNECTED");
       const connections = await getBrokerConnections(userEmail);
       setBrokerConnections(connections);
-      alert(`Synchronized broker account ${broker} successfully!`);
+      toast.success(`Synchronized broker account ${broker} successfully!`);
     } catch (e) {
       console.error(e);
+      toast.error(`Failed to connect ${broker}.`);
     }
   };
 
@@ -533,14 +561,15 @@ export default function DashboardPage() {
       setIsLoading(true);
       const res = await triggerBrokerSync(userEmail, broker, {});
       if (res.success) {
-        alert(`Successfully imported ${res.recordsCount} trades from ${broker}!`);
+        toast.success(`Imported ${res.recordsCount} trades from ${broker}!`);
         const dbTrades = await getTrades(userEmail);
         setTrades(dbTrades);
       } else {
-        alert(`Failed to sync from ${broker}: ${res.errorMessage}`);
+        toast.error(`Failed to sync from ${broker}: ${res.errorMessage}`);
       }
     } catch (e) {
       console.error(e);
+      toast.error("Broker sync failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -567,9 +596,10 @@ export default function DashboardPage() {
       setMistakeLoss("");
       setMistakeTip("");
       setMistakeTradeId("");
-      alert("Mistake logged to database successfully! 🧠");
+      toast.success("Mistake logged successfully! 🧠");
     } catch (e) {
       console.error(e);
+      toast.error("Failed to log mistake.");
     }
   };
 
@@ -582,11 +612,13 @@ export default function DashboardPage() {
         const dbMistakes = await getMistakes(userEmail);
         setMistakes(dbMistakes);
         await fetchMistakeSummary();
+        toast.success("Mistake confirmed!");
       } else {
-        alert("Failed to confirm mistake.");
+        toast.error("Failed to confirm mistake.");
       }
     } catch (e) {
       console.error(e);
+      toast.error("Network error.");
     }
   };
 
@@ -599,30 +631,47 @@ export default function DashboardPage() {
         const dbMistakes = await getMistakes(userEmail);
         setMistakes(dbMistakes);
         await fetchMistakeSummary();
+        toast.success("Marked as reviewed!");
       } else {
-        alert("Failed to mark mistake as reviewed.");
+        toast.error("Failed to mark as reviewed.");
       }
     } catch (e) {
       console.error(e);
+      toast.error("Network error.");
     }
   };
 
   const handleDeleteMistake = async (mistakeId: string) => {
-    if (!confirm("Are you sure you want to delete this mistake log? This cannot be undone.")) return;
-    try {
-      const res = await fetch(`/api/mistakes/${mistakeId}`, {
-        method: "DELETE"
-      });
-      if (res.ok) {
-        const dbMistakes = await getMistakes(userEmail);
-        setMistakes(dbMistakes);
-        await fetchMistakeSummary();
-      } else {
-        alert("Failed to delete mistake.");
-      }
-    } catch (e) {
-      console.error(e);
-    }
+    const toastId = toast(
+      (t) => (
+        <span className="flex items-center gap-3">
+          Delete this mistake log?
+          <button
+            className="px-2 py-1 bg-[#E94B8A] text-white text-[10px] font-bold rounded-lg"
+            onClick={async () => {
+              toast.dismiss(t.id);
+              try {
+                const res = await fetch(`/api/mistakes/${mistakeId}`, { method: "DELETE" });
+                if (res.ok) {
+                  const dbMistakes = await getMistakes(userEmail);
+                  setMistakes(dbMistakes);
+                  await fetchMistakeSummary();
+                  toast.success("Mistake deleted.");
+                } else {
+                  toast.error("Failed to delete.");
+                }
+              } catch (e) { toast.error("Network error."); }
+            }}
+          >Delete</button>
+          <button
+            className="px-2 py-1 bg-slate-600 text-white text-[10px] font-bold rounded-lg"
+            onClick={() => toast.dismiss(t.id)}
+          >Cancel</button>
+        </span>
+      ),
+      { duration: 8000 }
+    );
+    void toastId;
   };
 
   const handleAddMentorReview = async (e: React.FormEvent) => {
@@ -648,21 +697,24 @@ export default function DashboardPage() {
       setMentorStrengths("");
       setMentorImprovements("");
       setMentorTradeId("");
-      alert("Mentor review logged successfully! 🎓");
+      toast.success("Mentor review logged successfully! 🎓");
     } catch (e) {
       console.error(e);
+      toast.error("Failed to log mentor review.");
     }
   };
 
   const handleAutoDetectMistakes = async () => {
+    const tid = toast.loading("Scanning trades for emotional patterns...");
     try {
       setIsLoading(true);
       const dbMistakes = await runAutoDetectMistakes(userEmail);
       setMistakes(dbMistakes);
       await fetchMistakeSummary();
-      alert(`AI Scan completed! Detected ${dbMistakes.filter(m => m.detectedAutomatically).length} emotional patterns in your journal.`);
+      toast.success(`Scan complete! Detected ${dbMistakes.filter(m => m.detectedAutomatically).length} patterns.`, { id: tid });
     } catch (e) {
       console.error(e);
+      toast.error("AI scan failed.", { id: tid });
     } finally {
       setIsLoading(false);
     }
@@ -687,6 +739,7 @@ export default function DashboardPage() {
     });
 
     if (parsed.length > 0) {
+      const tid = toast.loading(`Saving ${parsed.length} trades...`);
       try {
         const insertPromises = parsed.map(trade => 
           addDbTrade(userEmail, {
@@ -702,18 +755,102 @@ export default function DashboardPage() {
         setTrades(dbTrades);
         setPastedText("");
         setActiveTab("journal");
-        alert(`Successfully imported and saved ${parsed.length} trades to the database! ✅`);
+        toast.success(`Imported ${parsed.length} trades successfully! ✅`, { id: tid });
       } catch (err) {
         console.error("Failed to save some pasted trades to database", err);
+        toast.error("Failed to import some trades.", { id: tid });
       }
     } else {
-      alert("Invalid format. Make sure columns are separated by tabs (Instrument \	 Type \	 PnL \	 Strategy).");
+      toast.error("Invalid format. Use tabs to separate: Instrument\tType\tPnL\tStrategy");
     }
+  };
+
+  const handleCSVUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      const text = evt.target?.result as string;
+      if (!text) return;
+
+      const lines = text.split("\n").map(l => l.trim()).filter(l => l);
+      if (lines.length <= 1) {
+        alert("Empty CSV file or header only.");
+        return;
+      }
+
+      // Parse headers
+      const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
+      const parsedTrades: any[] = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(",").map(c => c.trim());
+        if (cols.length < headers.length) continue;
+
+        const row: Record<string, string> = {};
+        headers.forEach((header, idx) => {
+          row[header] = cols[idx];
+        });
+
+        const asset = row["asset"] || row["symbol"] || row["instrument"] || "";
+        const type = (row["type"] || row["direction"] || "BUY").toUpperCase().includes("BUY") || (row["type"] || row["direction"] || "BUY").toUpperCase().includes("LONG") ? "BUY" : "SELL";
+        const quantity = parseFloat(row["quantity"] || row["qty"]) || 1;
+        const entryPrice = parseFloat(row["entryprice"] || row["entry"] || row["buyprice"]) || 100;
+        const exitPrice = parseFloat(row["exitprice"] || row["exit"] || row["sellprice"]) || 100;
+        const pnl = parseFloat(row["pnl"] || row["profit"] || row["loss"]) || 0;
+        const strategy = row["strategy"] || row["setup"] || "CSV Upload";
+        const emotion = row["emotion"] || row["mood"] || "Discipline ✓";
+
+        if (asset) {
+          parsedTrades.push({
+            asset,
+            type,
+            quantity,
+            entryPrice,
+            exitPrice,
+            pnl,
+            strategy,
+            emotion
+          });
+        }
+      }
+
+      if (parsedTrades.length > 0) {
+        try {
+          setIsLoading(true);
+          const promises = parsedTrades.map(trade => 
+            addDbTrade(userEmail, {
+              asset: trade.asset,
+              type: trade.type,
+              quantity: trade.quantity,
+              entryPrice: trade.entryPrice,
+              exitPrice: trade.exitPrice,
+              pnl: trade.pnl,
+              strategy: trade.strategy,
+              emotion: trade.emotion,
+            })
+          );
+          await Promise.all(promises);
+          const dbTrades = await getTrades(userEmail);
+          setTrades(dbTrades);
+          toast.success(`Imported ${parsedTrades.length} trades from CSV! ✅`);
+        } catch (err) {
+          console.error("Failed to import CSV trades:", err);
+          toast.error("Error saving imported trades to database.");
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        alert("No valid trades found in CSV. Headers should include: Asset/Symbol, Type/Direction, PnL, Quantity, Entry Price, Exit Price");
+      }
+    };
+    reader.readAsText(file);
   };
 
   const handleExportCSV = () => {
     if (trades.length === 0) {
-      alert("No trades available to export!");
+      toast.error("No trades available to export!");
       return;
     }
     const headers = ["ID", "Asset", "Type", "Gross P&L", "Charges", "Net P&L", "Strategy", "Emotion", "Quantity", "Entry Price", "Exit Price", "Stop Loss", "Target", "R:R", "Date/Time"];
@@ -955,8 +1092,16 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans flex">
+      {/* MOBILE OVERLAY */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 z-30 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* FIXED SIDEBAR */}
-      <aside className="fixed left-0 top-0 bottom-0 w-[260px] bg-white border-r border-[#ECECF3] p-6 flex flex-col justify-between z-30">
+      <aside className={`fixed left-0 top-0 bottom-0 w-[260px] bg-white border-r border-[#ECECF3] p-6 flex flex-col justify-between z-40 transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}>
         <div className="space-y-6">
           {/* Logo */}
           <div className="flex items-center gap-3">
@@ -989,7 +1134,7 @@ export default function DashboardPage() {
               return (
                 <button
                   key={item.id}
-                  onClick={() => setActiveTab(item.id as any)}
+                  onClick={() => { setActiveTab(item.id as any); setSidebarOpen(false); }}
                   className={`w-full flex items-center gap-3 px-4 h-11 rounded-[12px] text-xs font-bold transition-all cursor-pointer ${
                     activeTab === item.id
                       ? "bg-[#F4F0FF] text-[#7C4DFF]"
@@ -1013,7 +1158,7 @@ export default function DashboardPage() {
               return (
                 <button
                   key={item.id}
-                  onClick={() => setActiveTab(item.id as any)}
+                  onClick={() => { setActiveTab(item.id as any); setSidebarOpen(false); }}
                   className={`w-full flex items-center gap-3 px-4 h-11 rounded-[12px] text-xs font-bold transition-all cursor-pointer ${
                     activeTab === item.id
                       ? "bg-[#F4F0FF] text-[#7C4DFF]"
@@ -1041,12 +1186,19 @@ export default function DashboardPage() {
       </aside>
 
       {/* MAIN CONTAINER */}
-      <div className="flex-1 pl-[260px] flex flex-col min-h-screen">
+      <div className="flex-1 pl-0 lg:pl-[260px] flex flex-col min-h-screen">
         
         {/* HEADER BAR */}
-        <header className="h-[80px] bg-white border-b border-[#ECECF3] px-8 flex justify-between items-center sticky top-0 z-20 shadow-sm shadow-[#ECECF3]/10">
+        <header className="h-[64px] lg:h-[80px] bg-white border-b border-[#ECECF3] px-4 lg:px-8 flex justify-between items-center sticky top-0 z-20 shadow-sm shadow-[#ECECF3]/10">
           <div className="flex items-center gap-3">
-            <span className="bg-[#F4F0FF] border border-[#ECECF3] px-3.5 py-1.5 rounded-[12px] text-[10px] font-bold text-slate-600 flex items-center gap-1.5">
+            {/* Hamburger for mobile */}
+            <button
+              className="lg:hidden w-9 h-9 rounded-[10px] bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-[#F4F0FF] transition-colors"
+              onClick={() => setSidebarOpen((o) => !o)}
+            >
+              {sidebarOpen ? <XIcon className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+            </button>
+            <span className="hidden sm:flex bg-[#F4F0FF] border border-[#ECECF3] px-3.5 py-1.5 rounded-[12px] text-[10px] font-bold text-slate-600 items-center gap-1.5">
               <CalendarIcon className="w-3.5 h-3.5 text-[#7C4DFF]" />
               <span>Range: {settingsDateRange}</span>
             </span>
@@ -1073,10 +1225,26 @@ export default function DashboardPage() {
         </header>
 
         {/* WORKSPACE CONTENT AREA */}
-        <main className="p-8 flex-1 space-y-8">
+        <main className="p-4 lg:p-8 flex-1 space-y-8">
           {isLoading && (
-            <div className="flex items-center justify-center py-20">
-              <RefreshCw className="w-8 h-8 text-[#7C4DFF] animate-spin" />
+            <div className="space-y-6 animate-pulse">
+              {/* Skeleton KPI row */}
+              <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="h-24 bg-slate-100 rounded-[18px]" />
+                ))}
+              </div>
+              {/* Skeleton charts */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div className="lg:col-span-8 h-64 bg-slate-100 rounded-[24px]" />
+                <div className="lg:col-span-4 h-64 bg-slate-100 rounded-[24px]" />
+              </div>
+              {/* Skeleton bottom row */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div className="lg:col-span-6 h-48 bg-slate-100 rounded-[24px]" />
+                <div className="lg:col-span-3 h-48 bg-slate-100 rounded-[24px]" />
+                <div className="lg:col-span-3 h-48 bg-slate-100 rounded-[24px]" />
+              </div>
             </div>
           )}
 
@@ -1440,6 +1608,7 @@ export default function DashboardPage() {
                   <div className="flex border-b border-[#ECEAF5]">
                     {[
                       { id: "single", label: "Manual Add Entry" },
+                      { id: "upload", label: "CSV File Upload" },
                       { id: "paste", label: "Paste Import Logs" },
                       { id: "broker", label: "Broker Sync Connections" }
                     ].map((st) => (
@@ -1604,6 +1773,37 @@ export default function DashboardPage() {
                       <div className="lg:col-span-4 bg-white border border-[#E8EAF3] rounded-[24px] p-6 shadow-sm space-y-4">
                         <span className="text-xs font-bold text-slate-800 uppercase tracking-wider block">Pre-trade check</span>
                         <p className="text-[10px] text-slate-500 font-semibold leading-relaxed">Ensure your pre-trade checklist rules are fulfilled in the tools tab before entering manual logs.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* SUBTAB: FILE UPLOAD IMPORT */}
+                  {journalSubTab === "upload" && (
+                    <div className="bg-white border border-[#E8EAF3] rounded-[24px] p-8 shadow-sm text-center max-w-xl mx-auto space-y-6 animate-fade-in">
+                      <div className="p-8 border-2 border-dashed border-[#7C4DFF]/20 bg-[#FAF9FF] rounded-[20px] flex flex-col items-center justify-center gap-4 group hover:border-[#7C4DFF]/40 transition-all">
+                        <div className="p-4 bg-[#7C4DFF]/10 rounded-full text-[#7C4DFF] group-hover:scale-110 transition-transform">
+                          <Upload className="w-8 h-8" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-800">Upload your trading logs (CSV file)</h4>
+                          <p className="text-[10px] text-slate-400 font-semibold mt-1">Accepts standard layout headers: Asset/Symbol, Type/Direction, Quantity, Entry Price, Exit Price, PnL</p>
+                        </div>
+                        <label className="px-5 py-2.5 bg-[#7C4DFF] hover:bg-indigo-600 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-colors cursor-pointer shadow-md shadow-[#7C4DFF]/15">
+                          <span>Browse CSV File</span>
+                          <input
+                            type="file"
+                            accept=".csv"
+                            onChange={handleCSVUpload}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+
+                      <div className="text-left space-y-3 p-4 bg-slate-50 border border-slate-100 rounded-xl">
+                        <span className="text-[9px] font-black uppercase text-[#8C8CA1] ml-1">Example CSV Column Schema</span>
+                        <pre className="text-[9px] text-slate-600 font-mono overflow-x-auto whitespace-pre p-2 bg-white border border-slate-100 rounded-lg">
+                          {"Asset,Type,Quantity,Entry Price,Exit Price,PnL,Strategy,Emotion\nNIFTY 22400 CE,BUY,150,120,210,13500,Breakout,Discipline ✓\nSBIN,BUY,200,720,733,2600,Retest,Discipline ✓"}
+                        </pre>
                       </div>
                     </div>
                   )}
