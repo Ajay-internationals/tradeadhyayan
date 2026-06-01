@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Quicksand } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
-import { Providers } from "./providers";
 
 const quicksand = Quicksand({
   variable: "--font-quicksand",
@@ -29,9 +28,7 @@ export default function RootLayout({
       className={`${quicksand.variable} h-full antialiased font-sans`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground font-sans">
-        <Providers>
-          {children}
-        </Providers>
+        {children}
         <Toaster
           position="top-right"
           toastOptions={{

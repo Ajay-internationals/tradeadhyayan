@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { signIn } from "next-auth/react";
 import toast from "react-hot-toast";
 import { Activity, Mail, User, Lock, ArrowRight } from "lucide-react";
 
@@ -21,36 +20,19 @@ export default function SignupPage() {
     setLoading(true);
     
     try {
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email: email.trim().toLowerCase(), password }),
-      });
+      const { registerUser } = await import("@/app/actions/auth");
+      const result = await registerUser(name, email, password);
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        toast.error(data.message || "Registration failed");
+      if (!result.success) {
+        toast.error(result.error || "Registration failed");
         setLoading(false);
         return;
       }
 
       // Auto login after successful registration
-      const result = await signIn("credentials", {
-        redirect: false,
-        email: email.trim().toLowerCase(),
-        password,
-      });
-
-      if (result?.error) {
-        toast.error("Account created, but couldn't log in automatically.");
-        setLoading(false);
-        router.push("/login");
-      } else {
-        toast.success("Account created successfully!");
-        router.push("/dashboard");
-        router.refresh();
-      }
+      localStorage.setItem('trade_adhyayan_user', result.email!);
+      toast.success("Account created successfully!");
+      router.push("/dashboard");
     } catch (error) {
       toast.error("An error occurred during registration");
       setLoading(false);

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import {
@@ -276,17 +275,11 @@ export default function DashboardPage() {
     }
   };
 
-  const { data: session, status } = useSession();
-
   // Initialize and load user data
   useEffect(() => {
-    if (status === "loading") return;
-    
-    // Ensure we have an email from session
-    const email = session?.user?.email;
+    const email = localStorage.getItem('trade_adhyayan_user');
     if (!email) {
-      // If no session but mounted, they should be redirected by middleware,
-      // but just in case, we do not load data.
+      router.push('/login');
       return;
     }
 

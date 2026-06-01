@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { signIn } from "next-auth/react";
 import toast from "react-hot-toast";
 import { Activity, Mail, Lock, ArrowRight } from "lucide-react";
 
@@ -20,19 +19,16 @@ export default function LoginPage() {
     setLoading(true);
     
     try {
-      const result = await signIn("credentials", {
-        redirect: false,
-        email: email.trim().toLowerCase(),
-        password,
-      });
+      const { loginUser } = await import("@/app/actions/auth");
+      const result = await loginUser(email, password);
 
-      if (result?.error) {
-        toast.error(result.error);
+      if (!result.success) {
+        toast.error(result.error || "Login failed");
         setLoading(false);
       } else {
+        localStorage.setItem('trade_adhyayan_user', result.email!);
         toast.success("Successfully logged in");
         router.push("/dashboard");
-        router.refresh();
       }
     } catch (error) {
       toast.error("An error occurred during login");
