@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/db";
-import { InstrumentType, TradeDirection, TradeResult, MistakeSeverity, GoalStatus, BrokerStatus } from "@/lib/generated/prisma";
+import { InstrumentType, TradeDirection, TradeResult, MistakeSeverity, GoalStatus, BrokerStatus } from "@prisma/client";
 
 // Map database trade object to frontend dashboard format
 function mapDbTradeToFrontend(dbTrade: any) {
