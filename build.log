@@ -1,0 +1,20 @@
+  ▲ Next.js 14.2.3
+  - Environments: .env.local, .env
+
+   Creating an optimized production build ...
+glob error [Error: EPERM: operation not permitted, scandir 'C:\Users\hp\trade-adhyayan-next\.next\trace'] {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'scandir',
+  path: 'C:\\Users\\hp\\trade-adhyayan-next\\.next\\trace'
+}
+Failed to compile.
+
+Error: EPERM: operation not permitted, scandir 'C:\Users\hp\trade-adhyayan-next\.next\trace'
+
+uncaughtException [Error: EPERM: operation not permitted, open 'C:\Users\hp\trade-adhyayan-next\.next\trace'] {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'open',
+  path: 'C:\\Users\\hp\\trade-adhyayan-next\\.next\\trace'
+}
