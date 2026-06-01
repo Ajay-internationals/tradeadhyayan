@@ -7,6 +7,34 @@ import { registerUser } from "@/app/actions/auth";
 import toast from "react-hot-toast";
 import { Activity, Mail, User, Lock, ArrowRight } from "lucide-react";
 
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  height: "46px",
+  paddingLeft: "42px",
+  paddingRight: "14px",
+  background: "rgba(0,0,0,0.4)",
+  border: "1px solid rgba(255,255,255,0.1)",
+  borderRadius: "12px",
+  color: "#E2E8F0",
+  fontSize: "12px",
+  fontWeight: 700,
+  outline: "none",
+  boxSizing: "border-box",
+  fontFamily: "inherit",
+  transition: "border-color 0.2s",
+};
+
+const labelStyle: React.CSSProperties = {
+  fontSize: "9px",
+  fontWeight: 800,
+  textTransform: "uppercase",
+  color: "#8C8CA1",
+  letterSpacing: "0.5px",
+  display: "block",
+  marginBottom: "6px",
+  marginLeft: "2px",
+};
+
 export default function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -17,91 +45,167 @@ export default function SignupPage() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !email) return;
-
-    // Instant signup (no backend password validation)
-    localStorage.setItem('trade_adhyayan_user', email.trim().toLowerCase());
+    setLoading(true);
+    localStorage.setItem("trade_adhyayan_user", email.trim().toLowerCase());
     toast.success("Account created successfully!");
     router.push("/dashboard");
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-center items-center font-sans px-6 relative selection:bg-[#7C4DFF]/30 selection:text-white">
-      {/* Glow effects */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-[#E94B8A]/10 rounded-full blur-[100px] pointer-events-none" />
+    <div style={{
+      minHeight: "100vh",
+      background: "linear-gradient(135deg, #0A0A1A 0%, #1A0A2E 50%, #0A0A1A 100%)",
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: "24px",
+      fontFamily: "'Quicksand', system-ui, sans-serif",
+      position: "relative",
+      overflow: "hidden",
+    }}>
+      {/* Pink glow */}
+      <div style={{
+        position: "absolute",
+        top: "50%", left: "50%",
+        transform: "translate(-50%, -50%)",
+        width: "500px", height: "500px",
+        background: "radial-gradient(circle, rgba(233,75,138,0.12) 0%, transparent 70%)",
+        pointerEvents: "none",
+      }} />
 
-      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-[28px] p-8 shadow-2xl relative z-10 space-y-6">
-        <div className="text-center space-y-2">
-          <Link href="/" className="inline-flex items-center gap-2 mb-2 group">
-            <div className="p-2 bg-gradient-to-tr from-[#7C4DFF] to-[#E94B8A] rounded-xl text-white group-hover:scale-105 transition-transform">
-              <Activity className="w-5 h-5" />
+      {/* Card */}
+      <div style={{
+        width: "100%",
+        maxWidth: "420px",
+        background: "rgba(255,255,255,0.04)",
+        border: "1px solid rgba(255,255,255,0.1)",
+        borderRadius: "28px",
+        padding: "40px 36px",
+        boxShadow: "0 32px 80px rgba(0,0,0,0.6)",
+        position: "relative",
+        zIndex: 1,
+      }}>
+        {/* Logo */}
+        <div style={{ textAlign: "center", marginBottom: "28px" }}>
+          <Link href="/" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
+            <div style={{
+              padding: "8px",
+              background: "linear-gradient(135deg, #7C4DFF, #E94B8A)",
+              borderRadius: "12px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}>
+              <Activity size={20} color="#fff" />
             </div>
-            <span className="font-heading font-black text-sm uppercase tracking-wider text-slate-200">
+            <span style={{ fontWeight: 900, fontSize: "13px", textTransform: "uppercase", letterSpacing: "1px", color: "#E2E8F0" }}>
               Trade Adhyayan
             </span>
           </Link>
-          <h2 className="text-xl font-black text-slate-100">Create account</h2>
-          <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Start tracking your trading discipline for free</p>
+          <h2 style={{ margin: "0 0 6px", fontSize: "22px", fontWeight: 900, color: "#F1F5F9" }}>Create account</h2>
+          <p style={{ margin: 0, fontSize: "10px", color: "#94A3B8", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.8px" }}>
+            Start tracking your discipline for free
+          </p>
         </div>
 
-        <form onSubmit={handleSignup} className="space-y-4">
-          <div className="space-y-1.5 text-left">
-            <label className="text-[8px] font-black uppercase text-[#8C8CA1] ml-1">Your Name</label>
-            <div className="relative">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+        <form onSubmit={handleSignup} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {/* Name */}
+          <div>
+            <label style={labelStyle}>Your Name</label>
+            <div style={{ position: "relative" }}>
+              <User size={16} color="#64748B" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)" }} />
               <input
                 required
                 type="text"
                 placeholder="Ajay Sharma"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full pl-11 pr-4 h-11 rounded-xl bg-slate-950 border border-slate-800 text-xs font-bold text-slate-200 focus:outline-none focus:border-[#7C4DFF] focus:ring-1 focus:ring-[#7C4DFF] transition-all"
+                style={inputStyle}
+                onFocus={(e) => (e.target.style.borderColor = "#E94B8A")}
+                onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.1)")}
               />
             </div>
           </div>
 
-          <div className="space-y-1.5 text-left">
-            <label className="text-[8px] font-black uppercase text-[#8C8CA1] ml-1">Email Address</label>
-            <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          {/* Email */}
+          <div>
+            <label style={labelStyle}>Email Address</label>
+            <div style={{ position: "relative" }}>
+              <Mail size={16} color="#64748B" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)" }} />
               <input
                 required
                 type="email"
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-11 pr-4 h-11 rounded-xl bg-slate-950 border border-slate-800 text-xs font-bold text-slate-200 focus:outline-none focus:border-[#7C4DFF] focus:ring-1 focus:ring-[#7C4DFF] transition-all"
+                style={inputStyle}
+                onFocus={(e) => (e.target.style.borderColor = "#E94B8A")}
+                onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.1)")}
               />
             </div>
           </div>
 
-          <div className="space-y-1.5 text-left">
-            <label className="text-[8px] font-black uppercase text-[#8C8CA1] ml-1">Password</label>
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          {/* Password */}
+          <div>
+            <label style={labelStyle}>Password</label>
+            <div style={{ position: "relative" }}>
+              <Lock size={16} color="#64748B" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)" }} />
               <input
                 required
                 type="password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-11 pr-4 h-11 rounded-xl bg-slate-950 border border-slate-800 text-xs font-bold text-slate-200 focus:outline-none focus:border-[#7C4DFF] focus:ring-1 focus:ring-[#7C4DFF] transition-all"
+                style={inputStyle}
+                onFocus={(e) => (e.target.style.borderColor = "#E94B8A")}
+                onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.1)")}
               />
             </div>
           </div>
 
+          {/* Submit */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full h-11 bg-gradient-to-r from-[#7C4DFF] to-indigo-600 hover:opacity-95 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-[#7C4DFF]/15 disabled:opacity-50"
+            style={{
+              width: "100%",
+              height: "46px",
+              background: loading ? "#7A2050" : "linear-gradient(135deg, #E94B8A, #7C4DFF)",
+              border: "none",
+              borderRadius: "12px",
+              color: "#fff",
+              fontSize: "12px",
+              fontWeight: 800,
+              textTransform: "uppercase",
+              letterSpacing: "0.8px",
+              cursor: loading ? "not-allowed" : "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              marginTop: "4px",
+              boxShadow: "0 8px 24px rgba(233,75,138,0.35)",
+              transition: "opacity 0.2s",
+              fontFamily: "inherit",
+            }}
           >
-            <span>{loading ? "Registering..." : "Create Free Account"}</span>
-            {!loading && <ArrowRight className="w-4 h-4" />}
+            <span>{loading ? "Creating account..." : "Create Free Account"}</span>
+            {!loading && <ArrowRight size={16} />}
           </button>
         </form>
 
-        <div className="text-center text-[10px] text-slate-400 font-semibold border-t border-slate-850 pt-4">
+        <div style={{
+          marginTop: "24px",
+          paddingTop: "20px",
+          borderTop: "1px solid rgba(255,255,255,0.07)",
+          textAlign: "center",
+          fontSize: "11px",
+          color: "#94A3B8",
+          fontWeight: 600,
+        }}>
           Already have an account?{" "}
-          <Link href="/login" className="text-[#7C4DFF] font-bold hover:underline">
+          <Link href="/login" style={{ color: "#7C4DFF", fontWeight: 800, textDecoration: "none" }}>
             Sign In
           </Link>
         </div>
