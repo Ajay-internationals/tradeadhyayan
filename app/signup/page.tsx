@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { signIn } from "next-auth/react";
+import toast from "react-hot-toast";
 import { Activity, Mail, User, Lock, ArrowRight } from "lucide-react";
 
 export default function SignupPage() {
@@ -12,18 +14,47 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
+    if (!name || !email || !password) return;
 
     setLoading(true);
-    // Simulate auth by saving email to localStorage
-    localStorage.setItem("ta_user_email", email.trim().toLowerCase());
     
-    setTimeout(() => {
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email: email.trim().toLowerCase(), password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.message || "Registration failed");
+        setLoading(false);
+        return;
+      }
+
+      // Auto login after successful registration
+      const result = await signIn("credentials", {
+        redirect: false,
+        email: email.trim().toLowerCase(),
+        password,
+      });
+
+      if (result?.error) {
+        toast.error("Account created, but couldn't log in automatically.");
+        setLoading(false);
+        router.push("/login");
+      } else {
+        toast.success("Account created successfully!");
+        router.push("/dashboard");
+        router.refresh();
+      }
+    } catch (error) {
+      toast.error("An error occurred during registration");
       setLoading(false);
-      router.push("/dashboard");
-    }, 800);
+    }
   };
 
   return (

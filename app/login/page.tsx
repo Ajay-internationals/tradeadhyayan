@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { signIn } from "next-auth/react";
+import toast from "react-hot-toast";
 import { Activity, Mail, Lock, ArrowRight } from "lucide-react";
 
 export default function LoginPage() {
@@ -11,18 +13,31 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
+    if (!email || !password) return;
 
     setLoading(true);
-    // Simulate auth by saving email to localStorage
-    localStorage.setItem("ta_user_email", email.trim().toLowerCase());
     
-    setTimeout(() => {
+    try {
+      const result = await signIn("credentials", {
+        redirect: false,
+        email: email.trim().toLowerCase(),
+        password,
+      });
+
+      if (result?.error) {
+        toast.error(result.error);
+        setLoading(false);
+      } else {
+        toast.success("Successfully logged in");
+        router.push("/dashboard");
+        router.refresh();
+      }
+    } catch (error) {
+      toast.error("An error occurred during login");
       setLoading(false);
-      router.push("/dashboard");
-    }, 800);
+    }
   };
 
   return (
