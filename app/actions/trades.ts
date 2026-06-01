@@ -1265,3 +1265,114 @@ export async function addMentorReview(
     throw new Error("Failed to add mentor review.");
   }
 }
+
+export async function getDashboardData(email: string) {
+  try {
+    const user = await getOrCreateUser(email);
+    
+    const [
+      trades,
+      strategies,
+      goals,
+      calendarEvents,
+      settings,
+      brokerConnections,
+      syncLogs,
+      mistakes,
+      mentorReviews
+    ] = await Promise.all([
+      prisma.trade.findMany({
+        where: { userId: user.id },
+        orderBy: { entryTime: "desc" },
+      }).then(items => items.map(mapDbTradeToFrontend)),
+      
+      prisma.strategy.findMany({
+        where: { userId: user.id },
+        orderBy: { createdAt: "desc" },
+      }),
+      
+      prisma.goal.findMany({
+        where: { userId: user.id },
+        orderBy: { createdAt: "desc" },
+      }),
+      
+      prisma.calendarEvent.findMany({
+        where: { userId: user.id },
+        orderBy: { startTime: "asc" },
+      }),
+      
+      prisma.userSetting.findUnique({
+        where: { userId: user.id },
+      }).then(async (settings) => {
+        if (!settings) {
+          return await prisma.userSetting.create({
+            data: {
+              userId: user.id,
+              theme: "Light",
+              currency: "INR",
+              timezone: "Asia/Kolkata",
+              defaultRisk: 1.0,
+              defaultRr: 2.0,
+              includeBrokerage: true,
+              defaultDateRange: "This Week",
+              updatedAt: new Date(),
+            },
+          });
+        }
+        return settings;
+      }),
+      
+      prisma.brokerConnection.findMany({
+        where: { userId: user.id },
+        orderBy: { createdAt: "desc" },
+      }),
+      
+      prisma.brokerConnection.findMany({
+        where: { userId: user.id },
+      }).then(connections => {
+        const connectionIds = connections.map(c => c.id);
+        return prisma.syncLog.findMany({
+          where: { connectionId: { in: connectionIds } },
+          orderBy: { createdAt: "desc" },
+        });
+      }),
+      
+      prisma.mistake.findMany({
+        where: { userId: user.id },
+        include: { Trade: true },
+        orderBy: { createdAt: "desc" },
+      }),
+      
+      prisma.mentorReview.findMany({
+        where: { studentId: user.id },
+        include: { Trade: true },
+        orderBy: { createdAt: "desc" },
+      })
+    ]);
+
+    return {
+      trades,
+      strategies,
+      goals,
+      calendarEvents,
+      settings,
+      brokerConnections,
+      syncLogs,
+      mistakes,
+      mentorReviews
+    };
+  } catch (error) {
+    console.error("Error in getDashboardData server action:", error);
+    return {
+      trades: [],
+      strategies: [],
+      goals: [],
+      calendarEvents: [],
+      settings: null,
+      brokerConnections: [],
+      syncLogs: [],
+      mistakes: [],
+      mentorReviews: []
+    };
+  }
+}

@@ -27,7 +27,8 @@ import {
   addMistake,
   runAutoDetectMistakes,
   getMentorReviews,
-  addMentorReview
+  addMentorReview,
+  getDashboardData
 } from "@/app/actions/trades";
 import {
   TrendingUp,
@@ -291,34 +292,15 @@ export default function DashboardPage() {
 
     const loadAllData = async () => {
       try {
-        const [
-          dbTrades,
-          dbStrats,
-          dbGoals,
-          dbEvents,
-          dbSettings,
-          dbConnections,
-          dbLogs,
-          dbMistakes,
-          dbReviews
-        ] = await Promise.all([
-          getTrades(email),
-          getStrategies(email),
-          getGoals(email),
-          getCalendarEvents(email),
-          getUserSettings(email),
-          getBrokerConnections(email),
-          getSyncLogs(email),
-          getMistakes(email),
-          getMentorReviews(email)
-        ]);
+        const data = await getDashboardData(email);
 
-        setTrades(dbTrades);
-        setStrategies(dbStrats);
-        setGoals(dbGoals);
-        setCalendarEvents(dbEvents);
+        setTrades(data.trades);
+        setStrategies(data.strategies);
+        setGoals(data.goals);
+        setCalendarEvents(data.calendarEvents);
 
-        if (dbSettings) {
+        if (data.settings) {
+          const dbSettings = data.settings;
           setSettings(dbSettings);
           setSettingsTheme(dbSettings.theme);
           setSettingsCurrency(dbSettings.currency);
@@ -329,10 +311,10 @@ export default function DashboardPage() {
           setSettingsDateRange(dbSettings.defaultDateRange);
         }
 
-        setBrokerConnections(dbConnections);
-        setSyncLogs(dbLogs);
-        setMistakes(dbMistakes);
-        setMentorReviews(dbReviews);
+        setBrokerConnections(data.brokerConnections);
+        setSyncLogs(data.syncLogs);
+        setMistakes(data.mistakes);
+        setMentorReviews(data.mentorReviews);
 
         await fetchMistakeSummary();
       } catch (err) {
@@ -343,7 +325,7 @@ export default function DashboardPage() {
     };
 
     loadAllData();
-  }, [userEmail]);
+  }, []);
 
   // Load mistakes when Mistakes tab is active (No heavy auto-detect scanner runs on click)
   useEffect(() => {
