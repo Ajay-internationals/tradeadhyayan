@@ -29,7 +29,7 @@ export async function loginUser(email: string, passwordHash: string) {
     return { success: true, email: user.email };
   } catch (error) {
     console.error("Login error:", error);
-    return { success: false, error: "Server error occurred" };
+    return { success: false, error: "Server error: " + String(error) + " " + ((error as any).message || "") };
   }
 }
 
@@ -60,6 +60,6 @@ export async function registerUser(name: string, email: string, passwordHash: st
     return { success: true, email: user.email };
   } catch (error) {
     console.error("Registration error:", error);
-    return { success: false, error: "Server error occurred" };
+    return { success: false, error: "Server error: " + String(error) + " " + ((error as any).message || "") };
   }
 }
