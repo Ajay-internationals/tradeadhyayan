@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import {
@@ -159,6 +160,7 @@ export default function DashboardPage() {
   const [journalSubTab, setJournalSubTab] = useState<"single" | "upload" | "paste" | "broker">("single");
   const [goalsSubTab, setGoalsSubTab] = useState<"active" | "completed" | "all">("active");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const router = useRouter();
 
   const [authBrokerName, setAuthBrokerName] = useState<string | null>(null);
   const [brokerApiKey, setBrokerApiKey] = useState("");
