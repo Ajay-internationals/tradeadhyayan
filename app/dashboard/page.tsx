@@ -290,19 +290,33 @@ export default function DashboardPage() {
 
     const loadAllData = async () => {
       try {
-        const dbTrades = await getTrades(email);
+        const [
+          dbTrades,
+          dbStrats,
+          dbGoals,
+          dbEvents,
+          dbSettings,
+          dbConnections,
+          dbLogs,
+          dbMistakes,
+          dbReviews
+        ] = await Promise.all([
+          getTrades(email),
+          getStrategies(email),
+          getGoals(email),
+          getCalendarEvents(email),
+          getUserSettings(email),
+          getBrokerConnections(email),
+          getSyncLogs(email),
+          getMistakes(email),
+          getMentorReviews(email)
+        ]);
+
         setTrades(dbTrades);
-
-        const dbStrats = await getStrategies(email);
         setStrategies(dbStrats);
-
-        const dbGoals = await getGoals(email);
         setGoals(dbGoals);
-
-        const dbEvents = await getCalendarEvents(email);
         setCalendarEvents(dbEvents);
 
-        const dbSettings = await getUserSettings(email);
         if (dbSettings) {
           setSettings(dbSettings);
           setSettingsTheme(dbSettings.theme);
@@ -314,18 +328,12 @@ export default function DashboardPage() {
           setSettingsDateRange(dbSettings.defaultDateRange);
         }
 
-        const dbConnections = await getBrokerConnections(email);
         setBrokerConnections(dbConnections);
-
-        const dbLogs = await getSyncLogs(email);
         setSyncLogs(dbLogs);
-
-        const dbMistakes = await getMistakes(email);
         setMistakes(dbMistakes);
-        await fetchMistakeSummary();
-
-        const dbReviews = await getMentorReviews(email);
         setMentorReviews(dbReviews);
+
+        await fetchMistakeSummary();
       } catch (err) {
         console.error("Error loading data from database:", err);
       } finally {

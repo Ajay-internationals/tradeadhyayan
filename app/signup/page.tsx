@@ -16,27 +16,12 @@ export default function SignupPage() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email || !password) return;
+    if (!name || !email) return;
 
-    setLoading(true);
-    
-    try {
-      const result = await registerUser(name, email, password);
-
-      if (!result.success) {
-        toast.error(result.error || "Registration failed");
-        setLoading(false);
-        return;
-      }
-
-      // Auto login after successful registration
-      localStorage.setItem('trade_adhyayan_user', result.email!);
-      toast.success("Account created successfully!");
-      router.push("/dashboard");
-    } catch (error) {
-      toast.error("An error occurred during registration");
-      setLoading(false);
-    }
+    // Instant signup (no backend password validation)
+    localStorage.setItem('trade_adhyayan_user', email.trim().toLowerCase());
+    toast.success("Account created successfully!");
+    router.push("/dashboard");
   };
 
   return (

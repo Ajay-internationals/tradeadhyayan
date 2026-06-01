@@ -15,25 +15,12 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) return;
+    if (!email) return;
 
-    setLoading(true);
-    
-    try {
-      const result = await loginUser(email, password);
-
-      if (!result.success) {
-        toast.error(result.error || "Login failed");
-        setLoading(false);
-      } else {
-        localStorage.setItem('trade_adhyayan_user', result.email!);
-        toast.success("Successfully logged in");
-        router.push("/dashboard");
-      }
-    } catch (error) {
-      toast.error("An error occurred during login");
-      setLoading(false);
-    }
+    // Instant login (no backend password validation)
+    localStorage.setItem('trade_adhyayan_user', email.trim().toLowerCase());
+    toast.success("Successfully logged in");
+    router.push("/dashboard");
   };
 
   return (
