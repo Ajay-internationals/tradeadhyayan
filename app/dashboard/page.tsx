@@ -1248,7 +1248,7 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {!isLoading && totalTradesCount === 0 && activeTab !== "settings" && activeTab !== "tools" && (
+          {!isLoading && totalTradesCount === 0 && activeTab !== "settings" && activeTab !== "tools" && activeTab !== "journal" && activeTab !== "strategies" && activeTab !== "goals" && activeTab !== "calendar" && activeTab !== "mistakes" && activeTab !== "mentor" && (
             <div className="bg-white border border-[#E8EAF3] rounded-[24px] p-12 text-center max-w-xl mx-auto space-y-6 shadow-sm my-12">
               <div className="w-16 h-16 bg-[#F4F0FF] rounded-full flex items-center justify-center mx-auto text-[#7C4DFF]">
                 <Layers3 className="w-8 h-8" />
@@ -1257,16 +1257,30 @@ export default function DashboardPage() {
                 <h3 className="text-base font-bold text-slate-800">Add your first trade to generate insights</h3>
                 <p className="text-xs text-slate-500">Every statistic, curve, mistake auto-detection, and strategy report will compute automatically once you log trades.</p>
               </div>
-              <button 
-                onClick={() => { setActiveTab("journal"); setJournalSubTab("single"); }}
-                className="px-6 py-2.5 bg-[#7C4DFF] text-white text-xs font-bold rounded-xl shadow-md hover:bg-[#7C4DFF]/90 transition-all cursor-pointer"
-              >
-                Log Manual Entry
-              </button>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <button 
+                  onClick={() => { setActiveTab("journal"); setJournalSubTab("single"); }}
+                  className="px-6 py-2.5 bg-[#7C4DFF] text-white text-xs font-bold rounded-xl shadow-md hover:bg-[#7C4DFF]/90 transition-all cursor-pointer"
+                >
+                  Log Manual Entry
+                </button>
+                <button 
+                  onClick={() => { setActiveTab("journal"); setJournalSubTab("broker"); }}
+                  className="px-6 py-2.5 bg-slate-800 text-white text-xs font-bold rounded-xl shadow-md hover:bg-slate-900 transition-all cursor-pointer"
+                >
+                  Import from Broker
+                </button>
+                <button 
+                  onClick={() => { setActiveTab("journal"); setJournalSubTab("upload"); }}
+                  className="px-6 py-2.5 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 transition-all cursor-pointer"
+                >
+                  Upload CSV
+                </button>
+              </div>
             </div>
           )}
 
-          {!isLoading && (totalTradesCount > 0 || activeTab === "settings" || activeTab === "tools") && (
+          {!isLoading && (totalTradesCount > 0 || activeTab === "settings" || activeTab === "tools" || activeTab === "journal" || activeTab === "strategies" || activeTab === "goals" || activeTab === "calendar" || activeTab === "mistakes" || activeTab === "mentor") && (
             <>
               {/* TAB 1: DASHBOARD ANALYTICS */}
               {activeTab === "dashboard" && (
@@ -1837,35 +1851,103 @@ export default function DashboardPage() {
                   {/* SUBTAB: BROKER SYNC */}
                   {journalSubTab === "broker" && (
                     <div className="space-y-6">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                        {["Zerodha", "Upstox", "Dhan"].map((broker) => {
-                          const connection = brokerConnections.find(c => c.brokerName === broker);
+                      {/* Info Banner */}
+                      <div className="p-4 bg-amber-50 border border-amber-100 rounded-[18px] flex gap-3 items-start">
+                        <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-[10px] font-bold text-amber-800">Broker API Integration</p>
+                          <p className="text-[9px] text-amber-700 font-semibold mt-0.5">Enter your broker API credentials below to authorize and sync your live trades. Your keys are stored securely and never shared.</p>
+                        </div>
+                      </div>
+
+                      {/* Broker Cards */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                        {[
+                          { name: "Zerodha", color: "#387ED1", desc: "Kite Connect API" },
+                          { name: "Upstox", color: "#5C4EE5", desc: "Upstox Developer API" },
+                          { name: "AngelOne", color: "#E8441B", desc: "SmartAPI" },
+                          { name: "Dhan", color: "#00B386", desc: "Dhan HQ API" },
+                        ].map((broker) => {
+                          const connection = brokerConnections.find(c => c.brokerName === broker.name);
                           const isConnected = connection && connection.status === "CONNECTED";
                           return (
-                            <div key={broker} className="p-6 bg-white border border-[#E8EAF3] rounded-[24px] shadow-sm flex flex-col justify-between space-y-4">
-                              <div className="flex justify-between items-start">
-                                <span className="font-heading font-black text-sm text-slate-800">{broker} Sync</span>
-                                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${
+                            <div key={broker.name} className="p-5 bg-white border border-[#E8EAF3] rounded-[20px] shadow-sm flex flex-col gap-4">
+                              {/* Header */}
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <span className="font-black text-sm text-slate-800 block">{broker.name}</span>
+                                  <span className="text-[9px] text-slate-400 font-semibold">{broker.desc}</span>
+                                </div>
+                                <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase ${
                                   isConnected ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-slate-50 text-slate-400 border border-slate-100"
                                 }`}>
-                                  {isConnected ? "Connected" : "Disconnected"}
+                                  {isConnected ? "✓ Connected" : "Disconnected"}
                                 </span>
                               </div>
-                              <div className="space-y-2 pt-2">
+
+                              {/* API Key Fields */}
+                              {!isConnected && (
+                                <div className="space-y-2">
+                                  <input
+                                    type="text"
+                                    placeholder="API Key"
+                                    value={brokerApiKey}
+                                    onChange={e => setBrokerApiKey(e.target.value)}
+                                    className="w-full px-3 h-9 rounded-lg bg-slate-50 border border-slate-200 text-[10px] font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#7C4DFF] placeholder:text-slate-300"
+                                  />
+                                  <input
+                                    type="password"
+                                    placeholder="API Secret"
+                                    value={brokerApiSecret}
+                                    onChange={e => setBrokerApiSecret(e.target.value)}
+                                    className="w-full px-3 h-9 rounded-lg bg-slate-50 border border-slate-200 text-[10px] font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#7C4DFF] placeholder:text-slate-300"
+                                  />
+                                  <input
+                                    type="text"
+                                    placeholder="Client ID (optional)"
+                                    value={brokerClientId}
+                                    onChange={e => setBrokerClientId(e.target.value)}
+                                    className="w-full px-3 h-9 rounded-lg bg-slate-50 border border-slate-200 text-[10px] font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#7C4DFF] placeholder:text-slate-300"
+                                  />
+                                </div>
+                              )}
+
+                              {/* Action Buttons */}
+                              <div className="flex flex-col gap-2">
                                 {isConnected ? (
-                                  <button
-                                    onClick={() => handleTriggerBrokerSyncClick(broker)}
-                                    className="w-full py-2 bg-[#F4F0FF] hover:bg-[#7C4DFF]/10 text-[#7C4DFF] font-bold rounded-xl text-[10px] uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                                  >
-                                    <RefreshCw className="w-3.5 h-3.5" />
-                                    <span>Sync Live Trades</span>
-                                  </button>
+                                  <>
+                                    <button
+                                      onClick={() => handleTriggerBrokerSyncClick(broker.name)}
+                                      className="w-full py-2 bg-[#F4F0FF] hover:bg-[#7C4DFF]/10 text-[#7C4DFF] font-bold rounded-xl text-[10px] uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                                    >
+                                      <RefreshCw className="w-3.5 h-3.5" />
+                                      Sync Live Trades
+                                    </button>
+                                    <button
+                                      onClick={async () => {
+                                        await disconnectBroker(userEmail, broker.name);
+                                        const conns = await getBrokerConnections(userEmail);
+                                        setBrokerConnections(conns);
+                                        toast.success(`Disconnected from ${broker.name}`);
+                                      }}
+                                      className="w-full py-1.5 text-slate-400 font-bold rounded-xl text-[9px] uppercase tracking-wider hover:text-red-400 transition-colors cursor-pointer"
+                                    >
+                                      Disconnect
+                                    </button>
+                                  </>
                                 ) : (
                                   <button
-                                    onClick={() => handleBrokerConnectionAction(broker)}
-                                    className="w-full py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl text-[10px] uppercase tracking-wider transition-all cursor-pointer"
+                                    onClick={() => {
+                                      if (!brokerApiKey) { toast.error("Please enter your API Key"); return; }
+                                      handleBrokerConnectionAction(broker.name);
+                                      setBrokerApiKey("");
+                                      setBrokerApiSecret("");
+                                      setBrokerClientId("");
+                                    }}
+                                    className="w-full py-2 text-white font-bold rounded-xl text-[10px] uppercase tracking-wider transition-all cursor-pointer"
+                                    style={{ backgroundColor: broker.color }}
                                   >
-                                    Authorize API
+                                    Connect & Authorize
                                   </button>
                                 )}
                               </div>
@@ -1874,48 +1956,57 @@ export default function DashboardPage() {
                         })}
                       </div>
 
-                      {/* Sync logs history */}
-                      <div className="bg-white border border-[#E8EAF3] rounded-[24px] shadow-sm overflow-hidden">
-                        <div className="p-6 border-b border-[#ECEAF5]">
-                          <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Broker Synchronization Logs</h3>
+                      {/* Manual Upload fallback */}
+                      <div className="p-6 bg-white border border-[#E8EAF3] rounded-[20px] shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                        <div className="p-3 bg-emerald-50 rounded-xl text-emerald-600 shrink-0">
+                          <Upload className="w-5 h-5" />
                         </div>
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-left border-collapse">
-                            <thead>
-                              <tr className="border-b border-[#ECEAF5] bg-slate-50/50 text-[8px] text-slate-400 font-black uppercase tracking-wider">
-                                <th className="py-4 px-6">Connection ID</th>
-                                <th className="py-4 px-4">Data Type</th>
-                                <th className="py-4 px-4">Records Imported</th>
-                                <th className="py-4 px-4">Status</th>
-                                <th className="py-4 px-6">Timestamp</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 text-[10px] font-bold text-slate-600">
-                              {syncLogs.length > 0 ? (
-                                syncLogs.map((log) => (
-                                  <tr key={log.id}>
-                                    <td className="py-3.5 px-6 font-mono text-[9px]">{log.connectionId}</td>
-                                    <td className="py-3.5 px-4 uppercase">{log.dataType}</td>
-                                    <td className="py-3.5 px-4">{log.recordsCount} trades</td>
-                                    <td className="py-3.5 px-4">
-                                      <span className="bg-[#15B77A]/10 text-[#15B77A] px-2 py-0.5 rounded text-[8px] font-black uppercase">
-                                        {log.status}
-                                      </span>
-                                    </td>
-                                    <td className="py-3.5 px-6 text-slate-400 font-semibold">{new Date(log.createdAt).toLocaleString()}</td>
-                                  </tr>
-                                ))
-                              ) : (
-                                <tr>
-                                  <td colSpan={5} className="py-8 text-center text-slate-400 font-semibold">
-                                    No synchronizations logged yet.
-                                  </td>
-                                </tr>
-                              )}
-                            </tbody>
-                          </table>
+                        <div className="flex-1">
+                          <p className="text-xs font-bold text-slate-800">Don't have API access? Import manually</p>
+                          <p className="text-[9px] text-slate-400 font-semibold mt-0.5">Download your trade history CSV from your broker's back-office and upload it here.</p>
                         </div>
+                        <button
+                          onClick={() => setJournalSubTab("upload")}
+                          className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white text-[10px] font-bold rounded-xl uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap"
+                        >
+                          Upload CSV Instead
+                        </button>
                       </div>
+
+                      {/* Sync Logs */}
+                      {syncLogs.length > 0 && (
+                        <div className="bg-white border border-[#E8EAF3] rounded-[24px] shadow-sm overflow-hidden">
+                          <div className="p-5 border-b border-[#ECEAF5]">
+                            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Recent Sync Logs</h3>
+                          </div>
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                              <thead>
+                                <tr className="border-b border-[#ECEAF5] bg-slate-50/50 text-[8px] text-slate-400 font-black uppercase tracking-wider">
+                                  <th className="py-3 px-5">Broker</th>
+                                  <th className="py-3 px-4">Records</th>
+                                  <th className="py-3 px-4">Status</th>
+                                  <th className="py-3 px-5">Time</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100 text-[10px] font-bold text-slate-600">
+                                {syncLogs.slice(0, 8).map((log) => (
+                                  <tr key={log.id}>
+                                    <td className="py-3 px-5">{log.connectionId.split("_")[0] || "Broker"}</td>
+                                    <td className="py-3 px-4">{log.recordsCount} trades</td>
+                                    <td className="py-3 px-4">
+                                      <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${
+                                        log.status === "SUCCESS" ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-500"
+                                      }`}>{log.status}</span>
+                                    </td>
+                                    <td className="py-3 px-5 text-slate-400">{new Date(log.createdAt).toLocaleDateString()}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
