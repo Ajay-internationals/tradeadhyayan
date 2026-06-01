@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { loginUser } from "@/app/actions/auth";
 import toast from "react-hot-toast";
 import { Activity, Mail, Lock, ArrowRight } from "lucide-react";
 
@@ -19,7 +20,6 @@ export default function LoginPage() {
     setLoading(true);
     
     try {
-      const { loginUser } = await import("@/app/actions/auth");
       const result = await loginUser(email, password);
 
       if (!result.success) {

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { registerUser } from "@/app/actions/auth";
 import toast from "react-hot-toast";
 import { Activity, Mail, User, Lock, ArrowRight } from "lucide-react";
 
@@ -20,7 +21,6 @@ export default function SignupPage() {
     setLoading(true);
     
     try {
-      const { registerUser } = await import("@/app/actions/auth");
       const result = await registerUser(name, email, password);
 
       if (!result.success) {
