@@ -1268,98 +1268,233 @@ export async function addMentorReview(
 
 export async function getDashboardData(email: string) {
   try {
-    const user = await getOrCreateUser(email);
+    const userEmail = email.trim().toLowerCase();
     
-    const [
-      trades,
-      strategies,
-      goals,
-      calendarEvents,
-      settings,
-      brokerConnections,
-      syncLogs,
-      mistakes,
-      mentorReviews
-    ] = await Promise.all([
-      prisma.trade.findMany({
-        where: { userId: user.id },
-        orderBy: { entryTime: "desc" },
-      }).then(items => items.map(mapDbTradeToFrontend)),
-      
-      prisma.strategy.findMany({
-        where: { userId: user.id },
-        orderBy: { createdAt: "desc" },
-      }),
-      
-      prisma.goal.findMany({
-        where: { userId: user.id },
-        orderBy: { createdAt: "desc" },
-      }),
-      
-      prisma.calendarEvent.findMany({
-        where: { userId: user.id },
-        orderBy: { startTime: "asc" },
-      }),
-      
-      prisma.userSetting.findUnique({
-        where: { userId: user.id },
-      }).then(async (settings) => {
-        if (!settings) {
-          return await prisma.userSetting.create({
-            data: {
-              userId: user.id,
-              theme: "Light",
-              currency: "INR",
-              timezone: "Asia/Kolkata",
-              defaultRisk: 1.0,
-              defaultRr: 2.0,
-              includeBrokerage: true,
-              defaultDateRange: "This Week",
-              updatedAt: new Date(),
-            },
-          });
+    // 1. Fetch user and ALL required relations in a single db round-trip
+    let user = await prisma.user.findUnique({
+      where: { email: userEmail },
+      include: {
+        Trade: { orderBy: { entryTime: "desc" } },
+        Strategy: { orderBy: { createdAt: "desc" } },
+        Goal: { orderBy: { createdAt: "desc" } },
+        CalendarEvent: { orderBy: { startTime: "asc" } },
+        UserSetting: true,
+        BrokerConnection: {
+          include: {
+            SyncLog: true
+          },
+          orderBy: { createdAt: "desc" }
+        },
+        Mistake: {
+          include: { Trade: true },
+          orderBy: { createdAt: "desc" }
+        },
+        MentorReview_MentorReview_studentIdToUser: {
+          include: { Trade: true },
+          orderBy: { createdAt: "desc" }
         }
-        return settings;
-      }),
-      
-      prisma.brokerConnection.findMany({
-        where: { userId: user.id },
-        orderBy: { createdAt: "desc" },
-      }),
-      
-      prisma.brokerConnection.findMany({
-        where: { userId: user.id },
-      }).then(connections => {
-        const connectionIds = connections.map(c => c.id);
-        return prisma.syncLog.findMany({
-          where: { connectionId: { in: connectionIds } },
-          orderBy: { createdAt: "desc" },
-        });
-      }),
-      
-      prisma.mistake.findMany({
-        where: { userId: user.id },
-        include: { Trade: true },
-        orderBy: { createdAt: "desc" },
-      }),
-      
-      prisma.mentorReview.findMany({
-        where: { studentId: user.id },
-        include: { Trade: true },
-        orderBy: { createdAt: "desc" },
-      })
-    ]);
+      }
+    });
+
+    if (!user) {
+      await getOrCreateUser(email);
+      user = await prisma.user.findUnique({
+        where: { email: userEmail },
+        include: {
+          Trade: { orderBy: { entryTime: "desc" } },
+          Strategy: { orderBy: { createdAt: "desc" } },
+          Goal: { orderBy: { createdAt: "desc" } },
+          CalendarEvent: { orderBy: { startTime: "asc" } },
+          UserSetting: true,
+          BrokerConnection: {
+            include: {
+              SyncLog: true
+            },
+            orderBy: { createdAt: "desc" }
+          },
+          Mistake: {
+            include: { Trade: true },
+            orderBy: { createdAt: "desc" }
+          },
+          MentorReview_MentorReview_studentIdToUser: {
+            include: { Trade: true },
+            orderBy: { createdAt: "desc" }
+          }
+        }
+      });
+    }
+
+    if (!user) {
+      throw new Error("User not found or could not be created.");
+    }
+
+    // 2. Map and parse UserSetting (Create if not exists)
+    let settings = user.UserSetting;
+    if (!settings) {
+      settings = await prisma.userSetting.create({
+        data: {
+          userId: user.id,
+          theme: "Light",
+          currency: "INR",
+          timezone: "Asia/Kolkata",
+          defaultRisk: 1.0,
+          defaultRr: 2.0,
+          includeBrokerage: true,
+          defaultDateRange: "This Week",
+          updatedAt: new Date(),
+        },
+      });
+    }
+
+    // 3. Map trades to frontend format
+    const trades = user.Trade.map(mapDbTradeToFrontend);
+
+    // 4. Flatten and sort sync logs from BrokerConnections
+    const syncLogs = user.BrokerConnection.flatMap(bc => bc.SyncLog)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+    // 5. In-memory calculate mistakeSummary
+    const tradesAsc = [...user.Trade].sort((a, b) => a.entryTime.getTime() - b.entryTime.getTime());
+    const mistakesForSummary = user.Mistake;
+
+    const totalTradesCount = tradesAsc.length;
+    const closedTradesCount = tradesAsc.filter(t => t.result !== "BREAKEVEN" && t.exitPrice > 0).length;
+
+    const totalMistakesCount = mistakesForSummary.length;
+    const mistakeTradeIds = new Set(mistakesForSummary.map(m => m.tradeId));
+    const mistakeTradesCount = mistakeTradeIds.size;
+
+    const mistakeTrades = tradesAsc.filter(t => mistakeTradeIds.has(t.id));
+    const totalLossFromMistakes = mistakeTrades
+      .filter(t => t.netPnl < 0)
+      .reduce((sum, t) => sum + Math.abs(t.netPnl), 0);
+
+    const mistakeRate = totalTradesCount > 0 
+      ? Math.round((mistakeTradesCount / totalTradesCount) * 100) 
+      : 0;
+
+    const breakdownMap: Record<string, number> = {};
+    mistakesForSummary.forEach(m => {
+      breakdownMap[m.mistakeType] = (breakdownMap[m.mistakeType] || 0) + 1;
+    });
+
+    const breakdown = Object.entries(breakdownMap).map(([type, count]) => ({
+      type,
+      count
+    })).sort((a, b) => b.count - a.count);
+
+    const repeatMistakes = breakdown.filter(b => b.count > 1).map(b => b.type);
+    const repeatPenalty = repeatMistakes.length * 5;
+    const improvementScore = Math.max(0, 100 - mistakeRate - repeatPenalty);
+
+    const overTimeMap: Record<string, number> = {};
+    mistakesForSummary.forEach(m => {
+      const dateStr = new Date(m.createdAt).toLocaleDateString([], { month: "short", day: "numeric" });
+      overTimeMap[dateStr] = (overTimeMap[dateStr] || 0) + 1;
+    });
+    const overTime = Object.entries(overTimeMap).map(([date, count]) => ({
+      date,
+      count
+    }));
+
+    const insights: string[] = [];
+    const settingsObj = settings || {
+      maxTradesPerDay: 3,
+      revengeTradeWindowMinutes: 30,
+      minRr: 2.0,
+      intradayCutoffTime: "15:30",
+      allowedEntryDeviationPercent: 0.30,
+      defaultRisk: 1.0,
+    };
+
+    if (closedTradesCount < 10) {
+      insights.push("Add at least 10 closed trades to generate mistake insights.");
+    } else {
+      const overtradingAfter12 = mistakesForSummary.filter(m => {
+        if (m.mistakeType !== "Overtrading") return false;
+        if (!m.Trade) return false;
+        const entryHour = new Date(m.Trade.entryTime).getHours();
+        return entryHour >= 12;
+      }).length;
+      if (overtradingAfter12 > 0) {
+        insights.push("Overtrading increases after 12 PM. Lock your terminal before the afternoon session.");
+      }
+
+      let winStreakLapses = 0;
+      for (let i = 2; i < tradesAsc.length; i++) {
+        const prev1 = tradesAsc[i - 1];
+        const prev2 = tradesAsc[i - 2];
+        const curr = tradesAsc[i];
+        if (prev1.netPnl > 0 && prev2.netPnl > 0 && mistakeTradeIds.has(curr.id)) {
+          winStreakLapses++;
+        }
+      }
+      if (winStreakLapses > 0) {
+        insights.push("You make more mistakes after 2 consecutive winning trades. Watch out for overconfidence.");
+      }
+
+      const emotionalLossCount = mistakesForSummary.filter(m => m.mistakeType === "Emotional Trading" && m.Trade && m.Trade.netPnl < 0).length;
+      if (emotionalLossCount >= 2) {
+        insights.push("Most losses come from emotional trading. Keep a cooling period after any trigger.");
+      }
+
+      const tradesByDate: Record<string, typeof tradesAsc> = {};
+      tradesAsc.forEach((t) => {
+        const dateStr = new Date(t.entryTime).toDateString();
+        if (!tradesByDate[dateStr]) tradesByDate[dateStr] = [];
+        tradesByDate[dateStr].push(t);
+      });
+
+      let highTradeDaysCount = 0;
+      let highTradeDaysWins = 0;
+      let lowTradeDaysCount = 0;
+      let lowTradeDaysWins = 0;
+
+      Object.values(tradesByDate).forEach(dayTrades => {
+        if (dayTrades.length > 3) {
+          highTradeDaysCount += dayTrades.length;
+          highTradeDaysWins += dayTrades.filter(t => t.netPnl > 0).length;
+        } else {
+          lowTradeDaysCount += dayTrades.length;
+          lowTradeDaysWins += dayTrades.filter(t => t.netPnl > 0).length;
+        }
+      });
+
+      const highWinRate = highTradeDaysCount > 0 ? highTradeDaysWins / highTradeDaysCount : 0;
+      const lowWinRate = lowTradeDaysCount > 0 ? lowTradeDaysWins / lowTradeDaysCount : 0;
+      if (lowWinRate > highWinRate) {
+        insights.push("Your win rate drops when you take more than 3 trades per day. Stick to your daily limit.");
+      }
+
+      const earlyExits = mistakesForSummary.filter(m => m.mistakeType === "Early Exit");
+      if (earlyExits.length > 0) {
+        insights.push("Your early exits reduce your average reward. Let your winning setups reach the target.");
+      }
+    }
+
+    const mistakeSummary = {
+      totalMistakes: totalMistakesCount,
+      mistakeTrades: mistakeTradesCount,
+      totalLossFromMistakes,
+      repeatMistakes,
+      mistakeRate,
+      improvementScore,
+      breakdown,
+      overTime,
+      insights
+    };
 
     return {
       trades,
-      strategies,
-      goals,
-      calendarEvents,
+      strategies: user.Strategy,
+      goals: user.Goal,
+      calendarEvents: user.CalendarEvent,
       settings,
-      brokerConnections,
+      brokerConnections: user.BrokerConnection,
       syncLogs,
-      mistakes,
-      mentorReviews
+      mistakes: user.Mistake,
+      mentorReviews: user.MentorReview_MentorReview_studentIdToUser,
+      mistakeSummary
     };
   } catch (error) {
     console.error("Error in getDashboardData server action:", error);
@@ -1372,7 +1507,8 @@ export async function getDashboardData(email: string) {
       brokerConnections: [],
       syncLogs: [],
       mistakes: [],
-      mentorReviews: []
+      mentorReviews: [],
+      mistakeSummary: null
     };
   }
 }

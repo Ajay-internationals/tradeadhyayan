@@ -267,9 +267,11 @@ export default function DashboardPage() {
   const [filterEmotion, setFilterEmotion] = useState("All");
   const [filterType, setFilterType] = useState("All");
 
-  const fetchMistakeSummary = async () => {
+  const fetchMistakeSummary = async (emailParam?: string) => {
     try {
-      const res = await fetch("/api/mistakes/summary");
+      const email = emailParam || userEmail || localStorage.getItem('trade_adhyayan_user') || "";
+      if (!email) return;
+      const res = await fetch(`/api/mistakes/summary?email=${encodeURIComponent(email)}`);
       if (res.ok) {
         const data = await res.json();
         setMistakeSummary(data);
@@ -316,7 +318,9 @@ export default function DashboardPage() {
         setMistakes(data.mistakes);
         setMentorReviews(data.mentorReviews);
 
-        await fetchMistakeSummary();
+        if (data.mistakeSummary) {
+          setMistakeSummary(data.mistakeSummary);
+        }
       } catch (err) {
         console.error("Error loading data from database:", err);
       } finally {
@@ -334,7 +338,7 @@ export default function DashboardPage() {
         try {
           const dbMistakes = await getMistakes(userEmail);
           setMistakes(dbMistakes);
-          await fetchMistakeSummary();
+          await fetchMistakeSummary(userEmail);
         } catch (e) {
           console.error("Error loading mistakes:", e);
         }

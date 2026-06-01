@@ -3,9 +3,20 @@ import { prisma } from "@/lib/db";
 
 const DEFAULT_USER_ID = "00000000-0000-0000-0000-000000000001";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const userId = DEFAULT_USER_ID;
+    const { searchParams } = new URL(request.url);
+    const email = searchParams.get("email");
+    
+    let userId = DEFAULT_USER_ID;
+    if (email) {
+      const user = await prisma.user.findUnique({
+        where: { email: email.trim().toLowerCase() }
+      });
+      if (user) {
+        userId = user.id;
+      }
+    }
 
     // Fetch trades and mistakes
     const trades = await prisma.trade.findMany({
