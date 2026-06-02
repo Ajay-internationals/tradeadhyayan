@@ -1512,3 +1512,410 @@ export async function getDashboardData(email: string) {
     };
   }
 }
+
+export async function getMentorshipOverview(email: string) {
+  try {
+    const user = await getOrCreateUser(email);
+    
+    // Find active assignment
+    const assignment = await prisma.mentorClient.findUnique({
+      where: { clientId: user.id },
+      include: {
+        Mentor: true
+      }
+    });
+
+    // Find review requests
+    const reviewRequests = await prisma.reviewRequest.findMany({
+      where: { clientId: user.id },
+      include: {
+        MentorshipReview: true,
+        Mentor: true
+      },
+      orderBy: { submittedAt: "desc" }
+    });
+
+    return {
+      userRole: user.role,
+      assignedMentor: assignment?.status === "ACTIVE" ? assignment.Mentor : null,
+      reviewRequests
+    };
+  } catch (error) {
+    console.error("Error in getMentorshipOverview:", error);
+    throw new Error("Failed to get mentorship overview.");
+  }
+}
+
+export async function submitReviewRequest(
+  email: string,
+  selectedTradeIds: string[],
+  clientNotes: string,
+  disciplineRating: number
+) {
+  try {
+    const user = await getOrCreateUser(email);
+    
+    // Find active assignment
+    const assignment = await prisma.mentorClient.findUnique({
+      where: { clientId: user.id },
+      include: { Mentor: true }
+    });
+    
+    if (!assignment || assignment.status !== "ACTIVE") {
+      throw new Error("No active mentor assigned. Please contact the administrator.");
+    }
+    
+    const id = `rr_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    return await prisma.reviewRequest.create({
+      data: {
+        id,
+        clientId: user.id,
+        mentorId: assignment.mentorId,
+        selectedTradeIds,
+        clientNotes,
+        disciplineRating,
+        status: "PENDING",
+        submittedAt: new Date()
+      }
+    });
+  } catch (error: any) {
+    console.error("Error in submitReviewRequest:", error);
+    throw new Error(error.message || "Failed to submit review request.");
+  }
+}
+
+export async function getMentorClients(mentorEmail: string) {
+  try {
+    const mentor = await prisma.mentor.findUnique({
+      where: { email: mentorEmail.trim().toLowerCase() }
+    });
+    
+    if (!mentor) {
+      return [];
+    }
+    
+    const assignments = await prisma.mentorClient.findMany({
+      where: { mentorId: mentor.id, status: "ACTIVE" },
+      include: {
+        Client: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            initialCapital: true,
+            Trade: {
+              orderBy: { entryTime: "desc" }
+            }
+          }
+        }
+      }
+    });
+    
+    return assignments.map(a => ({
+      ...a.Client,
+      assignedDate: a.assignedDate,
+      status: a.status
+    }));
+  } catch (error) {
+    console.error("Error in getMentorClients:", error);
+    return [];
+  }
+}
+
+export async function getReviewQueue(mentorEmail: string) {
+  try {
+    const mentor = await prisma.mentor.findUnique({
+      where: { email: mentorEmail.trim().toLowerCase() }
+    });
+    
+    if (!mentor) {
+      return [];
+    }
+    
+    return await prisma.reviewRequest.findMany({
+      where: { mentorId: mentor.id },
+      include: {
+        Client: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        MentorshipReview: true
+      },
+      orderBy: { submittedAt: "desc" }
+    });
+  } catch (error) {
+    console.error("Error in getReviewQueue:", error);
+    return [];
+  }
+}
+
+export async function submitMentorshipReview(
+  mentorEmail: string,
+  requestId: string,
+  scores: {
+    executionScore: number;
+    riskScore: number;
+    psychologyScore: number;
+    disciplineScore: number;
+  },
+  feedback: {
+    strengths?: string;
+    improvements?: string;
+    mistakesObserved?: string;
+    actionPlan?: string;
+    nextWeekFocus?: string;
+    mentorRemark?: string;
+  }
+) {
+  try {
+    const mentor = await prisma.mentor.findUnique({
+      where: { email: mentorEmail.trim().toLowerCase() }
+    });
+    
+    if (!mentor) {
+      throw new Error("Mentor not found.");
+    }
+    
+    const request = await prisma.reviewRequest.findUnique({
+      where: { id: requestId }
+    });
+    
+    if (!request) {
+      throw new Error("Review request not found.");
+    }
+    
+    const { executionScore, riskScore, psychologyScore, disciplineScore } = scores;
+    const overallScore = (executionScore + riskScore + psychologyScore + disciplineScore) / 4;
+    
+    const reviewId = `mr_${Date.now()}`;
+    
+    return await prisma.$transaction(async (tx) => {
+      const review = await tx.mentorshipReview.create({
+        data: {
+          id: reviewId,
+          reviewRequestId: requestId,
+          clientId: request.clientId,
+          mentorId: mentor.id,
+          executionScore,
+          riskScore,
+          psychologyScore,
+          disciplineScore,
+          overallScore,
+          strengths: feedback.strengths,
+          improvements: feedback.improvements,
+          mistakesObserved: feedback.mistakesObserved,
+          actionPlan: feedback.actionPlan,
+          nextWeekFocus: feedback.nextWeekFocus,
+          mentorRemark: feedback.mentorRemark
+        }
+      });
+      
+      await tx.reviewRequest.update({
+        where: { id: requestId },
+        data: {
+          status: "COMPLETED",
+          completedAt: new Date()
+        }
+      });
+      
+      return review;
+    });
+  } catch (error: any) {
+    console.error("Error in submitMentorshipReview:", error);
+    throw new Error(error.message || "Failed to submit mentorship review.");
+  }
+}
+
+export async function getAdminOverview() {
+  try {
+    const mentors = await prisma.mentor.findMany({
+      include: {
+        MentorClient: {
+          where: { status: "ACTIVE" }
+        }
+      }
+    });
+
+    const clients = await prisma.user.findMany({
+      where: { role: "CLIENT" },
+      include: {
+        MentorClient_AsClient: true
+      }
+    });
+
+    const reviewRequests = await prisma.reviewRequest.findMany({
+      include: {
+        Client: {
+          select: { name: true, email: true }
+        },
+        Mentor: true
+      },
+      orderBy: { submittedAt: "desc" }
+    });
+
+    const unassignedClients = clients.filter(c => !c.MentorClient_AsClient);
+
+    return {
+      mentors: mentors.map(m => ({
+        id: m.id,
+        name: m.name,
+        email: m.email,
+        phone: m.phone,
+        designation: m.designation,
+        bio: m.bio,
+        experience: m.experience,
+        specialization: m.specialization,
+        capacity: m.capacity,
+        payoutShare: m.payoutShare,
+        profileImage: m.profileImage,
+        status: m.status,
+        activeClientsCount: m.MentorClient.length
+      })),
+      unassignedClients: unassignedClients.map(c => ({
+        id: c.id,
+        name: c.name,
+        email: c.email,
+        createdAt: c.createdAt
+      })),
+      reviewRequests
+    };
+  } catch (error) {
+    console.error("Error in getAdminOverview:", error);
+    throw new Error("Failed to get admin overview.");
+  }
+}
+
+export async function addMentor(data: {
+  name: string;
+  email: string;
+  phone?: string;
+  designation?: string;
+  bio?: string;
+  experience?: string;
+  specialization?: string;
+  capacity?: number;
+  payoutShare?: number;
+}) {
+  try {
+    const email = data.email.trim().toLowerCase();
+    
+    let user = await prisma.user.findUnique({
+      where: { email }
+    });
+    
+    return await prisma.$transaction(async (tx) => {
+      if (!user) {
+        user = await tx.user.create({
+          data: {
+            id: `usr_mentor_${Date.now()}`,
+            name: data.name,
+            email,
+            passwordHash: "simulated_hash",
+            role: "MENTOR",
+            updatedAt: new Date()
+          }
+        });
+      } else {
+        user = await tx.user.update({
+          where: { id: user.id },
+          data: { role: "MENTOR" }
+        });
+      }
+      
+      const existingMentor = await tx.mentor.findUnique({
+        where: { userId: user.id }
+      });
+      
+      if (existingMentor) {
+        throw new Error("User is already registered as a mentor.");
+      }
+      
+      return await tx.mentor.create({
+        data: {
+          id: `men_${Date.now()}`,
+          userId: user.id,
+          name: data.name,
+          email,
+          phone: data.phone,
+          designation: data.designation,
+          bio: data.bio,
+          experience: data.experience,
+          specialization: data.specialization,
+          capacity: data.capacity ?? 10,
+          payoutShare: data.payoutShare ?? 40.0,
+          status: "ACTIVE"
+        }
+      });
+    });
+  } catch (error: any) {
+    console.error("Error in addMentor:", error);
+    throw new Error(error.message || "Failed to add mentor.");
+  }
+}
+
+export async function assignClientToMentor(clientId: string, mentorId: string) {
+  try {
+    const mentor = await prisma.mentor.findUnique({
+      where: { id: mentorId },
+      include: {
+        MentorClient: {
+          where: { status: "ACTIVE" }
+        }
+      }
+    });
+    
+    if (!mentor) {
+      throw new Error("Mentor not found.");
+    }
+    
+    if (mentor.MentorClient.length >= mentor.capacity) {
+      throw new Error(`Mentor capacity limit reached. Maximum limit: ${mentor.capacity}.`);
+    }
+    
+    const client = await prisma.user.findUnique({
+      where: { id: clientId }
+    });
+    
+    if (!client) {
+      throw new Error("Client not found.");
+    }
+    
+    const mcId = `mc_${Date.now()}`;
+    
+    return await prisma.mentorClient.upsert({
+      where: { clientId },
+      update: {
+        mentorId,
+        status: "ACTIVE",
+        assignedDate: new Date()
+      },
+      create: {
+        id: mcId,
+        mentorId,
+        clientId,
+        status: "ACTIVE",
+        assignedDate: new Date()
+      }
+    });
+  } catch (error: any) {
+    console.error("Error in assignClientToMentor:", error);
+    throw new Error(error.message || "Failed to assign client to mentor.");
+  }
+}
+
+export async function setUserRole(email: string, role: string) {
+  try {
+    const user = await getOrCreateUser(email);
+    return await prisma.user.update({
+      where: { id: user.id },
+      data: { role }
+    });
+  } catch (error) {
+    console.error("Error in setUserRole:", error);
+    throw new Error("Failed to set user role.");
+  }
+}

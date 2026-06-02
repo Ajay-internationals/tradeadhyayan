@@ -28,7 +28,9 @@ import {
   runAutoDetectMistakes,
   getMentorReviews,
   addMentorReview,
-  getDashboardData
+  getDashboardData,
+  getMentorshipOverview,
+  submitReviewRequest
 } from "@/app/actions/trades";
 import {
   TrendingUp,
@@ -229,6 +231,15 @@ export default function DashboardPage() {
   const [mentorImprovements, setMentorImprovements] = useState("");
   const [mentorReviews, setMentorReviews] = useState<any[]>([]);
 
+  // Mentorship System states
+  const [mentorshipData, setMentorshipData] = useState<any>(null);
+  const [mentorshipSubTab, setMentorshipSubTab] = useState<"overview" | "submit" | "reviews">("overview");
+  const [selectedReviewTradeIds, setSelectedReviewTradeIds] = useState<string[]>([]);
+  const [reviewNotes, setReviewNotes] = useState("");
+  const [disciplineRating, setDisciplineRating] = useState(5);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [isMentorshipLoading, setIsMentorshipLoading] = useState(false);
+
   // Tools Form Calculators
   const [calcCapital, setCalcCapital] = useState("100000");
   const [calcRiskPct, setCalcRiskPct] = useState("1");
@@ -278,6 +289,53 @@ export default function DashboardPage() {
       }
     } catch (err) {
       console.error("Error fetching mistake summary:", err);
+    }
+  };
+
+  const fetchMentorshipData = async (emailParam?: string) => {
+    try {
+      const email = emailParam || userEmail;
+      if (!email) return;
+      setIsMentorshipLoading(true);
+      const data = await getMentorshipOverview(email);
+      setMentorshipData(data);
+    } catch (err) {
+      console.error("Error loading mentorship data:", err);
+    } finally {
+      setIsMentorshipLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "mentor" && userEmail) {
+      fetchMentorshipData();
+    }
+  }, [activeTab, userEmail]);
+
+  const handleSubmitReviewRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (selectedReviewTradeIds.length === 0) {
+      toast.error("Please select at least one trade to submit.");
+      return;
+    }
+    try {
+      setIsSubmittingReview(true);
+      await submitReviewRequest(
+        userEmail,
+        selectedReviewTradeIds,
+        reviewNotes,
+        disciplineRating
+      );
+      toast.success("Mentorship review request submitted successfully! 🎓");
+      setSelectedReviewTradeIds([]);
+      setReviewNotes("");
+      setDisciplineRating(5);
+      setMentorshipSubTab("reviews");
+      await fetchMentorshipData();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to submit review request.");
+    } finally {
+      setIsSubmittingReview(false);
     }
   };
 
@@ -2465,179 +2523,432 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              {/* TAB 5: MENTOR REVIEW */}
+              {/* TAB 5: MENTOR REVIEW (CLIENT MENTORSHIP DASHBOARD) */}
               {activeTab === "mentor" && (
                 <div className="space-y-8 animate-fade-in text-left">
-                  {/* Mentor KPIs */}
-                  <div className="grid grid-cols-4 gap-6">
-                    <div className="p-5 bg-white border border-[#E8EAF3] rounded-[24px] shadow-sm space-y-1">
-                      <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider">Average Mentor Score</span>
-                      <p className="text-xl font-black text-slate-800">
-                        {mentorReviews.length > 0 ? (mentorReviews.reduce((acc, r) => acc + r.score, 0) / mentorReviews.length).toFixed(1) : "0.0"}
-                      </p>
-                    </div>
-                    <div className="p-5 bg-white border border-[#E8EAF3] rounded-[24px] shadow-sm space-y-1">
-                      <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider">Total Reviewed</span>
-                      <p className="text-xl font-black text-slate-800">{mentorReviews.length}</p>
-                    </div>
-                    <div className="p-5 bg-white border border-[#E8EAF3] rounded-[24px] shadow-sm space-y-1">
-                      <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider">Pending Reviews</span>
-                      <p className="text-xl font-black text-slate-800">
-                        {trades.filter(t => t.pnl < 0 && !mentorReviews.some(r => r.tradeId === t.id)).length}
-                      </p>
-                    </div>
-                    <div className="p-5 bg-white border border-[#E8EAF3] rounded-[24px] shadow-sm space-y-1">
-                      <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider">Top Strength</span>
-                      <p className="text-xl font-black text-[#15B77A]">Patience</p>
-                    </div>
+                  {/* Mentorship Sub-Tab Headers */}
+                  <div className="flex space-x-6 border-b border-[#E8EAF3] pb-3">
+                    {[
+                      { id: "overview", label: "Overview" },
+                      { id: "submit", label: "Submit Review" },
+                      { id: "reviews", label: "Past Reviews" }
+                    ].map((tab) => (
+                      <button
+                        key={tab.id}
+                        onClick={() => setMentorshipSubTab(tab.id as any)}
+                        className={`text-xs font-black uppercase tracking-wider pb-2 transition-all border-b-2 cursor-pointer ${
+                          mentorshipSubTab === tab.id
+                            ? "border-slate-800 text-slate-800"
+                            : "border-transparent text-[#8C8CA1] hover:text-slate-600"
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
                   </div>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                    {/* Submit Feedback Form */}
-                    <div className="lg:col-span-4 bg-white border border-[#E8EAF3] rounded-[24px] p-6 shadow-sm space-y-4">
-                      <div>
-                        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Submit Review Log</h3>
-                        <p className="text-[9px] text-[#8C8CA1] font-semibold mt-0.5">Log mentor notes and evaluation marks on trades</p>
+                  {isMentorshipLoading ? (
+                    <div className="space-y-6">
+                      <div className="h-32 bg-slate-50 border border-slate-100 rounded-[24px] animate-pulse" />
+                      <div className="grid grid-cols-4 gap-6">
+                        {[1, 2, 3, 4].map((i) => (
+                          <div key={i} className="h-20 bg-slate-50 border border-slate-100 rounded-[20px] animate-pulse" />
+                        ))}
                       </div>
-
-                      <form onSubmit={handleAddMentorReview} className="space-y-3.5">
-                        <div className="space-y-1">
-                          <label className="text-[8px] font-black uppercase text-[#8C8CA1] ml-1">Select Ticker Trade</label>
-                          <select
-                            required
-                            value={mentorTradeId}
-                            onChange={(e) => setMentorTradeId(e.target.value)}
-                            className="w-full px-4 h-10 rounded-xl bg-slate-50 border border-slate-100 text-xs font-bold text-slate-700 focus:outline-none"
-                          >
-                            <option value="">-- Choose Trade --</option>
-                            {trades.map((t) => (
-                              <option key={t.id} value={t.id}>
-                                {t.asset} ({t.type}) - P&L: ₹{t.pnl.toLocaleString()}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="space-y-1">
-                          <label className="text-[8px] font-black uppercase text-[#8C8CA1] ml-1">Execution Quality Score (1-100)</label>
-                          <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            required
-                            placeholder="e.g. 85"
-                            value={mentorScore}
-                            onChange={(e) => setMentorScore(e.target.value)}
-                            className="w-full px-4 h-10 rounded-xl bg-slate-50 border border-slate-100 text-xs font-bold text-slate-700 focus:outline-none"
-                          />
-                        </div>
-
-                        <div className="space-y-1">
-                          <label className="text-[8px] font-black uppercase text-[#8C8CA1] ml-1">Key Strengths (comma separated)</label>
-                          <input
-                            type="text"
-                            placeholder="e.g. Patience, Setup followed"
-                            value={mentorStrengths}
-                            onChange={(e) => setMentorStrengths(e.target.value)}
-                            className="w-full px-4 h-10 rounded-xl bg-slate-50 border border-slate-100 text-xs font-bold text-slate-700 focus:outline-none"
-                          />
-                        </div>
-
-                        <div className="space-y-1">
-                          <label className="text-[8px] font-black uppercase text-[#8C8CA1] ml-1">Improvement Areas (comma separated)</label>
-                          <input
-                            type="text"
-                            placeholder="e.g. Early Exit, Oversizing"
-                            value={mentorImprovements}
-                            onChange={(e) => setMentorImprovements(e.target.value)}
-                            className="w-full px-4 h-10 rounded-xl bg-slate-50 border border-slate-100 text-xs font-bold text-slate-700 focus:outline-none"
-                          />
-                        </div>
-
-                        <div className="space-y-1">
-                          <label className="text-[8px] font-black uppercase text-[#8C8CA1] ml-1">Mentor's Notes</label>
-                          <textarea
-                            rows={3}
-                            required
-                            placeholder="Provide detailed feedback..."
-                            value={mentorFeedback}
-                            onChange={(e) => setMentorFeedback(e.target.value)}
-                            className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl text-xs focus:outline-none"
-                          ></textarea>
-                        </div>
-
-                        <button
-                          type="submit"
-                          className="w-full h-10 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
-                        >
-                          Publish Mentor Notes
-                        </button>
-                      </form>
                     </div>
-
-                    {/* Mentor reviews feed */}
-                    <div className="lg:col-span-8 space-y-4">
-                      {mentorReviews.length > 0 ? (
-                        mentorReviews.map((rev) => {
-                          const scoreColor = rev.score >= 80 ? "text-[#15B77A] bg-[#15B77A]/10 border-[#15B77A]/20" : rev.score >= 60 ? "text-amber-600 bg-amber-50 border border-amber-100" : "text-[#E94B8A] bg-[#E94B8A]/10 border-[#E94B8A]/20";
-                          const strengths = Array.isArray(rev.strengthsJson) ? rev.strengthsJson : JSON.parse(rev.strengthsJson || "[]");
-                          const improvements = Array.isArray(rev.improvementAreasJson) ? rev.improvementAreasJson : JSON.parse(rev.improvementAreasJson || "[]");
-                          
-                          return (
-                            <div
-                              key={rev.id}
-                              className="bg-white border border-[#E8EAF3] rounded-[20px] p-6 shadow-sm space-y-4"
-                            >
-                              <div className="flex justify-between items-start">
-                                <div className="space-y-1">
-                                  <span className="text-[8px] text-[#8C8CA1] uppercase tracking-wider font-bold">Review by Senior Mentor</span>
-                                  <h4 className="font-heading font-black text-slate-800 text-sm">
-                                    {rev.Trade ? `${rev.Trade.symbol} Trade Analysis` : "Trade Evaluation"}
-                                  </h4>
-                                </div>
-                                <div className={`w-12 h-12 rounded-xl flex flex-col items-center justify-center font-bold border ${scoreColor}`}>
-                                  <span className="text-base">{rev.score}</span>
-                                  <span className="text-[7px] uppercase tracking-tighter">Score</span>
-                                </div>
+                  ) : (
+                    <>
+                      {/* Sub-Tab 1: Overview */}
+                      {mentorshipSubTab === "overview" && (
+                        <div className="space-y-8">
+                          {/* Mentor Profile / Status Card */}
+                          {mentorshipData?.assignedMentor ? (
+                            <div className="bg-white border border-[#E8EAF3] rounded-[24px] p-6 shadow-sm flex flex-col md:flex-row items-center md:items-start gap-6">
+                              <div className="w-24 h-24 rounded-full bg-slate-100 border border-[#E8EAF3] flex items-center justify-center overflow-hidden shrink-0">
+                                {mentorshipData.assignedMentor.profileImage ? (
+                                  <img
+                                    src={mentorshipData.assignedMentor.profileImage}
+                                    alt={mentorshipData.assignedMentor.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <span className="text-2xl font-black text-slate-400">
+                                    {mentorshipData.assignedMentor.name.charAt(0)}
+                                  </span>
+                                )}
                               </div>
-
-                              <p className="text-xs text-slate-600 font-semibold leading-relaxed">
-                                "{rev.feedback}"
-                              </p>
-
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                                <div className="space-y-1.5">
-                                  <span className="text-[8px] font-black uppercase text-slate-400">Key Strengths</span>
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {strengths.map((str: string, index: number) => (
-                                      <span key={index} className="px-2 py-0.5 text-[8px] font-black bg-[#15B77A]/5 border border-[#15B77A]/15 text-[#15B77A] rounded-full">
-                                        ✓ {str}
-                                      </span>
-                                    ))}
+                              <div className="space-y-3.5 text-center md:text-left flex-1">
+                                <div className="space-y-1">
+                                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
+                                    <h3 className="text-base font-black text-slate-800">
+                                      {mentorshipData.assignedMentor.name}
+                                    </h3>
+                                    <span className="px-2.5 py-0.5 text-[8px] font-black bg-[#15B77A]/10 text-[#15B77A] rounded-full uppercase tracking-wider">
+                                      Assigned Coach
+                                    </span>
                                   </div>
+                                  <p className="text-xs font-bold text-slate-500">
+                                    {mentorshipData.assignedMentor.designation || "Trading Coach"}
+                                  </p>
                                 </div>
-
-                                <div className="space-y-1.5">
-                                  <span className="text-[8px] font-black uppercase text-slate-400">Improvement Opportunities</span>
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {improvements.map((imp: string, index: number) => (
-                                      <span key={index} className="px-2 py-0.5 text-[8px] font-black bg-red-50 border border-red-100 text-[#E94B8A] rounded-full">
-                                        ⚠ {imp}
-                                      </span>
-                                    ))}
+                                <p className="text-xs text-slate-600 font-semibold leading-relaxed max-w-2xl">
+                                  {mentorshipData.assignedMentor.bio || "Your dedicated mentor to guide your weekly performance, discipline, and execution review."}
+                                </p>
+                                <div className="flex flex-wrap gap-4 pt-1 justify-center md:justify-start">
+                                  <div className="text-[10px] font-bold text-slate-700">
+                                    <span className="text-[#8C8CA1]">Specialization: </span>
+                                    {mentorshipData.assignedMentor.specialization || "General Trading"}
+                                  </div>
+                                  <div className="text-[10px] font-bold text-slate-700">
+                                    <span className="text-[#8C8CA1]">Experience: </span>
+                                    {mentorshipData.assignedMentor.experience || "N/A"}
                                   </div>
                                 </div>
                               </div>
                             </div>
-                          );
-                        })
-                      ) : (
-                        <div className="bg-white border border-[#E8EAF3] rounded-[24px] p-12 text-center text-slate-400 font-semibold">
-                          🎓 Submit a review request or log mentor notes on a trade.
+                          ) : (
+                            <div className="bg-white border border-[#E8EAF3] rounded-[24px] p-8 shadow-sm text-center space-y-3">
+                              <div className="mx-auto w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center border border-[#E8EAF3]">
+                                <span className="text-lg">🎓</span>
+                              </div>
+                              <h4 className="text-sm font-black text-slate-800">Self-Guided Mentorship Mode</h4>
+                              <p className="text-xs text-[#8C8CA1] font-semibold max-w-md mx-auto">
+                                You do not have an assigned mentor. Submit reviews and view performance scores once assigned. Please contact details@tradeadhyayan.com to get allocated a personal trading coach.
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Scores & Performance Telemetry (Calculated from Completed Reviews) */}
+                          {(() => {
+                            const completed = mentorshipData?.reviewRequests?.filter((r: any) => r.status === "COMPLETED" && r.MentorshipReview) || [];
+                            const getAvg = (key: string) => {
+                              if (completed.length === 0) return 0;
+                              return Math.round(completed.reduce((acc: number, r: any) => acc + r.MentorshipReview[key], 0) / completed.length);
+                            };
+                            
+                            const avgExec = getAvg("executionScore");
+                            const avgRisk = getAvg("riskScore");
+                            const avgPsych = getAvg("psychologyScore");
+                            const avgDisc = getAvg("disciplineScore");
+                            const avgOverall = completed.length > 0
+                              ? (completed.reduce((acc: number, r: any) => acc + r.MentorshipReview.overallScore, 0) / completed.length).toFixed(1)
+                              : "0.0";
+
+                            return (
+                              <div className="space-y-6">
+                                <div>
+                                  <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Performance Scores</h3>
+                                  <p className="text-[9px] text-[#8C8CA1] font-semibold mt-0.5">Average scores assigned by your coach over past evaluations</p>
+                                </div>
+
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+                                  <div className="p-5 bg-white border border-[#E8EAF3] rounded-[24px] shadow-sm space-y-1">
+                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider block">Overall Score</span>
+                                    <span className="text-2xl font-black text-slate-800 block">{avgOverall}</span>
+                                    <span className="text-[7px] text-[#8C8CA1] font-bold block uppercase">Weekly Avg</span>
+                                  </div>
+                                  {[
+                                    { label: "Execution Score", val: avgExec, color: "text-[#15B77A] bg-[#15B77A]/5" },
+                                    { label: "Risk Management", val: avgRisk, color: "text-blue-600 bg-blue-50" },
+                                    { label: "Trader Psychology", val: avgPsych, color: "text-purple-600 bg-purple-50" },
+                                    { label: "Rule Discipline", val: avgDisc, color: "text-amber-600 bg-amber-50" }
+                                  ].map((metric) => (
+                                    <div key={metric.label} className="p-5 bg-white border border-[#E8EAF3] rounded-[24px] shadow-sm space-y-2">
+                                      <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider block">{metric.label}</span>
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-xl font-black text-slate-800">{metric.val}%</span>
+                                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-black ${metric.color}`}>
+                                          {metric.val >= 80 ? "A" : metric.val >= 60 ? "B" : "C"}
+                                        </span>
+                                      </div>
+                                      <div className="w-full bg-slate-50 h-1 rounded-full overflow-hidden">
+                                        <div className="bg-slate-800 h-full rounded-full" style={{ width: `${metric.val}%` }} />
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </div>
                       )}
-                    </div>
-                  </div>
+
+                      {/* Sub-Tab 2: Submit Review */}
+                      {mentorshipSubTab === "submit" && (
+                        <div className="bg-white border border-[#E8EAF3] rounded-[24px] p-6 shadow-sm max-w-3xl space-y-6">
+                          <div>
+                            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Weekly Trade Submission Form</h3>
+                            <p className="text-[9px] text-[#8C8CA1] font-semibold mt-0.5">Select trades from the last 7 days and submit them for manual review by your assigned mentor.</p>
+                          </div>
+
+                          {!mentorshipData?.assignedMentor ? (
+                            <div className="p-5 bg-[#E94B8A]/5 border border-[#E94B8A]/15 text-[#E94B8A] rounded-2xl text-xs font-semibold">
+                              ⚠ You cannot submit a review request until a mentor is assigned to you.
+                            </div>
+                          ) : (
+                            <form onSubmit={handleSubmitReviewRequest} className="space-y-6">
+                              {/* Trade selection list */}
+                              <div className="space-y-2">
+                                <label className="text-[8px] font-black uppercase text-[#8C8CA1] ml-1 block">
+                                  Select Trades to Submit (Recent 7 Days)
+                                </label>
+                                {(() => {
+                                  const sevenDaysAgo = new Date();
+                                  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+                                  const recentTrades = trades.filter((t: any) => new Date(t.entryTime) >= sevenDaysAgo);
+
+                                  if (recentTrades.length === 0) {
+                                    return (
+                                      <div className="p-4 border border-[#E8EAF3] rounded-xl text-center text-xs font-bold text-slate-400 bg-slate-50">
+                                        No recent trades found. Add trades in your Trade Journal first.
+                                      </div>
+                                    );
+                                  }
+
+                                  return (
+                                    <div className="border border-[#E8EAF3] rounded-2xl overflow-hidden max-h-48 overflow-y-auto divide-y divide-slate-100">
+                                      {recentTrades.map((t: any) => {
+                                        const isChecked = selectedReviewTradeIds.includes(t.id);
+                                        return (
+                                          <div
+                                            key={t.id}
+                                            onClick={() => {
+                                              if (isChecked) {
+                                                setSelectedReviewTradeIds(selectedReviewTradeIds.filter((id) => id !== t.id));
+                                              } else {
+                                                setSelectedReviewTradeIds([...selectedReviewTradeIds, t.id]);
+                                              }
+                                            }}
+                                            className={`p-3.5 flex items-center gap-4 transition-colors cursor-pointer text-xs font-bold ${
+                                              isChecked ? "bg-slate-50/80" : "hover:bg-slate-50/30"
+                                            }`}
+                                          >
+                                            <input
+                                              type="checkbox"
+                                              checked={isChecked}
+                                              onChange={() => {}} // Handled by div onClick
+                                              className="rounded border-[#E8EAF3] text-slate-800 focus:ring-slate-800"
+                                            />
+                                            <div className="flex-1 flex justify-between items-center">
+                                              <div>
+                                                <span className="text-slate-700 block">{t.asset}</span>
+                                                <span className="text-[9px] text-[#8C8CA1] font-semibold">{t.time}</span>
+                                              </div>
+                                              <div className="text-right">
+                                                <span
+                                                  className={`px-2 py-0.5 text-[8px] font-black rounded-full uppercase ${
+                                                    t.type === "BUY" ? "bg-[#15B77A]/10 text-[#15B77A]" : "bg-red-50 text-[#E94B8A]"
+                                                  }`}
+                                                >
+                                                  {t.type}
+                                                </span>
+                                                <span className="text-[10px] text-slate-700 block mt-0.5">
+                                                  P&L: ₹{t.pnl.toLocaleString()}
+                                                </span>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+
+                              {/* Discipline Slider */}
+                              <div className="space-y-2">
+                                <div className="flex justify-between items-center ml-1">
+                                  <label className="text-[8px] font-black uppercase text-[#8C8CA1]">
+                                    Rate Your Discipline (1-10)
+                                  </label>
+                                  <span className="text-xs font-black text-slate-800">{disciplineRating} / 10</span>
+                                </div>
+                                <input
+                                  type="range"
+                                  min="1"
+                                  max="10"
+                                  value={disciplineRating}
+                                  onChange={(e) => setDisciplineRating(parseInt(e.target.value))}
+                                  className="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-slate-800"
+                                />
+                                <div className="flex justify-between text-[7px] text-[#8C8CA1] font-bold px-1">
+                                  <span>Poor Discipline (Overtraded)</span>
+                                  <span>Perfect Setup Discipline</span>
+                                </div>
+                              </div>
+
+                              {/* Notes */}
+                              <div className="space-y-1">
+                                <label className="text-[8px] font-black uppercase text-[#8C8CA1] ml-1">
+                                  Client notes & execution questions
+                                </label>
+                                <textarea
+                                  rows={4}
+                                  required
+                                  placeholder="Describe your execution, what setups you tried, and any specific questions you want the mentor to answer..."
+                                  value={reviewNotes}
+                                  onChange={(e) => setReviewNotes(e.target.value)}
+                                  className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-slate-300"
+                                />
+                              </div>
+
+                              <button
+                                type="submit"
+                                disabled={isSubmittingReview}
+                                className="w-full h-11 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider transition-colors disabled:bg-slate-200 cursor-pointer flex items-center justify-center gap-2"
+                              >
+                                {isSubmittingReview ? "Submitting Request..." : "Submit to Assigned Mentor"}
+                              </button>
+                            </form>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Sub-Tab 3: Past Reviews */}
+                      {mentorshipSubTab === "reviews" && (
+                        <div className="space-y-6">
+                          <div>
+                            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Evaluation History</h3>
+                            <p className="text-[9px] text-[#8C8CA1] font-semibold mt-0.5">Status of your submitted review requests and completed grading report sheets</p>
+                          </div>
+
+                          {mentorshipData?.reviewRequests?.length > 0 ? (
+                            <div className="space-y-4 max-w-3xl">
+                              {mentorshipData.reviewRequests.map((req: any) => {
+                                const isCompleted = req.status === "COMPLETED";
+                                return (
+                                  <div
+                                    key={req.id}
+                                    className="bg-white border border-[#E8EAF3] rounded-[24px] p-6 shadow-sm space-y-4 text-xs font-bold"
+                                  >
+                                    <div className="flex justify-between items-start gap-4">
+                                      <div className="space-y-1">
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-[8px] text-[#8C8CA1] uppercase tracking-wider">
+                                            Request ID: {req.id}
+                                          </span>
+                                          <span
+                                            className={`px-2 py-0.5 text-[8px] font-black rounded-full uppercase tracking-wider ${
+                                              isCompleted
+                                                ? "bg-[#15B77A]/10 text-[#15B77A]"
+                                                : "bg-amber-50 text-amber-600 border border-amber-100"
+                                            }`}
+                                          >
+                                            {req.status}
+                                          </span>
+                                        </div>
+                                        <h4 className="text-sm font-black text-slate-800">
+                                          Weekly Review submitted on {new Date(req.submittedAt).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}
+                                        </h4>
+                                      </div>
+                                      {isCompleted && req.MentorshipReview && (
+                                        <div className="w-14 h-14 rounded-2xl bg-slate-800 text-white flex flex-col items-center justify-center shadow-sm">
+                                          <span className="text-base font-black leading-none">
+                                            {req.MentorshipReview.overallScore.toFixed(1)}
+                                          </span>
+                                          <span className="text-[6px] uppercase tracking-tighter mt-1 font-bold">Overall</span>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* Client Notes & details */}
+                                    <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl space-y-1.5">
+                                      <div className="text-[8px] uppercase tracking-wider text-[#8C8CA1]">Your Notes & Questions</div>
+                                      <p className="text-xs text-slate-600 font-semibold leading-relaxed">
+                                        "{req.clientNotes || "No client notes added."}"
+                                      </p>
+                                      <div className="flex flex-wrap gap-4 pt-1.5 text-[9px] font-bold text-slate-500 border-t border-slate-100/60 mt-1.5">
+                                        <div>
+                                          <span className="text-[#8C8CA1]">Discipline Rating: </span>
+                                          {req.disciplineRating}/10
+                                        </div>
+                                        <div>
+                                          <span className="text-[#8C8CA1]">Trades Submitted: </span>
+                                          {req.selectedTradeIds.length}
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* Mentor evaluation sheet */}
+                                    {isCompleted && req.MentorshipReview ? (
+                                      <div className="border-t border-[#E8EAF3] pt-4 space-y-4">
+                                        <div className="grid grid-cols-4 gap-4 text-center">
+                                          {[
+                                            { label: "Execution", val: req.MentorshipReview.executionScore },
+                                            { label: "Risk Management", val: req.MentorshipReview.riskScore },
+                                            { label: "Psychology", val: req.MentorshipReview.psychologyScore },
+                                            { label: "Discipline", val: req.MentorshipReview.disciplineScore }
+                                          ].map((s) => (
+                                            <div key={s.label} className="p-2 bg-slate-50/50 border border-slate-100 rounded-xl">
+                                              <span className="text-[7px] text-[#8C8CA1] uppercase block mb-1">{s.label}</span>
+                                              <span className="text-xs font-black text-slate-800">{s.val}%</span>
+                                            </div>
+                                          ))}
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                          <div className="space-y-1.5">
+                                            <span className="text-[8px] font-black uppercase text-slate-400">Key Strengths</span>
+                                            <p className="text-xs text-slate-600 font-semibold bg-[#15B77A]/5 border border-[#15B77A]/15 rounded-xl p-3">
+                                              {req.MentorshipReview.strengths || "N/A"}
+                                            </p>
+                                          </div>
+                                          <div className="space-y-1.5">
+                                            <span className="text-[8px] font-black uppercase text-slate-400">Improvement Areas</span>
+                                            <p className="text-xs text-slate-600 font-semibold bg-red-50 border border-red-100 rounded-xl p-3">
+                                              {req.MentorshipReview.improvements || "N/A"}
+                                            </p>
+                                          </div>
+                                        </div>
+
+                                        <div className="space-y-1.5">
+                                          <span className="text-[8px] font-black uppercase text-slate-400">Mentor Remarks & Action Plan</span>
+                                          <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 space-y-3 font-semibold text-slate-700 leading-relaxed">
+                                            {req.MentorshipReview.mistakesObserved && (
+                                              <div>
+                                                <span className="text-[8px] uppercase tracking-wider text-[#8C8CA1] block mb-0.5">Mistakes Observed</span>
+                                                <p className="text-xs text-slate-600">{req.MentorshipReview.mistakesObserved}</p>
+                                              </div>
+                                            )}
+                                            {req.MentorshipReview.actionPlan && (
+                                              <div>
+                                                <span className="text-[8px] uppercase tracking-wider text-[#8C8CA1] block mb-0.5">Action Plan</span>
+                                                <p className="text-xs text-slate-600">{req.MentorshipReview.actionPlan}</p>
+                                              </div>
+                                            )}
+                                            {req.MentorshipReview.nextWeekFocus && (
+                                              <div>
+                                                <span className="text-[8px] uppercase tracking-wider text-[#8C8CA1] block mb-0.5">Next Week's Focus</span>
+                                                <p className="text-xs text-slate-600">{req.MentorshipReview.nextWeekFocus}</p>
+                                              </div>
+                                            )}
+                                            {req.MentorshipReview.mentorRemark && (
+                                              <div className="border-t border-slate-100 pt-2.5">
+                                                <span className="text-[8px] uppercase tracking-wider text-[#8C8CA1] block mb-0.5">General Remark</span>
+                                                <p className="text-xs text-slate-600 font-bold">"{req.MentorshipReview.mentorRemark}"</p>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="p-4 border border-[#E8EAF3] rounded-2xl bg-amber-50/20 text-amber-700 text-center font-bold text-xs">
+                                        ⏳ Waiting for your mentor to evaluate this request.
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className="bg-white border border-[#E8EAF3] rounded-[24px] p-12 text-center text-slate-400 font-semibold max-w-3xl">
+                              🎓 No past review requests found.
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
 

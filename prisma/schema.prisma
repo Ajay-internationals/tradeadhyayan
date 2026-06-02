@@ -246,6 +246,7 @@ model User {
   createdAt                                 DateTime            @default(now())
   updatedAt                                 DateTime
   initialCapital                            Float               @default(100000)
+  role                                      String              @default("CLIENT") // CLIENT, MENTOR, ADMIN
   AIInsight                                 AIInsight[]
   BrokerConnection                          BrokerConnection[]
   CalendarEvent                             CalendarEvent[]
@@ -260,6 +261,10 @@ model User {
   Trade                                     Trade[]
   TradePlan                                 TradePlan[]
   UserSetting                               UserSetting?
+  Mentor                                    Mentor?             @relation("UserToMentor")
+  MentorClient_AsClient                     MentorClient?       @relation("ClientToMentor")
+  ReviewRequest_AsClient                    ReviewRequest[]     @relation("ClientReviewRequest")
+  MentorshipReview_AsClient                 MentorshipReview[]  @relation("ClientMentorshipReview")
 }
 
 model UserSetting {
@@ -328,4 +333,73 @@ enum TradeResult {
   WIN
   LOSS
   BREAKEVEN
+}
+
+model Mentor {
+  id             String         @id
+  userId         String         @unique
+  name           String
+  email          String         @unique
+  phone          String?
+  designation    String?
+  bio            String?
+  experience     String?
+  specialization String?
+  capacity       Int            @default(10)
+  payoutShare    Float          @default(40.0)
+  profileImage   String?
+  status         String         @default("ACTIVE")
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  User           User           @relation("UserToMentor", fields: [userId], references: [id], onDelete: Cascade)
+  MentorClient   MentorClient[]
+  ReviewRequest  ReviewRequest[]
+  MentorshipReview MentorshipReview[]
+}
+
+model MentorClient {
+  id          String   @id
+  mentorId    String
+  clientId    String   @unique
+  assignedDate DateTime @default(now())
+  status      String   @default("ACTIVE")
+  Mentor      Mentor   @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  Client      User     @relation("ClientToMentor", fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+model ReviewRequest {
+  id                String             @id
+  clientId          String
+  mentorId          String
+  selectedTradeIds  String[]
+  clientNotes       String?
+  disciplineRating  Int                @default(5)
+  status            String             @default("PENDING")
+  submittedAt       DateTime           @default(now())
+  completedAt       DateTime?
+  Client            User               @relation("ClientReviewRequest", fields: [clientId], references: [id], onDelete: Cascade)
+  Mentor            Mentor             @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  MentorshipReview  MentorshipReview?
+}
+
+model MentorshipReview {
+  id               String        @id
+  reviewRequestId  String        @unique
+  clientId         String
+  mentorId         String
+  executionScore   Int
+  riskScore        Int
+  psychologyScore  Int
+  disciplineScore  Int
+  overallScore     Float
+  strengths        String?
+  improvements     String?
+  mistakesObserved String?
+  actionPlan       String?
+  nextWeekFocus    String?
+  mentorRemark     String?
+  createdAt        DateTime      @default(now())
+  ReviewRequest    ReviewRequest @relation(fields: [reviewRequestId], references: [id], onDelete: Cascade)
+  Client           User          @relation("ClientMentorshipReview", fields: [clientId], references: [id], onDelete: Cascade)
+  Mentor           Mentor        @relation(fields: [mentorId], references: [id], onDelete: Cascade)
 }
