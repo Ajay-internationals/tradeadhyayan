@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import "../globals.css";
 import { useRouter } from "next/navigation";
 import {
   getMentorClients,
