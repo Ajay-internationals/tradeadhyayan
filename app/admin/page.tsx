@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import "../globals.css";
+import "./admin.css";
 import { useRouter } from "next/navigation";
 import {
   getAdminOverview,
