@@ -26,7 +26,7 @@ import {
   updateSessionStatus,
   scheduleMentorSession,
 } from "@/app/actions/trades";
-import { loginUser } from "@/app/actions/auth";
+import { loginUser, registerUser } from "@/app/actions/auth";
 import {
   Users,
   ClipboardList,
@@ -65,12 +65,19 @@ export default function MentorArena() {
   const [ratingsData, setRatingsData] = useState<any[]>([]);
   const [payoutData, setPayoutData] = useState<any[]>([]);
 
-  // Auth sign-in states
+  // Auth states
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  // Signup states
+  const [signupName, setSignupName] = useState("");
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [signupConfirm, setSignupConfirm] = useState("");
+  const [isSigningUp, setIsSigningUp] = useState(false);
 
   // Data states
   const [reviewRequests, setReviewRequests] = useState<any[]>([]);
@@ -387,7 +394,42 @@ export default function MentorArena() {
     setMentorEmail("");
     setLoginEmail("");
     setLoginPassword("");
+    setSignupName("");
+    setSignupEmail("");
+    setSignupPassword("");
+    setSignupConfirm("");
     toast.success("Signed out successfully.");
+  };
+
+  const handleMentorSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!signupName.trim() || !signupEmail.trim() || !signupPassword) {
+      toast.error("Please fill in all fields.");
+      return;
+    }
+    if (signupPassword !== signupConfirm) {
+      toast.error("Passwords do not match.");
+      return;
+    }
+    if (signupPassword.length < 8) {
+      toast.error("Password must be at least 8 characters.");
+      return;
+    }
+    setIsSigningUp(true);
+    try {
+      const res = await registerUser(signupName.trim(), signupEmail.trim().toLowerCase(), signupPassword, "MENTOR");
+      if (res.success) {
+        localStorage.setItem("trade_adhyayan_user", res.email!.trim().toLowerCase());
+        toast.success("Account created! Let's set up your profile 🎉");
+        router.push("/mentor/setup");
+      } else {
+        toast.error(res.error || "Registration failed. Please try again.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Signup failed. Please try again.");
+    } finally {
+      setIsSigningUp(false);
+    }
   };
 
   const handleScoreChange = (key: string, val: number) => {
@@ -444,8 +486,27 @@ export default function MentorArena() {
     );
   }
 
-  // Show sign-in screen if not authenticated
+  // Show sign-in / sign-up screen if not authenticated
   if (!isAuthenticated) {
+    const inputStyle: React.CSSProperties = {
+      width: "100%", boxSizing: "border-box",
+      padding: "12px 16px",
+      background: "rgba(255,255,255,0.07)",
+      border: "1px solid rgba(255,255,255,0.12)",
+      borderRadius: "12px",
+      color: "#fff",
+      fontSize: "14px",
+      fontFamily: "var(--font-quicksand), 'Quicksand', system-ui, sans-serif",
+      fontWeight: 600,
+      outline: "none",
+      transition: "border-color 0.2s",
+    };
+    const labelStyle: React.CSSProperties = {
+      display: "block", fontSize: "10px", fontWeight: 800,
+      color: "rgba(255,255,255,0.55)", marginBottom: "6px",
+      textTransform: "uppercase", letterSpacing: "1px",
+      fontFamily: "var(--font-quicksand), 'Quicksand', system-ui, sans-serif",
+    };
     return (
       <div style={{
         minHeight: "100vh",
@@ -455,131 +516,170 @@ export default function MentorArena() {
         justifyContent: "center",
         alignItems: "center",
         padding: "24px",
-        fontFamily: "'Inter', system-ui, sans-serif",
+        fontFamily: "var(--font-quicksand), 'Quicksand', system-ui, sans-serif",
         position: "relative",
         overflow: "hidden",
       }}>
         <Toaster position="top-right" />
         {/* Decorative blobs */}
-        <div style={{
-          position: "absolute", top: "10%", left: "5%",
-          width: "300px", height: "300px",
-          background: "radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%)",
-          borderRadius: "50%", pointerEvents: "none",
-        }} />
-        <div style={{
-          position: "absolute", bottom: "10%", right: "5%",
-          width: "250px", height: "250px",
-          background: "radial-gradient(circle, rgba(139,92,246,0.12) 0%, transparent 70%)",
-          borderRadius: "50%", pointerEvents: "none",
-        }} />
+        <div style={{ position: "absolute", top: "8%", left: "4%", width: "350px", height: "350px", background: "radial-gradient(circle, rgba(99,102,241,0.18) 0%, transparent 70%)", borderRadius: "50%", pointerEvents: "none" }} />
+        <div style={{ position: "absolute", bottom: "8%", right: "4%", width: "280px", height: "280px", background: "radial-gradient(circle, rgba(139,92,246,0.14) 0%, transparent 70%)", borderRadius: "50%", pointerEvents: "none" }} />
+        <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: "600px", height: "600px", background: "radial-gradient(circle, rgba(99,102,241,0.04) 0%, transparent 70%)", borderRadius: "50%", pointerEvents: "none" }} />
 
         {/* Card */}
         <div style={{
-          width: "100%", maxWidth: "420px",
+          width: "100%", maxWidth: authMode === "signup" ? "460px" : "420px",
           background: "rgba(255,255,255,0.05)",
           border: "1px solid rgba(255,255,255,0.1)",
-          borderRadius: "24px",
-          padding: "40px 36px",
-          backdropFilter: "blur(20px)",
-          boxShadow: "0 25px 50px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)",
+          borderRadius: "28px",
+          padding: "36px 36px 32px",
+          backdropFilter: "blur(24px)",
+          boxShadow: "0 30px 60px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.1)",
           position: "relative", zIndex: 1,
+          transition: "max-width 0.3s ease",
         }}>
           {/* Logo */}
-          <div style={{ textAlign: "center", marginBottom: "32px" }}>
+          <div style={{ textAlign: "center", marginBottom: "28px" }}>
             <div style={{
-              width: "60px", height: "60px",
+              width: "58px", height: "58px",
               background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
               borderRadius: "18px",
               display: "flex", alignItems: "center", justifyContent: "center",
-              margin: "0 auto 16px",
-              boxShadow: "0 8px 24px rgba(99,102,241,0.4)",
+              margin: "0 auto 14px",
+              boxShadow: "0 8px 32px rgba(99,102,241,0.5)",
             }}>
-              <span style={{ color: "white", fontWeight: 900, fontSize: "20px" }}>TA</span>
+              <span style={{ color: "white", fontWeight: 900, fontSize: "20px", fontFamily: "var(--font-quicksand)" }}>TA</span>
             </div>
-            <h1 style={{ margin: "0 0 6px", fontSize: "22px", fontWeight: 800, color: "#fff" }}>Mentor Arena</h1>
-            <p style={{ margin: 0, fontSize: "12px", color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>
-              Sign in to access your mentor dashboard
+            <h1 style={{ margin: "0 0 4px", fontSize: "22px", fontWeight: 900, color: "#fff", fontFamily: "var(--font-quicksand)" }}>Mentor Arena</h1>
+            <p style={{ margin: 0, fontSize: "12px", color: "rgba(255,255,255,0.45)", fontWeight: 600, fontFamily: "var(--font-quicksand)" }}>
+              {authMode === "signin" ? "Sign in to your mentor dashboard" : "Create your mentor account"}
             </p>
           </div>
 
-          {/* Sign-in Form */}
-          <form onSubmit={handleMentorLogin} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            <div>
-              <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "rgba(255,255,255,0.6)", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.8px" }}>
-                Email Address
-              </label>
-              <input
-                type="email"
-                value={loginEmail}
-                onChange={(e) => setLoginEmail(e.target.value)}
-                placeholder="your@email.com"
-                required
+          {/* Tab switcher */}
+          <div style={{
+            display: "flex", background: "rgba(255,255,255,0.07)",
+            borderRadius: "14px", padding: "4px", marginBottom: "24px",
+            border: "1px solid rgba(255,255,255,0.08)",
+          }}>
+            {(["signin", "signup"] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setAuthMode(mode)}
                 style={{
-                  width: "100%", boxSizing: "border-box",
-                  padding: "12px 16px",
-                  background: "rgba(255,255,255,0.07)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  borderRadius: "12px",
-                  color: "#fff",
-                  fontSize: "14px",
-                  outline: "none",
-                  transition: "border-color 0.2s",
+                  flex: 1, padding: "9px",
+                  borderRadius: "10px",
+                  border: "none",
+                  background: authMode === mode ? "rgba(99,102,241,0.85)" : "transparent",
+                  color: authMode === mode ? "#fff" : "rgba(255,255,255,0.45)",
+                  fontSize: "12px",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.8px",
+                  fontFamily: "var(--font-quicksand), 'Quicksand', system-ui, sans-serif",
+                  boxShadow: authMode === mode ? "0 2px 8px rgba(99,102,241,0.4)" : "none",
                 }}
-                onFocus={(e) => (e.target.style.borderColor = "rgba(99,102,241,0.7)")}
-                onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.12)")}
-              />
-            </div>
-            <div>
-              <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "rgba(255,255,255,0.6)", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.8px" }}>
-                Password
-              </label>
-              <input
-                type="password"
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                style={{
-                  width: "100%", boxSizing: "border-box",
-                  padding: "12px 16px",
-                  background: "rgba(255,255,255,0.07)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  borderRadius: "12px",
-                  color: "#fff",
-                  fontSize: "14px",
-                  outline: "none",
-                  transition: "border-color 0.2s",
-                }}
-                onFocus={(e) => (e.target.style.borderColor = "rgba(99,102,241,0.7)")}
-                onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.12)")}
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={isLoggingIn}
-              style={{
-                width: "100%",
-                padding: "13px",
-                background: isLoggingIn ? "rgba(99,102,241,0.5)" : "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                border: "none",
-                borderRadius: "12px",
-                color: "#fff",
-                fontSize: "14px",
-                fontWeight: 700,
-                cursor: isLoggingIn ? "not-allowed" : "pointer",
-                transition: "all 0.2s",
-                boxShadow: isLoggingIn ? "none" : "0 4px 16px rgba(99,102,241,0.4)",
-                marginTop: "4px",
-              }}
-            >
-              {isLoggingIn ? "Signing in..." : "Sign In to Mentor Arena"}
-            </button>
-          </form>
+              >
+                {mode === "signin" ? "Sign In" : "Create Account"}
+              </button>
+            ))}
+          </div>
 
-          <p style={{ textAlign: "center", marginTop: "24px", fontSize: "12px", color: "rgba(255,255,255,0.35)", fontWeight: 500 }}>
-            Credentials are provided by the Trade Adhyayan admin team.
-          </p>
+          {/* SIGN IN FORM */}
+          {authMode === "signin" && (
+            <form onSubmit={handleMentorLogin} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div>
+                <label style={labelStyle}>Email Address</label>
+                <input type="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)}
+                  placeholder="your@email.com" required style={inputStyle}
+                  onFocus={(e) => (e.target.style.borderColor = "rgba(99,102,241,0.8)")}
+                  onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.12)")} />
+              </div>
+              <div>
+                <label style={labelStyle}>Password</label>
+                <input type="password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)}
+                  placeholder="••••••••" required style={inputStyle}
+                  onFocus={(e) => (e.target.style.borderColor = "rgba(99,102,241,0.8)")}
+                  onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.12)")} />
+              </div>
+              <button type="submit" disabled={isLoggingIn} style={{
+                width: "100%", padding: "13px",
+                background: isLoggingIn ? "rgba(99,102,241,0.45)" : "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                border: "none", borderRadius: "12px", color: "#fff",
+                fontSize: "14px", fontWeight: 800,
+                fontFamily: "var(--font-quicksand), 'Quicksand', system-ui, sans-serif",
+                cursor: isLoggingIn ? "not-allowed" : "pointer",
+                boxShadow: isLoggingIn ? "none" : "0 4px 20px rgba(99,102,241,0.45)",
+                marginTop: "4px", letterSpacing: "0.3px",
+              }}>
+                {isLoggingIn ? "Signing in..." : "Sign In →"}
+              </button>
+              <p style={{ textAlign: "center", margin: "4px 0 0", fontSize: "11px", color: "rgba(255,255,255,0.3)", fontWeight: 600, fontFamily: "var(--font-quicksand)" }}>
+                Don&apos;t have an account?{" "}
+                <span onClick={() => setAuthMode("signup")} style={{ color: "rgba(139,92,246,0.9)", cursor: "pointer", textDecoration: "underline" }}>Create one</span>
+              </p>
+            </form>
+          )}
+
+          {/* SIGN UP FORM */}
+          {authMode === "signup" && (
+            <form onSubmit={handleMentorSignup} style={{ display: "flex", flexDirection: "column", gap: "13px" }}>
+              <div>
+                <label style={labelStyle}>Full Name</label>
+                <input type="text" value={signupName} onChange={(e) => setSignupName(e.target.value)}
+                  placeholder="Your full name" required style={inputStyle}
+                  onFocus={(e) => (e.target.style.borderColor = "rgba(99,102,241,0.8)")}
+                  onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.12)")} />
+              </div>
+              <div>
+                <label style={labelStyle}>Email Address</label>
+                <input type="email" value={signupEmail} onChange={(e) => setSignupEmail(e.target.value)}
+                  placeholder="your@email.com" required style={inputStyle}
+                  onFocus={(e) => (e.target.style.borderColor = "rgba(99,102,241,0.8)")}
+                  onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.12)")} />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label style={labelStyle}>Password</label>
+                  <input type="password" value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)}
+                    placeholder="Min. 8 chars" required style={inputStyle}
+                    onFocus={(e) => (e.target.style.borderColor = "rgba(99,102,241,0.8)")}
+                    onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.12)")} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Confirm</label>
+                  <input type="password" value={signupConfirm} onChange={(e) => setSignupConfirm(e.target.value)}
+                    placeholder="Repeat password" required style={inputStyle}
+                    onFocus={(e) => (e.target.style.borderColor = "rgba(99,102,241,0.8)")}
+                    onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.12)")} />
+                </div>
+              </div>
+              <div style={{ padding: "10px 14px", background: "rgba(99,102,241,0.1)", borderRadius: "10px", border: "1px solid rgba(99,102,241,0.2)" }}>
+                <p style={{ margin: 0, fontSize: "11px", color: "rgba(255,255,255,0.55)", fontWeight: 600, lineHeight: 1.5, fontFamily: "var(--font-quicksand)" }}>
+                  ℹ️ After creating your account, you'll complete a profile setup wizard to get started as a mentor.
+                </p>
+              </div>
+              <button type="submit" disabled={isSigningUp} style={{
+                width: "100%", padding: "13px",
+                background: isSigningUp ? "rgba(99,102,241,0.45)" : "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                border: "none", borderRadius: "12px", color: "#fff",
+                fontSize: "14px", fontWeight: 800,
+                fontFamily: "var(--font-quicksand), 'Quicksand', system-ui, sans-serif",
+                cursor: isSigningUp ? "not-allowed" : "pointer",
+                boxShadow: isSigningUp ? "none" : "0 4px 20px rgba(99,102,241,0.45)",
+                letterSpacing: "0.3px",
+              }}>
+                {isSigningUp ? "Creating Account..." : "Create Account & Setup Profile →"}
+              </button>
+              <p style={{ textAlign: "center", margin: "2px 0 0", fontSize: "11px", color: "rgba(255,255,255,0.3)", fontWeight: 600, fontFamily: "var(--font-quicksand)" }}>
+                Already have an account?{" "}
+                <span onClick={() => setAuthMode("signin")} style={{ color: "rgba(139,92,246,0.9)", cursor: "pointer", textDecoration: "underline" }}>Sign in</span>
+              </p>
+            </form>
+          )}
         </div>
       </div>
     );

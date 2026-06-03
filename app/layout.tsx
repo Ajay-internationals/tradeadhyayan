@@ -25,7 +25,8 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${quicksand.variable} h-full antialiased font-sans`}
+      className={`${quicksand.variable} h-full antialiased`}
+      style={{ fontFamily: "var(--font-quicksand), 'Quicksand', system-ui, sans-serif" }}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground font-sans">
         {children}
