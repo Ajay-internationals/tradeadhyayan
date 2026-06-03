@@ -4,10 +4,10 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Award, TrendingUp, Users, Clock, Shield, Star,
-  ChevronRight, CheckCircle, Activity, BookOpen,
-  MessageSquare, Video, DollarSign, Zap, Globe,
-  ArrowRight, BarChart2, Heart
+  Award, Users, Star,
+  ChevronRight, CheckCircle,
+  MessageSquare, Video, DollarSign, Zap,
+  ArrowRight, BarChart2
 } from "lucide-react";
 
 export default function MentorLandingPage() {
@@ -29,10 +29,10 @@ export default function MentorLandingPage() {
   }, []);
 
   const stats = [
-    { value: "₹40K+", label: "Avg. Monthly Earnings", icon: DollarSign, color: "#15B77A" },
-    { value: "500+", label: "Active Traders", icon: Users, color: "#6366f1" },
-    { value: "4.9★", label: "Mentor Rating", icon: Star, color: "#F59E0B" },
-    { value: "95%", label: "Trader Retention", icon: Heart, color: "#E94B8A" },
+    { value: "10+", label: "Expert Mentors", icon: Award, color: "#6366f1" },
+    { value: "100+", label: "Active Traders", icon: Users, color: "#15B77A" },
+    { value: "500+", label: "Trades Reviewed", icon: BarChart2, color: "#F59E0B" },
+    { value: "4.9★", label: "Avg. Rating", icon: Star, color: "#E94B8A" },
   ];
 
   const features = [
@@ -175,12 +175,18 @@ export default function MentorLandingPage() {
           fontWeight: 900,
           lineHeight: 1.1,
           letterSpacing: "-1px",
-          background: "linear-gradient(135deg, #fff 30%, rgba(165,140,255,0.85) 100%)",
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
           maxWidth: "800px",
+          color: "#fff",
         }}>
-          Turn Your Trading Expertise Into a Thriving Career
+          <span style={{
+            background: "linear-gradient(135deg, #fff 30%, rgba(165,140,255,0.85) 100%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+            display: "inline",
+          }}>
+            Turn Your Trading Expertise Into a Thriving Career
+          </span>
         </h1>
 
         <p style={{
@@ -250,8 +256,8 @@ export default function MentorLandingPage() {
                   <Icon size={15} color={stat.color} />
                 </div>
                 <div style={{ textAlign: "left" }}>
-                  <div style={{ fontSize: "16px", fontWeight: 900, color: stat.color }}>{stat.value}</div>
-                  <div style={{ fontSize: "10px", fontWeight: 700, color: "rgba(255,255,255,0.4)", letterSpacing: "0.5px" }}>{stat.label}</div>
+                  <div style={{ fontSize: "16px", fontWeight: 900, color: stat.color, WebkitTextFillColor: stat.color }}>{stat.value}</div>
+                  <div style={{ fontSize: "10px", fontWeight: 700, color: "rgba(255,255,255,0.4)", WebkitTextFillColor: "rgba(255,255,255,0.4)", letterSpacing: "0.5px" }}>{stat.label}</div>
                 </div>
               </div>
             );
