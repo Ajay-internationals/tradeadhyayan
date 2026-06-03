@@ -22,7 +22,8 @@ import {
   Sliders,
   LogOut,
   ChevronRight,
-  BookOpen
+  BookOpen,
+  Shield
 } from "lucide-react";
 import { toast, Toaster } from "react-hot-toast";
 
@@ -203,6 +204,14 @@ export default function MentorArena() {
 
         {/* Footer actions */}
         <div className="space-y-3">
+          <button
+            onClick={() => router.push("/admin")}
+            className="w-full flex items-center gap-3 px-4 h-11 rounded-xl text-xs font-bold text-[#8C8CA1] hover:text-[#E2E8F0] hover:bg-[#1F2937] transition-all cursor-pointer border border-transparent"
+          >
+            <Shield size={16} />
+            <span>Admin Arena</span>
+          </button>
+
           <button
             onClick={() => router.push("/dashboard")}
             className="w-full flex items-center gap-3 px-4 h-11 rounded-xl text-xs font-bold text-[#8C8CA1] hover:text-[#E2E8F0] hover:bg-[#1F2937] transition-all cursor-pointer border border-transparent"

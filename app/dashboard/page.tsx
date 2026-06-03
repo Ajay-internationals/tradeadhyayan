@@ -1230,6 +1230,24 @@ export default function DashboardPage() {
                 </button>
               );
             })}
+
+            <div className="border-t border-[#ECECF3] my-3"></div>
+
+            <Link
+              href="/mentor"
+              className="w-full flex items-center gap-3 px-4 h-11 rounded-[12px] text-xs font-bold transition-all text-slate-500 hover:bg-[#F4F0FF] hover:text-[#7C4DFF]"
+            >
+              <User className="w-4 h-4 text-slate-400" />
+              <span>Mentor Arena</span>
+            </Link>
+
+            <Link
+              href="/admin"
+              className="w-full flex items-center gap-3 px-4 h-11 rounded-[12px] text-xs font-bold transition-all text-slate-500 hover:bg-[#F4F0FF] hover:text-[#7C4DFF]"
+            >
+              <Shield className="w-4 h-4 text-slate-400" />
+              <span>Admin Arena</span>
+            </Link>
           </nav>
         </div>
 

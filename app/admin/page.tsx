@@ -180,7 +180,15 @@ export default function AdminArena() {
         </div>
 
         {/* Footer actions */}
-        <div>
+        <div className="space-y-2">
+          <button
+            onClick={() => router.push("/mentor")}
+            className="w-full flex items-center gap-3 px-4 h-11 rounded-xl text-xs font-bold text-[#8C8CA1] hover:text-[#E2E8F0] hover:bg-[#1F2937] transition-all cursor-pointer border border-transparent"
+          >
+            <User size={16} />
+            <span>Mentor Arena</span>
+          </button>
+
           <button
             onClick={() => router.push("/dashboard")}
             className="w-full flex items-center gap-3 px-4 h-11 rounded-xl text-xs font-bold text-[#8C8CA1] hover:text-[#E2E8F0] hover:bg-[#1F2937] transition-all cursor-pointer border border-transparent"
