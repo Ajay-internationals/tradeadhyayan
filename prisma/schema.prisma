@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("PRISMA_DATABASE_URL")
 }
 
 model AIInsight {
@@ -212,9 +212,6 @@ model Trade {
   User               User              @relation(fields: [userId], references: [id])
   TradePlan          TradePlan?
 
-  @@index([userId, entryTime])
-  @@index([userId, exitTime])
-  @@index([userId])
 }
 
 model TradePlan {
@@ -265,6 +262,11 @@ model User {
   MentorClient_AsClient                     MentorClient?       @relation("ClientToMentor")
   ReviewRequest_AsClient                    ReviewRequest[]     @relation("ClientReviewRequest")
   MentorshipReview_AsClient                 MentorshipReview[]  @relation("ClientMentorshipReview")
+  ClientCategory                            ClientCategory?
+  MentorRating_AsClient                     MentorRating[]      @relation("ClientRatings")
+  ClientFeedback_AsClient                   ClientFeedback[]    @relation("ClientFeedbacks")
+  MentorSession_AsClient                    MentorSession[]     @relation("ClientSessions")
+  MentorMessage_AsClient                    MentorMessage[]     @relation("MessageClient")
 }
 
 model UserSetting {
@@ -336,50 +338,82 @@ enum TradeResult {
 }
 
 model Mentor {
-  id             String         @id
-  userId         String         @unique
-  name           String
-  email          String         @unique
-  phone          String?
-  designation    String?
-  bio            String?
-  experience     String?
-  specialization String?
-  capacity       Int            @default(10)
-  payoutShare    Float          @default(40.0)
-  profileImage   String?
-  status         String         @default("ACTIVE")
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  User           User           @relation("UserToMentor", fields: [userId], references: [id], onDelete: Cascade)
-  MentorClient   MentorClient[]
-  ReviewRequest  ReviewRequest[]
-  MentorshipReview MentorshipReview[]
+  id                    String              @id
+  userId                String              @unique
+  name                  String
+  email                 String              @unique
+  phone                 String?
+  designation           String?
+  bio                   String?
+  experience            String?
+  specialization        String?
+  languages             String?
+  availability          String?
+  capacity              Int                 @default(10)
+  payoutShare           Float               @default(40.0)
+  profileImage          String?
+  status                String              @default("ACTIVE")       // ACTIVE, INACTIVE, SUSPENDED
+  statusDetail          String              @default("AVAILABLE")    // AVAILABLE, BUSY, ON_LEAVE
+  category              String              @default("JUNIOR")        // JUNIOR, SENIOR, LEAD, HEAD
+  certificationStatus   String              @default("ACTIVE")       // TRAINEE, ACTIVE, SUSPENDED
+  averageRating         Float               @default(0)
+  totalReviewsCompleted Int                 @default(0)
+  wizardCompleted       Boolean             @default(false)
+  agreementAccepted     Boolean             @default(false)
+  dateOfBirth           String?
+  city                  String?
+  tradingStyle          String?
+  certifications        String?
+  linkedIn              String?
+  twitter               String?
+  youtube               String?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  User                  User                @relation("UserToMentor", fields: [userId], references: [id], onDelete: Cascade)
+  MentorClient          MentorClient[]
+  ReviewRequest         ReviewRequest[]
+  MentorshipReview      MentorshipReview[]
+  MentorKpi             MentorKpi?
+  MentorRating          MentorRating[]
+  MentorPayoutRule      MentorPayoutRule?
+  MentorPayout          MentorPayout[]
+  MentorSlaLog          MentorSlaLog[]
+  ClientFeedback        ClientFeedback[]
+  MentorCapacityLog     MentorCapacityLog[]
+  MentorProfile         MentorProfile?
+  MentorAvailability    MentorAvailability?
+  MentorAgreement       MentorAgreement?
+  MentorNotification    MentorNotification[]
+  MentorSession         MentorSession[]
+  MentorMessage_Sent    MentorMessage[]     @relation("MessageSender")
+  MentorAudit           MentorAudit[]
+  MentorSetupWizard     MentorSetupWizard?
 }
 
 model MentorClient {
-  id          String   @id
-  mentorId    String
-  clientId    String   @unique
+  id           String   @id
+  mentorId     String
+  clientId     String   @unique
   assignedDate DateTime @default(now())
-  status      String   @default("ACTIVE")
-  Mentor      Mentor   @relation(fields: [mentorId], references: [id], onDelete: Cascade)
-  Client      User     @relation("ClientToMentor", fields: [clientId], references: [id], onDelete: Cascade)
+  status       String   @default("ACTIVE")
+  Mentor       Mentor   @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  Client       User     @relation("ClientToMentor", fields: [clientId], references: [id], onDelete: Cascade)
 }
 
 model ReviewRequest {
-  id                String             @id
-  clientId          String
-  mentorId          String
-  selectedTradeIds  String[]
-  clientNotes       String?
-  disciplineRating  Int                @default(5)
-  status            String             @default("PENDING")
-  submittedAt       DateTime           @default(now())
-  completedAt       DateTime?
-  Client            User               @relation("ClientReviewRequest", fields: [clientId], references: [id], onDelete: Cascade)
-  Mentor            Mentor             @relation(fields: [mentorId], references: [id], onDelete: Cascade)
-  MentorshipReview  MentorshipReview?
+  id               String            @id
+  clientId         String
+  mentorId         String
+  selectedTradeIds String[]
+  clientNotes      String?
+  disciplineRating Int               @default(5)
+  status           String            @default("PENDING")
+  submittedAt      DateTime          @default(now())
+  completedAt      DateTime?
+  Client           User              @relation("ClientReviewRequest", fields: [clientId], references: [id], onDelete: Cascade)
+  Mentor           Mentor            @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  MentorshipReview MentorshipReview?
+  MentorSlaLog     MentorSlaLog?
 }
 
 model MentorshipReview {
@@ -402,4 +436,297 @@ model MentorshipReview {
   ReviewRequest    ReviewRequest @relation(fields: [reviewRequestId], references: [id], onDelete: Cascade)
   Client           User          @relation("ClientMentorshipReview", fields: [clientId], references: [id], onDelete: Cascade)
   Mentor           Mentor        @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+}
+
+// ─── MENTORSHIP BUSINESS SYSTEM ────────────────────────────────────────────────
+
+model MentorCategory {
+  id           String  @id
+  code         String  @unique  // JUNIOR, SENIOR, LEAD, HEAD
+  label        String           // "Category A — Junior Mentor"
+  experienceYr String           // "1-3 Years"
+  capacity     Int              // 15
+  revenueShare Float            // 25.0
+  description  String?
+}
+
+model MentorApplication {
+  id                  String   @id
+  name                String
+  email               String   @unique
+  phone               String?
+  linkedIn            String?
+  tradingExperience   String   @default("")
+  marketTraded        String   @default("")
+  tradingStyle        String   @default("")
+  avgMonthlyTrades    Int      @default(0)
+  teachingExperience  String?
+  resumeUrl           String?
+  tradingRecordUrl    String?
+  // Step 2: Interview Scores (0-100 each)
+  communicationScore  Int      @default(0)
+  tradingKnowledge    Int      @default(0)
+  psychologyScore     Int      @default(0)
+  reviewQualityScore  Int      @default(0)
+  riskMgmtScore       Int      @default(0)
+  clientHandlingScore Int      @default(0)
+  interviewTotal      Int      @default(0)
+  // Step 3: Trial Review Scores
+  trialReviewDepth    Int      @default(0)
+  trialActionPlan     Int      @default(0)
+  trialCommunication  Int      @default(0)
+  // Status
+  status              String   @default("APPLIED")  // APPLIED, INTERVIEW, TRIAL, CERTIFIED, REJECTED
+  certificationLevel  String?  // TRAINEE, JUNIOR, SENIOR, LEAD
+  appliedAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model ClientCategory {
+  id                  String   @id
+  userId              String   @unique
+  experienceLevel     String   @default("BEGINNER")  // BEGINNER, INTERMEDIATE, ADVANCED, PREMIUM
+  experienceMonths    Int      @default(0)
+  tradingCapital      Float    @default(0)
+  tradingStyle        String?
+  currentChallenges   String?
+  riskPerTrade        Float    @default(1.0)
+  goal                String?
+  suggestedMentorTier String?  // JUNIOR, SENIOR, LEAD, HEAD
+  onboardedAt         DateTime @default(now())
+  User                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model MentorKpi {
+  id                    String   @id
+  mentorId              String   @unique
+  reviewCompletionRate  Float    @default(0)
+  clientRetentionRate   Float    @default(0)
+  sessionAttendanceRate Float    @default(0)
+  avgClientImprovement  Float    @default(0)
+  clientSatisfaction    Float    @default(0)
+  revenueGenerated      Float    @default(0)
+  qualityScore          Float    @default(0)
+  lastCalculatedAt      DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  Mentor                Mentor   @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+}
+
+model MentorRating {
+  id                String   @id
+  mentorId          String
+  clientId          String
+  reviewRequestId   String?
+  ratingType        String   @default("REVIEW")  // REVIEW, SESSION, MONTHLY
+  stars             Int      @default(5)
+  helpfulScore      Int      @default(5)
+  knowledgeScore    Int      @default(5)
+  actionableScore   Int      @default(5)
+  professionalScore Int      @default(5)
+  comment           String?
+  createdAt         DateTime @default(now())
+  Mentor            Mentor   @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  Client            User     @relation("ClientRatings", fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+model MentorPayoutRule {
+  id               String   @id
+  mentorId         String   @unique
+  revenueShare     Float    @default(40.0)
+  penaltyPerMiss   Float    @default(500.0)
+  minClientsBonus  Int      @default(20)
+  bonusPercent     Float    @default(5.0)
+  Mentor           Mentor   @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+}
+
+model MentorPayout {
+  id               String    @id
+  mentorId         String
+  month            String    // "2026-06"
+  totalRevenue     Float     @default(0)
+  mentorShare      Float     @default(0)
+  companyShare     Float     @default(0)
+  penaltyAmount    Float     @default(0)
+  bonusAmount      Float     @default(0)
+  netPayout        Float     @default(0)
+  activeClients    Int       @default(0)
+  reviewsCompleted Int       @default(0)
+  slaBreaches      Int       @default(0)
+  status           String    @default("PENDING")  // PENDING, APPROVED, PAID
+  calculatedAt     DateTime  @default(now())
+  paidAt           DateTime?
+  Mentor           Mentor    @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+
+  @@unique([mentorId, month])
+}
+
+model MentorSlaLog {
+  id              String    @id
+  reviewRequestId String    @unique
+  mentorId        String
+  submittedAt     DateTime
+  notifiedAt      DateTime?
+  adminAlertedAt  DateTime?
+  reassignedAt    DateTime?
+  completedAt     DateTime?
+  slaStatus       String    @default("GREEN")  // GREEN, YELLOW, RED, BREACHED
+  hoursElapsed    Float     @default(0)
+  ReviewRequest   ReviewRequest @relation(fields: [reviewRequestId], references: [id], onDelete: Cascade)
+  Mentor          Mentor    @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+}
+
+model ClientFeedback {
+  id           String   @id
+  clientId     String
+  mentorId     String
+  month        String
+  overallScore Int      @default(5)
+  comment      String?
+  submittedAt  DateTime @default(now())
+  Client       User     @relation("ClientFeedbacks", fields: [clientId], references: [id], onDelete: Cascade)
+  Mentor       Mentor   @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+}
+
+model MentorCapacityLog {
+  id          String   @id
+  mentorId    String
+  oldCapacity Int
+  newCapacity Int
+  reason      String?
+  changedAt   DateTime @default(now())
+  Mentor      Mentor   @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+}
+
+// ─── PROFESSIONAL MENTOR PLATFORM MODULES ─────────────────────────────────────
+
+model MentorSetupWizard {
+  id               String   @id
+  mentorId         String   @unique
+  step1Photo       Boolean  @default(false)
+  step2Bio         Boolean  @default(false)
+  step3Experience  Boolean  @default(false)
+  step4Specialize  Boolean  @default(false)
+  step5Languages   Boolean  @default(false)
+  step6Availability Boolean @default(false)
+  step7Status      Boolean  @default(false)
+  step8Agreement   Boolean  @default(false)
+  completedAt      DateTime?
+  Mentor           Mentor   @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+}
+
+model MentorProfile {
+  id               String   @id
+  mentorId         String   @unique
+  dateOfBirth      String?
+  city             String?
+  tradingStyle     String?   // comma-separated styles
+  segments         String?   // OPTIONS_BUYING, OPTIONS_SELLING, etc.
+  certifications   String?
+  linkedIn         String?
+  twitter          String?
+  youtube          String?
+  profileComplete  Boolean  @default(false)
+  updatedAt        DateTime @updatedAt
+  Mentor           Mentor   @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+}
+
+model MentorAvailability {
+  id              String   @id
+  mentorId        String   @unique
+  workingDays     String   @default("Mon,Tue,Wed,Thu,Fri") // comma-separated
+  startTime       String   @default("18:00")
+  endTime         String   @default("21:00")
+  slotDuration    Int      @default(30)   // minutes
+  leaveDates      String?  // JSON array of date strings
+  timezone        String   @default("Asia/Kolkata")
+  updatedAt       DateTime @updatedAt
+  Mentor          Mentor   @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+}
+
+model MentorAgreement {
+  id          String   @id
+  mentorId    String   @unique
+  version     String   @default("v1.0")
+  acceptedAt  DateTime @default(now())
+  ipAddress   String?
+  userAgent   String?
+  Mentor      Mentor   @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+}
+
+model MentorNotification {
+  id         String   @id
+  mentorId   String
+  type       String   @default("INFO") // INFO, CLIENT_ASSIGNED, REVIEW, PAYOUT, SESSION, ALERT
+  title      String
+  message    String
+  isRead     Boolean  @default(false)
+  actionUrl  String?
+  createdAt  DateTime @default(now())
+  Mentor     Mentor   @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+}
+
+model MentorSession {
+  id            String   @id
+  mentorId      String
+  clientId      String
+  scheduledAt   DateTime
+  durationMins  Int      @default(30)
+  status        String   @default("SCHEDULED") // SCHEDULED, CONFIRMED, COMPLETED, RESCHEDULED, CANCELLED
+  sessionType   String   @default("REVIEW")    // REVIEW, COACHING, STRATEGY, EMERGENCY
+  notes         String?
+  recordingUrl  String?
+  homeworkUrl   String?
+  mentorNotes   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  Mentor        Mentor   @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  Client        User     @relation("ClientSessions", fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+model MentorMessage {
+  id          String   @id
+  mentorId    String
+  clientId    String
+  senderType  String   @default("MENTOR")  // MENTOR or CLIENT
+  content     String
+  messageType String   @default("TEXT")    // TEXT, ACTION_ITEM, REMINDER, NOTES, INSTRUCTIONS
+  isRead      Boolean  @default(false)
+  sentAt      DateTime @default(now())
+  Mentor      Mentor   @relation("MessageSender", fields: [mentorId], references: [id], onDelete: Cascade)
+  Client      User     @relation("MessageClient", fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+model MentorReviewTemplate {
+  id           String   @id
+  name         String
+  category     String   // EXECUTION, RISK, PSYCHOLOGY, BEGINNER, ADVANCED
+  strengths    String?
+  improvements String?
+  actionPlan   String?
+  nextFocus    String?
+  remark       String?
+  isDefault    Boolean  @default(true)
+  createdAt    DateTime @default(now())
+}
+
+model MentorAudit {
+  id           String   @id
+  mentorId     String
+  auditType    String   @default("REVIEW") // REVIEW, COMPLAINT, SLA_BREACH, QUALITY_CHECK
+  description  String
+  adminNotes   String?
+  severity     String   @default("LOW")    // LOW, MEDIUM, HIGH
+  resolvedAt   DateTime?
+  createdAt    DateTime @default(now())
+  Mentor       Mentor   @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+}
+
+model MentorResource {
+  id          String   @id
+  title       String
+  category    String   @default("HANDBOOK") // HANDBOOK, GUIDELINE, TEMPLATE, SOP, FRAMEWORK
+  description String?
+  url         String
+  isPublic    Boolean  @default(true)
+  createdAt   DateTime @default(now())
 }

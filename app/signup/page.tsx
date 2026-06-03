@@ -12,23 +12,23 @@ const inputStyle: React.CSSProperties = {
   height: "46px",
   paddingLeft: "42px",
   paddingRight: "14px",
-  background: "rgba(0,0,0,0.4)",
-  border: "1px solid rgba(255,255,255,0.1)",
+  background: "#F8FAFC",
+  border: "1px solid #E2E8F0",
   borderRadius: "12px",
-  color: "#E2E8F0",
+  color: "#0F172A",
   fontSize: "12px",
   fontWeight: 700,
   outline: "none",
   boxSizing: "border-box",
   fontFamily: "inherit",
-  transition: "border-color 0.2s",
+  transition: "border-color 0.2s, background-color 0.2s",
 };
 
 const labelStyle: React.CSSProperties = {
   fontSize: "9px",
   fontWeight: 800,
   textTransform: "uppercase",
-  color: "#8C8CA1",
+  color: "#475569",
   letterSpacing: "0.5px",
   display: "block",
   marginBottom: "6px",
@@ -39,22 +39,39 @@ export default function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState<"CLIENT" | "MENTOR">("CLIENT");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email) return;
+    if (!name || !email || !password) return;
     setLoading(true);
-    localStorage.setItem("trade_adhyayan_user", email.trim().toLowerCase());
-    toast.success("Account created successfully!");
-    router.push("/dashboard");
+    try {
+      const res = await registerUser(name, email, password, role);
+      if (res.success) {
+        localStorage.setItem("trade_adhyayan_user", email.trim().toLowerCase());
+        toast.success("Account created successfully! 🚀");
+        if (role === "MENTOR") {
+          router.push("/mentor");
+        } else {
+          router.push("/dashboard");
+        }
+      } else {
+        toast.error(res.error || "Failed to create account.");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("An unexpected error occurred during sign up.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div style={{
       minHeight: "100vh",
-      background: "linear-gradient(135deg, #0A0A1A 0%, #1A0A2E 50%, #0A0A1A 100%)",
+      background: "linear-gradient(135deg, #F8FAFC 0%, #EEF2F6 50%, #F8FAFC 100%)",
       display: "flex",
       flexDirection: "column",
       justifyContent: "center",
@@ -64,13 +81,13 @@ export default function SignupPage() {
       position: "relative",
       overflow: "hidden",
     }}>
-      {/* Pink glow */}
+      {/* Light pink glow */}
       <div style={{
         position: "absolute",
         top: "50%", left: "50%",
         transform: "translate(-50%, -50%)",
         width: "500px", height: "500px",
-        background: "radial-gradient(circle, rgba(233,75,138,0.12) 0%, transparent 70%)",
+        background: "radial-gradient(circle, rgba(233,75,138,0.05) 0%, transparent 70%)",
         pointerEvents: "none",
       }} />
 
@@ -78,11 +95,11 @@ export default function SignupPage() {
       <div style={{
         width: "100%",
         maxWidth: "420px",
-        background: "rgba(255,255,255,0.04)",
-        border: "1px solid rgba(255,255,255,0.1)",
+        background: "#ffffff",
+        border: "1px solid #E2E8F0",
         borderRadius: "28px",
         padding: "40px 36px",
-        boxShadow: "0 32px 80px rgba(0,0,0,0.6)",
+        boxShadow: "0 20px 40px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.02)",
         position: "relative",
         zIndex: 1,
       }}>
@@ -99,12 +116,12 @@ export default function SignupPage() {
             }}>
               <Activity size={20} color="#fff" />
             </div>
-            <span style={{ fontWeight: 900, fontSize: "13px", textTransform: "uppercase", letterSpacing: "1px", color: "#E2E8F0" }}>
+            <span style={{ fontWeight: 900, fontSize: "13px", textTransform: "uppercase", letterSpacing: "1px", color: "#0F172A" }}>
               Trade Adhyayan
             </span>
           </Link>
-          <h2 style={{ margin: "0 0 6px", fontSize: "22px", fontWeight: 900, color: "#F1F5F9" }}>Create account</h2>
-          <p style={{ margin: 0, fontSize: "10px", color: "#94A3B8", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.8px" }}>
+          <h2 style={{ margin: "0 0 6px", fontSize: "22px", fontWeight: 900, color: "#0F172A" }}>Create account</h2>
+          <p style={{ margin: 0, fontSize: "10px", color: "#64748B", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.8px" }}>
             Start tracking your discipline for free
           </p>
         </div>
@@ -122,8 +139,14 @@ export default function SignupPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 style={inputStyle}
-                onFocus={(e) => (e.target.style.borderColor = "#E94B8A")}
-                onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.1)")}
+                onFocus={(e) => {
+                  e.target.style.borderColor = "#E94B8A";
+                  e.target.style.backgroundColor = "#ffffff";
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = "#E2E8F0";
+                  e.target.style.backgroundColor = "#F8FAFC";
+                }}
               />
             </div>
           </div>
@@ -140,9 +163,34 @@ export default function SignupPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 style={inputStyle}
-                onFocus={(e) => (e.target.style.borderColor = "#E94B8A")}
-                onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.1)")}
+                onFocus={(e) => {
+                  e.target.style.borderColor = "#E94B8A";
+                  e.target.style.backgroundColor = "#ffffff";
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = "#E2E8F0";
+                  e.target.style.backgroundColor = "#F8FAFC";
+                }}
               />
+            </div>
+          </div>
+
+          {/* Role */}
+          <div>
+            <label style={labelStyle}>I want to register as a</label>
+            <div style={{ position: "relative" }}>
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value as "CLIENT" | "MENTOR")}
+                style={{
+                  ...inputStyle,
+                  paddingLeft: "14px",
+                  cursor: "pointer"
+                }}
+              >
+                <option value="CLIENT">Trader (Client)</option>
+                <option value="MENTOR">Mentor (Coach)</option>
+              </select>
             </div>
           </div>
 
@@ -158,8 +206,14 @@ export default function SignupPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 style={inputStyle}
-                onFocus={(e) => (e.target.style.borderColor = "#E94B8A")}
-                onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.1)")}
+                onFocus={(e) => {
+                  e.target.style.borderColor = "#E94B8A";
+                  e.target.style.backgroundColor = "#ffffff";
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = "#E2E8F0";
+                  e.target.style.backgroundColor = "#F8FAFC";
+                }}
               />
             </div>
           </div>
@@ -185,7 +239,7 @@ export default function SignupPage() {
               justifyContent: "center",
               gap: "8px",
               marginTop: "4px",
-              boxShadow: "0 8px 24px rgba(233,75,138,0.35)",
+              boxShadow: "0 8px 24px rgba(233,75,138,0.2)",
               transition: "opacity 0.2s",
               fontFamily: "inherit",
             }}
@@ -198,10 +252,10 @@ export default function SignupPage() {
         <div style={{
           marginTop: "24px",
           paddingTop: "20px",
-          borderTop: "1px solid rgba(255,255,255,0.07)",
+          borderTop: "1px solid #E2E8F0",
           textAlign: "center",
           fontSize: "11px",
-          color: "#94A3B8",
+          color: "#64748B",
           fontWeight: 600,
         }}>
           Already have an account?{" "}
