@@ -1291,7 +1291,8 @@ export default function MentorArena() {
                     {clients.map((client) => (
                       <div
                         key={client.id}
-                        className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4 flex flex-col justify-between"
+                        onClick={() => setSelectedClient(client)}
+                        className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4 flex flex-col justify-between cursor-pointer hover:border-indigo-300 hover:shadow-md transition-all"
                       >
                         <div className="space-y-2">
                           <h4 className="font-heading font-black text-slate-900 text-sm">

@@ -566,12 +566,16 @@ export default function AdminArena() {
           {/* Header Stats */}
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
             {[
-              { label: "Total Mentors", val: adminData?.mentors?.length || 0, color: "text-slate-900" },
-              { label: "Unassigned Clients", val: adminData?.unassignedClients?.length || 0, color: "text-amber-600" },
-              { label: "Review Requests", val: adminData?.reviewRequests?.length || 0, color: "text-indigo-600" },
-              { label: "Pending Reviews", val: adminData?.reviewRequests?.filter((r: any) => r.status === "PENDING").length || 0, color: "text-rose-600" }
+              { label: "Total Mentors", val: adminData?.mentors?.length || 0, color: "text-slate-900", tab: "mentors" },
+              { label: "Unassigned Clients", val: adminData?.unassignedClients?.length || 0, color: "text-amber-600", tab: "allocate" },
+              { label: "Review Requests", val: adminData?.reviewRequests?.length || 0, color: "text-indigo-600", tab: "reviews" },
+              { label: "Pending Reviews", val: adminData?.reviewRequests?.filter((r: any) => r.status === "PENDING").length || 0, color: "text-rose-600", tab: "reviews" }
             ].map((stat) => (
-              <div key={stat.label} className="p-5 bg-white border border-slate-200 rounded-[24px] shadow-sm space-y-1">
+              <div 
+                key={stat.label} 
+                onClick={() => setActiveTab(stat.tab)}
+                className="p-5 bg-white border border-slate-200 rounded-[24px] shadow-sm space-y-1 cursor-pointer hover:border-indigo-300 hover:shadow-md transition-all"
+              >
                 <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider block">{stat.label}</span>
                 <span className={`text-2xl font-black block ${stat.color}`}>{stat.val}</span>
               </div>
