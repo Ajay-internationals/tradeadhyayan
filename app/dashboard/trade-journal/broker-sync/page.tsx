@@ -194,9 +194,9 @@ function BrokerSyncContent() {
                 logo="F"
                 color="text-[#0E8FEF]"
                 bg="bg-[#0E8FEF]/10"
-                onConnect={() => toast.error("Coming Soon!")}
-                onSync={() => {}}
-                isSyncing={false}
+                onConnect={() => handleConnect("FYERS")}
+                onSync={() => handleSync("FYERS")}
+                isSyncing={syncingBroker === "FYERS"}
               />
               <BrokerCard 
                 name="Angel One"

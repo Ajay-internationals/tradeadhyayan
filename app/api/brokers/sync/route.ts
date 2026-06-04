@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { ZerodhaAdapter } from "@/lib/brokers/zerodha.adapter";
 import { UpstoxAdapter } from "@/lib/brokers/upstox.adapter";
+import { FyersAdapter } from "@/lib/brokers/fyers.adapter";
 
 export async function POST(req: Request) {
   try {
@@ -15,6 +16,8 @@ export async function POST(req: Request) {
       adapter = new ZerodhaAdapter();
     } else if (brokerName === "Upstox") {
       adapter = new UpstoxAdapter();
+    } else if (brokerName === "FYERS") {
+      adapter = new FyersAdapter();
     } else {
       return NextResponse.json({ success: false, error: "Unsupported broker" }, { status: 400 });
     }
