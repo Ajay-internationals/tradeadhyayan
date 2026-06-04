@@ -33,20 +33,56 @@ export interface BrokerConnectionData {
   brokerName: string;
 }
 
+export type NormalizedOrder = {
+  brokerName: string;
+  brokerOrderId: string;
+  symbol: string;
+  exchange: string;
+  transactionType: "BUY" | "SELL";
+  productType: string;
+  quantity: number;
+  price: number;
+  status: string; // "PENDING", "EXECUTED", "CANCELLED", "REJECTED"
+  orderTime: string;
+};
+
+export type NormalizedPosition = {
+  brokerName: string;
+  symbol: string;
+  exchange: string;
+  productType: string;
+  quantity: number;
+  averagePrice: number;
+  mtm: number;
+  realizedPnl: number;
+  unrealizedPnl: number;
+};
+
+export type NormalizedHolding = {
+  brokerName: string;
+  symbol: string;
+  exchange: string;
+  quantity: number;
+  averagePrice: number;
+  currentPrice: number;
+  currentValue: number;
+  pnl: number;
+};
+
 export interface BrokerAdapter {
   brokerName: string;
 
-  generateLoginUrl(userId: string): Promise<string>;
+  generateLoginUrl(userId: string, origin?: string): Promise<string>;
 
-  exchangeToken(authCode: string, userId: string): Promise<BrokerToken>;
+  exchangeToken(authCode: string, userId: string, origin?: string): Promise<BrokerToken>;
 
-  fetchOrders(connection: BrokerConnectionData): Promise<any[]>;
+  fetchOrders(connection: BrokerConnectionData): Promise<NormalizedOrder[]>;
 
   fetchTrades(connection: BrokerConnectionData): Promise<NormalizedExecution[]>;
 
-  fetchPositions(connection: BrokerConnectionData): Promise<any[]>;
+  fetchPositions(connection: BrokerConnectionData): Promise<NormalizedPosition[]>;
 
-  fetchHoldings(connection: BrokerConnectionData): Promise<any[]>;
+  fetchHoldings(connection: BrokerConnectionData): Promise<NormalizedHolding[]>;
 
   fetchFunds(connection: BrokerConnectionData): Promise<any | null>;
 }

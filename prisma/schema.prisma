@@ -288,6 +288,8 @@ model User {
   ClientFeedback_AsClient                   ClientFeedback[]    @relation("ClientFeedbacks")
   MentorSession_AsClient                    MentorSession[]     @relation("ClientSessions")
   MentorMessage_AsClient                    MentorMessage[]     @relation("MessageClient")
+  SupportTicket                             SupportTicket[]
+  CalculatorSettings                        CalculatorSettings?
 }
 
 model UserSetting {
@@ -782,6 +784,51 @@ model BrokerExecution {
   createdAt       DateTime  @default(now())
 }
 
+model BrokerOrder {
+  id              String    @id @default(uuid())
+  userId          String
+  brokerName      String
+  brokerOrderId   String
+  symbol          String
+  exchange        String?
+  transactionType String    // BUY, SELL
+  productType     String?
+  quantity        Float
+  price           Float
+  status          String    // PENDING, EXECUTED, CANCELLED, REJECTED
+  orderTime       DateTime?
+  createdAt       DateTime  @default(now())
+}
+
+model BrokerPosition {
+  id              String    @id @default(uuid())
+  userId          String
+  brokerName      String
+  symbol          String
+  exchange        String?
+  productType     String?
+  quantity        Float
+  averagePrice    Float
+  mtm             Float?
+  realizedPnl     Float?
+  unrealizedPnl   Float?
+  createdAt       DateTime  @default(now())
+}
+
+model BrokerHolding {
+  id              String    @id @default(uuid())
+  userId          String
+  brokerName      String
+  symbol          String
+  exchange        String?
+  quantity        Float
+  averagePrice    Float
+  currentPrice    Float?
+  currentValue    Float?
+  pnl             Float?
+  createdAt       DateTime  @default(now())
+}
+
 model TradeSetup {
   id          String   @id @default(uuid())
   userId      String
@@ -798,4 +845,24 @@ model TradeChecklist {
   itemKey   String
   checked   Boolean  @default(false)
   createdAt DateTime @default(now())
+}
+
+model SupportTicket {
+  id        String   @id @default(uuid())
+  userId    String
+  subject   String
+  message   String
+  status    String   @default("OPEN")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CalculatorSettings {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  capital      Float    @default(100000)
+  riskPercent  Float    @default(1)
+  updatedAt    DateTime @updatedAt
+  User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

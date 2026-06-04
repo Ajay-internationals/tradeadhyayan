@@ -1,22 +1,84 @@
-// lib/brokers/upstox.adapter.ts
-
-import { BrokerAdapter, BrokerConnectionData, BrokerToken, NormalizedExecution } from "./adapter.interface";
+import { BrokerAdapter, BrokerConnectionData, BrokerToken, NormalizedExecution, NormalizedOrder, NormalizedPosition, NormalizedHolding } from "./adapter.interface";
 
 export class UpstoxAdapter implements BrokerAdapter {
   brokerName = "Upstox";
 
-  async generateLoginUrl(userId: string): Promise<string> {
-    return `https://api.upstox.com/v2/login/authorization/dialog?response_type=code&client_id=SAMPLE_ID&redirect_uri=https://localhost:3000/api/broker/callback/upstox`;
+  private get clientId() {
+    return process.env.UPSTOX_CLIENT_ID || "";
   }
 
-  async exchangeToken(authCode: string, userId: string): Promise<BrokerToken> {
+  private get clientSecret() {
+    return process.env.UPSTOX_CLIENT_SECRET || "";
+  }
+
+  async generateLoginUrl(userId: string, origin?: string): Promise<string> {
+    if (!this.clientId) throw new Error("Upstox Client ID not configured");
+    // Use the specific callback URL configured in the user's Upstox app
+    const redirectUri = origin ? `${origin}/api/broker/upstox/callback` : "";
+    return `https://api-v2.upstox.com/login/authorization/dialog?response_type=code&client_id=${this.clientId}&redirect_uri=${encodeURIComponent(redirectUri)}`;
+  }
+
+  async exchangeToken(authCode: string, userId: string, origin?: string): Promise<BrokerToken> {
+    if (!this.clientId || !this.clientSecret) {
+      throw new Error("Upstox API keys not configured");
+    }
+
+    // Must match exactly the redirect_uri used during login
+    const redirectUri = origin ? `${origin}/api/broker/upstox/callback` : "";
+
+    const params = new URLSearchParams();
+    params.append("code", authCode);
+    params.append("client_id", this.clientId);
+    params.append("client_secret", this.clientSecret);
+    params.append("redirect_uri", redirectUri);
+    params.append("grant_type", "authorization_code");
+
+    const res = await fetch("https://api-v2.upstox.com/login/authorization/token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "application/json"
+      },
+      body: params.toString()
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.errors?.[0]?.message || "Failed to exchange Upstox token");
+    }
+
     return {
-      accessToken: "mock-upstox-access-token",
+      accessToken: data.access_token,
+      expiresIn: 86400, // Upstox tokens typically valid for 1 day
     };
   }
 
-  async fetchOrders(connection: BrokerConnectionData): Promise<any[]> {
-    return [];
+  async fetchOrders(connection: BrokerConnectionData): Promise<NormalizedOrder[]> {
+    if (!connection.accessTokenEncrypted) throw new Error("Not connected to Upstox");
+
+    const res = await fetch("https://api-v2.upstox.com/order/retrieve-all", {
+      method: "GET",
+      headers: {
+        "Accept": "application/json",
+        "Authorization": `Bearer ${connection.accessTokenEncrypted}`
+      }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.errors?.[0]?.message || "Failed to fetch orders");
+
+    const rawOrders = data.data || [];
+    return rawOrders.map((o: any) => ({
+      brokerName: this.brokerName,
+      brokerOrderId: o.order_id,
+      symbol: o.tradingsymbol,
+      exchange: o.exchange,
+      transactionType: o.transaction_type, // BUY, SELL
+      productType: o.product,
+      quantity: o.quantity,
+      price: o.average_price || o.price || 0,
+      status: o.status,
+      orderTime: o.order_timestamp,
+    }));
   }
 
   async fetchTrades(connection: BrokerConnectionData): Promise<NormalizedExecution[]> {
@@ -24,52 +86,92 @@ export class UpstoxAdapter implements BrokerAdapter {
       throw new Error("Not connected to Upstox");
     }
 
-    return [
-      {
-        brokerName: this.brokerName,
-        brokerOrderId: "ord_UP998",
-        brokerTradeId: "trd_UP998",
-        symbol: "RELIANCE",
-        exchange: "NSE",
-        segment: "EQ",
-        productType: "INTRADAY",
-        transactionType: "BUY",
-        quantity: 100,
-        price: 2900.50,
-        orderTime: new Date().toISOString(),
-        tradeTime: new Date().toISOString(),
-        status: "COMPLETE",
-      },
-      {
-        brokerName: this.brokerName,
-        brokerOrderId: "ord_UP999",
-        brokerTradeId: "trd_UP999",
-        symbol: "RELIANCE",
-        exchange: "NSE",
-        segment: "EQ",
-        productType: "INTRADAY",
-        transactionType: "SELL",
-        quantity: 100,
-        price: 2915.20,
-        orderTime: new Date().toISOString(),
-        tradeTime: new Date().toISOString(),
-        status: "COMPLETE",
-      },
-    ];
+    const res = await fetch("https://api-v2.upstox.com/order/trades", {
+      method: "GET",
+      headers: {
+        "Accept": "application/json",
+        "Authorization": `Bearer ${connection.accessTokenEncrypted}`
+      }
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.errors?.[0]?.message || "Failed to fetch trades from Upstox");
+    }
+
+    const rawTrades = data.data || [];
+    
+    return rawTrades.map((t: any) => ({
+      brokerName: this.brokerName,
+      brokerOrderId: t.order_id,
+      brokerTradeId: t.trade_id,
+      symbol: t.tradingsymbol,
+      exchange: t.exchange,
+      segment: t.instrument_token ? "OPTIONS" : "STOCK",
+      productType: t.product,
+      transactionType: t.transaction_type, // BUY, SELL
+      quantity: t.quantity,
+      price: t.average_price,
+      orderTime: t.order_timestamp,
+      tradeTime: t.trade_timestamp,
+      status: "COMPLETE",
+    }));
   }
 
-  async fetchPositions(connection: BrokerConnectionData): Promise<any[]> {
-    return [];
+  async fetchPositions(connection: BrokerConnectionData): Promise<NormalizedPosition[]> {
+    if (!connection.accessTokenEncrypted) throw new Error("Not connected to Upstox");
+
+    const res = await fetch("https://api-v2.upstox.com/portfolio/short-term-positions", {
+      method: "GET",
+      headers: {
+        "Accept": "application/json",
+        "Authorization": `Bearer ${connection.accessTokenEncrypted}`
+      }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.errors?.[0]?.message || "Failed to fetch positions");
+
+    const positions = data.data || [];
+    return positions.map((p: any) => ({
+      brokerName: this.brokerName,
+      symbol: p.tradingsymbol,
+      exchange: p.exchange,
+      productType: p.product,
+      quantity: p.net_qty || p.quantity || 0,
+      averagePrice: p.average_price || p.buy_price || 0, // Simplified fallback
+      mtm: p.m2m || 0,
+      realizedPnl: p.realised || 0,
+      unrealizedPnl: p.unrealised || 0,
+    }));
   }
 
-  async fetchHoldings(connection: BrokerConnectionData): Promise<any[]> {
-    return [];
+  async fetchHoldings(connection: BrokerConnectionData): Promise<NormalizedHolding[]> {
+    if (!connection.accessTokenEncrypted) throw new Error("Not connected to Upstox");
+
+    const res = await fetch("https://api-v2.upstox.com/portfolio/long-term-holdings", {
+      method: "GET",
+      headers: {
+        "Accept": "application/json",
+        "Authorization": `Bearer ${connection.accessTokenEncrypted}`
+      }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.errors?.[0]?.message || "Failed to fetch holdings");
+
+    const holdings = data.data || [];
+    return holdings.map((h: any) => ({
+      brokerName: this.brokerName,
+      symbol: h.tradingsymbol,
+      exchange: h.exchange,
+      quantity: h.quantity,
+      averagePrice: h.average_price,
+      currentPrice: h.last_price,
+      currentValue: (h.quantity || 0) * (h.last_price || 0),
+      pnl: h.pnl || 0,
+    }));
   }
 
   async fetchFunds(connection: BrokerConnectionData): Promise<any | null> {
-    return {
-      availableBalance: 125000,
-      utilizedMargin: 0,
-    };
+    return null;
   }
 }
