@@ -111,6 +111,20 @@ export async function POST(req: Request) {
     const batchId = `sync_${Date.now()}`;
     let importedCount = 0;
 
+    // Prevent Duplicates: Delete any existing synced trades from this broker for today
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    await prisma.trade.deleteMany({
+      where: {
+        userId: mockUserId,
+        source: brokerName.toUpperCase(),
+        entryTime: {
+          gte: startOfDay
+        }
+      }
+    });
+
     for (const [symbol, pair] of Array.from(tradesMap.entries())) {
       if (pair.buy && pair.sell) {
         // Complete trade matched
