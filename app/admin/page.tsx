@@ -573,7 +573,7 @@ export default function AdminArena() {
             ].map((stat) => (
               <div 
                 key={stat.label} 
-                onClick={() => setActiveTab(stat.tab)}
+                onClick={() => setActiveTab(stat.tab as any)}
                 className="p-5 bg-white border border-slate-200 rounded-[24px] shadow-sm space-y-1 cursor-pointer hover:border-indigo-300 hover:shadow-md transition-all"
               >
                 <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider block">{stat.label}</span>
