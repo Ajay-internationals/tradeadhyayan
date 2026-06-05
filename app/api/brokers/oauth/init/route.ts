@@ -3,6 +3,8 @@ import { ZerodhaAdapter } from "@/lib/brokers/zerodha.adapter";
 import { UpstoxAdapter } from "@/lib/brokers/upstox.adapter";
 import { FyersAdapter } from "@/lib/brokers/fyers.adapter";
 
+export const dynamic = "force-dynamic";
+
 // In a real app, this would come from the auth session.
 const MOCK_USER_ID = "cmp86dqje0000l2040im7xgg1";
 

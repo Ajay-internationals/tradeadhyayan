@@ -6,6 +6,8 @@ import { UpstoxAdapter } from "@/lib/brokers/upstox.adapter";
 // In a real app, this would come from the auth session.
 const MOCK_USER_ID = "cmp86dqje0000l2040im7xgg1";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
