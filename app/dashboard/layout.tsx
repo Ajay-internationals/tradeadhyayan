@@ -29,7 +29,7 @@ export default function TradeJournalLayout({ children }: { children: React.React
     { label: "Add Trade", href: "/dashboard/trade-journal/manual-add", icon: PlusCircle },
     { label: "Broker Sync", href: "/dashboard/trade-journal/broker-sync", icon: RefreshCw },
     { label: "Mistakes", href: "/dashboard/mistakes", icon: AlertTriangle },
-    { label: "Mentor Review", href: "/dashboard/mentor-review", icon: UserCheck },
+    { label: "Mentorship", href: "/dashboard/mentorship", icon: UserCheck },
     { label: "Reports", href: "/dashboard/reports", icon: BarChart2 },
     { label: "Strategies", href: "/dashboard/strategies", icon: Crosshair },
     { label: "Tools", href: "/dashboard/tools", icon: Wrench },

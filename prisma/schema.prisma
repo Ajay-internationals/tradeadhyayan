@@ -290,6 +290,8 @@ model User {
   MentorMessage_AsClient                    MentorMessage[]     @relation("MessageClient")
   SupportTicket                             SupportTicket[]
   CalculatorSettings                        CalculatorSettings?
+  ClientActionPlan_AsClient                 ClientActionPlan[]  @relation("ActionPlanClient")
+  ClientRulebook_AsClient                   ClientRulebook[]    @relation("RulebookClient")
 }
 
 model UserSetting {
@@ -411,6 +413,7 @@ model Mentor {
   MentorMessage_Sent    MentorMessage[]      @relation("MessageSender")
   MentorAudit           MentorAudit[]
   MentorSetupWizard     MentorSetupWizard?
+  ClientActionPlan      ClientActionPlan[]
 }
 
 model MentorClient {
@@ -865,4 +868,38 @@ model CalculatorSettings {
   riskPercent  Float    @default(1)
   updatedAt    DateTime @updatedAt
   User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ClientActionPlan {
+  id            String   @id @default(uuid())
+  clientId      String
+  mentorId      String
+  currentFocus  String
+  weeklyRules   String
+  avoidList     String
+  nextWeekGoal  String
+  status        String   @default("ACTIVE")
+  createdAt     DateTime @default(now())
+  Client        User     @relation("ActionPlanClient", fields: [clientId], references: [id], onDelete: Cascade)
+  Mentor        Mentor   @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+}
+
+model ClientRulebook {
+  id               String   @id @default(uuid())
+  clientId         String
+  ruleTitle        String
+  ruleDescription  String
+  category         String   @default("GENERAL")
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  Client           User     @relation("RulebookClient", fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+model ActivityLog {
+  id           String   @id @default(uuid())
+  actorId      String
+  targetId     String
+  activityType String
+  description  String
+  createdAt    DateTime @default(now())
 }

@@ -48,7 +48,7 @@ function mapDbTradeToFrontend(dbTrade: any) {
 }
 
 // Ensure default user exists or retrieve them
-async function getOrCreateUser(email: string) {
+export async function getOrCreateUser(email: string) {
   const userEmail = email.trim().toLowerCase();
   let user = await prisma.user.findUnique({
     where: { email: userEmail },
