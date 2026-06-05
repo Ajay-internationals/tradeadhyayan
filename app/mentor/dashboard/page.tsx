@@ -1,31 +1,47 @@
-import React from "react";
+"use client";
+
+import React, { useState, useEffect } from "react";
 import { getMentorDashboard } from "@/app/actions/mentorship";
 import { 
   Users, Clock, CheckSquare, Calendar, TrendingUp, BarChart, ArrowRight, UserCircle 
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
-export default async function MentorDashboardPage() {
-  const email = "student3_profit@tradeadhyayan.com"; // Normally from session, using mock mentor for now
-  
-  // We wrap in try catch in case the user is not a mentor yet
-  let data;
-  try {
-    data = await getMentorDashboard(email);
-  } catch(e) {
-    // Mock data for display purposes
-    data = {
-      mentor: { name: "Demo Mentor", capacity: 20 },
-      clients: [
-        { Client: { id: "1", name: "Rishabh", currentScore: 82, totalTrades: 45, winRate: 65, netPnl: 12500 } },
-        { Client: { id: "2", name: "Aman", currentScore: 68, totalTrades: 12, winRate: 40, netPnl: -2000 } }
-      ],
-      reviewRequests: [
-        { id: "req1", Client: { name: "Rishabh" }, status: "PENDING", submittedAt: new Date() }
-      ],
-      sessions: []
+export default function MentorDashboardPage() {
+  const router = useRouter();
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const email = localStorage.getItem('trade_adhyayan_user');
+    if (!email) {
+      router.push('/login');
+      return;
+    }
+
+    const loadData = async () => {
+      try {
+        const result = await getMentorDashboard(email);
+        setData(result);
+      } catch(e) {
+        // Fallback for demo purposes if not a mentor or error
+        setData({
+          mentor: { name: "Demo Mentor", capacity: 20 },
+          clients: [],
+          reviewRequests: [],
+          sessions: []
+        });
+      } finally {
+        setLoading(false);
+      }
     };
-  }
+    
+    loadData();
+  }, [router]);
+
+  if (loading) return <div className="p-6">Loading...</div>;
+  if (!data) return <div className="p-6">No data available.</div>;
 
   const pendingCount = data.reviewRequests.filter((r: any) => r.status === "PENDING").length;
   const completedCount = data.reviewRequests.filter((r: any) => r.status === "COMPLETED").length;

@@ -1,16 +1,46 @@
-import React from "react";
+"use client";
+
+import React, { useState, useEffect } from "react";
 import { getClientMentorshipOverview } from "@/app/actions/mentorship";
 import Link from "next/link";
 import { 
   User, CheckCircle, Calendar, ClipboardList, Target, AlertCircle, Shield, BrainCircuit, Flag, LineChart
 } from "lucide-react";
-// In a real scenario we'd use recharts here, but since this is an RSC we either make a client wrapper or use simple HTML bars.
-// Let's create a Client Component for the Radar Chart if needed, but for now we'll use HTML/CSS charts to be safe and fast.
+import { useRouter } from "next/navigation";
 
-export default async function MentorshipOverviewPage() {
-  // Mock email for now if session isn't available, but we'll use a hardcoded student for testing
-  const email = "student3_profit@tradeadhyayan.com"; 
-  const data = await getClientMentorshipOverview(email);
+export default function MentorshipOverviewPage() {
+  const router = useRouter();
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const email = localStorage.getItem('trade_adhyayan_user');
+    if (!email) {
+      router.push('/login');
+      return;
+    }
+
+    const loadData = async () => {
+      try {
+        const result = await getClientMentorshipOverview(email);
+        setData(result);
+      } catch (err) {
+        console.error("Failed to load mentorship overview:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadData();
+  }, [router]);
+
+  if (loading) {
+    return <div className="p-6">Loading...</div>;
+  }
+
+  if (!data) {
+    return <div className="p-6">No data available.</div>;
+  }
 
   return (
     <div className="min-h-screen bg-[#FAFAFF] p-6 text-[#0F172A] font-sans">

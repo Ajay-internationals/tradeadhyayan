@@ -1,16 +1,39 @@
-import React from "react";
+"use client";
+
+import React, { useState, useEffect } from "react";
 import { getMentorDashboard } from "@/app/actions/mentorship";
 import { ArrowRight, UserCircle, Target, Shield, BrainCircuit, Flag } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
-export default async function MentorReviewsPage({ searchParams }: { searchParams: { id?: string } }) {
-  const email = "student3_profit@tradeadhyayan.com"; 
-  let data;
-  try {
-    data = await getMentorDashboard(email);
-  } catch(e) {
-    data = { reviewRequests: [] };
-  }
+export default function MentorReviewsPage({ searchParams }: { searchParams: { id?: string } }) {
+  const router = useRouter();
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const email = localStorage.getItem('trade_adhyayan_user');
+    if (!email) {
+      router.push('/login');
+      return;
+    }
+
+    const loadData = async () => {
+      try {
+        const result = await getMentorDashboard(email);
+        setData(result);
+      } catch(e) {
+        setData({ reviewRequests: [] });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadData();
+  }, [router]);
+
+  if (loading) return <div className="p-6">Loading...</div>;
+  if (!data) return <div className="p-6">No data available.</div>;
 
   // If a specific review ID is passed, we show the review form, otherwise the list
   const activeReview = data.reviewRequests.find((r:any) => r.id === searchParams.id) || data.reviewRequests[0];
