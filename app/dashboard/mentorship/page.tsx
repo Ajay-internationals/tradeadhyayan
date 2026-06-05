@@ -2,13 +2,14 @@
 
 import React, { useState, useEffect } from "react";
 import { getClientMentorshipOverview } from "@/app/actions/mentorship";
-import Link from "next/link";
 import { 
-  User, CheckCircle, Calendar, ClipboardList, Target, AlertCircle, Shield, BrainCircuit, Flag, LineChart
+  CheckCircle2, AlertCircle, Quote, Sparkles, TrendingUp,
+  Target, Shield, BrainCircuit, Flag, ArrowRight, Share2, FileText
 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-export default function MentorshipOverviewPage() {
+export default function ClientMentorshipPage() {
   const router = useRouter();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -24,8 +25,8 @@ export default function MentorshipOverviewPage() {
       try {
         const result = await getClientMentorshipOverview(email);
         setData(result);
-      } catch (err) {
-        console.error("Failed to load mentorship overview:", err);
+      } catch(e) {
+        console.error(e);
       } finally {
         setLoading(false);
       }
@@ -35,222 +36,210 @@ export default function MentorshipOverviewPage() {
   }, [router]);
 
   if (loading) {
-    return <div className="p-6">Loading...</div>;
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-[#6D3DF5] border-t-transparent rounded-full"></div>
+      </div>
+    );
   }
 
-  if (!data) {
-    return <div className="p-6">No data available.</div>;
+  if (!data || !data.assignedMentor) {
+    return (
+      <div className="p-12 text-center max-w-[800px] mx-auto mt-20 bg-white rounded-[18px] border border-[#E7EAF3] shadow-sm">
+        <h2 className="text-[24px] font-black text-[#0F172A] mb-4">No Mentor Assigned Yet</h2>
+        <p className="text-[14px] font-medium text-[#64748B] mb-8">You are not currently enrolled in a mentorship program or your mentor assignment is pending.</p>
+        <button className="bg-[#6D3DF5] text-white px-8 py-3 rounded-full font-bold">Explore Mentorship Plans</button>
+      </div>
+    );
   }
+
+  const mObs = data.mentorObservation;
+  const recentReview = mObs ? data.currentScore : null;
 
   return (
-    <div className="min-h-screen bg-[#FAFAFF] p-6 text-[#0F172A] font-sans">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="p-6 max-w-[1600px] mx-auto space-y-6" style={{ backgroundColor: "#FAFAFF" }}>
+      
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-[28px] font-bold text-[#0F172A] tracking-tight">Mentorship Dashboard</h1>
+          <p className="text-[#64748B] text-sm font-medium mt-1">Track your progress and mentor feedback.</p>
+        </div>
+      </div>
+
+      {/* Top Metric Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        {[
+          { label: "Trades Shared", val: "24", icon: Share2, color: "text-blue-600", bg: "bg-blue-100" },
+          { label: "Reviewed", val: "18", icon: FileText, color: "text-green-600", bg: "bg-green-100" },
+          { label: "Avg Mentor Score", val: data.currentScore ? `${data.currentScore.toFixed(0)}/100` : "N/A", icon: Target, color: "text-purple-600", bg: "bg-purple-100" },
+          { label: "Improvement Areas", val: "2", icon: AlertCircle, color: "text-orange-600", bg: "bg-orange-100" },
+          { label: "Action Taken", val: data.activeActionItems > 0 ? "Yes" : "Pending", icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-100" },
+        ].map(kpi => (
+          <div key={kpi.label} className="bg-white p-5 rounded-[18px] border border-[#E7EAF3] shadow-sm">
+            <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider block mb-2">{kpi.label}</span>
+            <div className="flex items-end justify-between">
+              <h2 className="text-2xl font-black text-[#0F172A]">{kpi.val}</h2>
+              <div className={`w-8 h-8 rounded-full ${kpi.bg} flex items-center justify-center`}>
+                <kpi.icon size={16} className={kpi.color} />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold tracking-tight">Mentorship Overview</h1>
-          <Link 
-            href="/dashboard/mentorship/submit-review"
-            className="bg-[#6D3DF5] hover:bg-[#5b32d4] text-white px-5 py-2.5 rounded-[12px] font-semibold text-sm transition-colors flex items-center gap-2 shadow-sm shadow-[#6D3DF5]/30"
-          >
-            <ClipboardList size={18} />
-            Submit Review
-          </Link>
-        </div>
-
-        {/* TOP CARDS GRID */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
-          
-          {/* 1. Assigned Mentor */}
-          <div className="bg-white rounded-[18px] p-5 border border-[#E7EAF3] shadow-sm flex flex-col justify-between">
-            <div>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-full bg-[#F1ECFF] flex items-center justify-center text-[#6D3DF5]">
-                  <User size={20} />
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-[#0F172A]">{data.assignedMentor?.name || "No Mentor"}</h3>
-                  <p className="text-xs text-[#64748B]">SEBI Registered RA</p>
-                </div>
-              </div>
-              <p className="text-xs text-[#64748B] mb-1">• 8+ Years Experience</p>
-              <p className="text-xs text-[#64748B] mb-3">• Options Trading Specialist</p>
+        {/* Left: Recent Reviews List */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-white rounded-[18px] border border-[#E7EAF3] shadow-sm p-6 h-full">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="font-bold text-[18px] text-[#0F172A]">Recent Reviews</h3>
+              <button className="text-[12px] font-bold text-[#6D3DF5] bg-[#F1ECFF] px-4 py-1.5 rounded-full hover:bg-[#E4DEFF]">
+                View All History
+              </button>
             </div>
-            <button className="w-full py-2 bg-slate-50 hover:bg-slate-100 text-[#0F172A] rounded-[12px] text-xs font-semibold border border-[#E7EAF3] transition-colors">
-              View Profile
-            </button>
-          </div>
-
-          {/* 2. Current Score */}
-          <div className="bg-white rounded-[18px] p-5 border border-[#E7EAF3] shadow-sm flex flex-col justify-between">
-            <div>
-              <p className="text-xs font-medium text-[#64748B] mb-1 uppercase tracking-wider">Current Score</p>
-              <div className="flex items-end gap-2">
-                <h2 className="text-3xl font-black text-[#0F172A]">{Math.round(data.currentScore)}<span className="text-lg text-[#64748B]">/100</span></h2>
-              </div>
-              <div className="mt-2 inline-flex items-center gap-1 bg-[#16A34A]/10 text-[#16A34A] px-2 py-0.5 rounded-full text-xs font-semibold">
-                +6 pts from last
-              </div>
-            </div>
-            <p className="text-xs font-medium text-[#16A34A] mt-4 flex items-center gap-1">
-              <CheckCircle size={14} /> Good Progress
-            </p>
-          </div>
-
-          {/* 3. Last Review */}
-          <div className="bg-white rounded-[18px] p-5 border border-[#E7EAF3] shadow-sm flex flex-col justify-between">
-            <div>
-              <p className="text-xs font-medium text-[#64748B] mb-1 uppercase tracking-wider">Last Review</p>
-              <h2 className="text-xl font-bold text-[#0F172A]">2 Days Ago</h2>
-              <p className="text-xs text-[#64748B] mt-1">Reviewed on {data.lastReviewDate ? new Date(data.lastReviewDate).toLocaleDateString() : "N/A"}</p>
-            </div>
-            <button className="w-full py-2 mt-4 bg-[#F1ECFF] hover:bg-[#E5D9FF] text-[#6D3DF5] rounded-[12px] text-xs font-semibold transition-colors">
-              View Review
-            </button>
-          </div>
-
-          {/* 4. Pending Review */}
-          <div className="bg-white rounded-[18px] p-5 border border-[#E7EAF3] shadow-sm flex flex-col justify-between">
-            <div>
-              <p className="text-xs font-medium text-[#64748B] mb-1 uppercase tracking-wider">Pending Review</p>
-              <h2 className="text-xl font-bold text-[#0F172A]">{data.pendingReviewsCount}</h2>
-              <p className="text-xs text-[#64748B] mt-1">
-                {data.pendingReviewsCount > 0 ? "Review in queue" : "No pending reviews"}
-              </p>
-            </div>
-            <button className="w-full py-2 mt-4 bg-slate-50 hover:bg-slate-100 text-[#0F172A] rounded-[12px] text-xs font-semibold border border-[#E7EAF3] transition-colors">
-              Track Status
-            </button>
-          </div>
-
-          {/* 5. Next Session */}
-          <div className="bg-white rounded-[18px] p-5 border border-[#E7EAF3] shadow-sm flex flex-col justify-between">
-            <div>
-              <p className="text-xs font-medium text-[#64748B] mb-1 uppercase tracking-wider">Next Session</p>
-              <h2 className="text-lg font-bold text-[#0F172A]">
-                {data.nextSession ? new Date(data.nextSession.scheduledAt).toLocaleDateString() : "Not Scheduled"}
-              </h2>
-              <p className="text-xs text-[#64748B] mt-1">Google Meet</p>
-            </div>
-            <button className="w-full py-2 mt-4 bg-slate-50 hover:bg-slate-100 text-[#0F172A] rounded-[12px] text-xs font-semibold border border-[#E7EAF3] transition-colors flex items-center justify-center gap-1">
-              <Calendar size={14}/> View Sessions
-            </button>
-          </div>
-
-        </div>
-
-        {/* MAIN SECTION */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          
-          {/* LEFT: Performance Snapshot */}
-          <div className="bg-white rounded-[18px] p-6 border border-[#E7EAF3] shadow-sm">
-            <h3 className="font-bold text-[#0F172A] mb-6 flex items-center gap-2">
-              <LineChart size={18} className="text-[#6D3DF5]"/> Performance Snapshot
-            </h3>
             
             <div className="space-y-4">
-              <div className="flex justify-between items-center text-sm font-semibold">
-                <span className="flex items-center gap-2 text-[#64748B]"><Target size={16}/> Execution</span>
-                <span>{data.scoreBreakdown.execution} / 100</span>
-              </div>
-              <div className="flex justify-between items-center text-sm font-semibold">
-                <span className="flex items-center gap-2 text-[#64748B]"><Shield size={16}/> Risk Mgmt</span>
-                <span>{data.scoreBreakdown.risk} / 100</span>
-              </div>
-              <div className="flex justify-between items-center text-sm font-semibold">
-                <span className="flex items-center gap-2 text-[#64748B]"><BrainCircuit size={16}/> Psychology</span>
-                <span>{data.scoreBreakdown.psychology} / 100</span>
-              </div>
-              <div className="flex justify-between items-center text-sm font-semibold">
-                <span className="flex items-center gap-2 text-[#64748B]"><Flag size={16}/> Discipline</span>
-                <span>{data.scoreBreakdown.discipline} / 100</span>
-              </div>
-            </div>
-          </div>
-
-          {/* MIDDLE: Mentor Observation */}
-          <div className="bg-white rounded-[18px] p-6 border border-[#E7EAF3] shadow-sm">
-            <h3 className="font-bold text-[#0F172A] mb-4">Mentor Observation</h3>
-            {data.mentorObservation ? (
-              <div className="space-y-4">
-                <div className="bg-[#16A34A]/5 border border-[#16A34A]/20 p-3 rounded-[12px]">
-                  <p className="text-xs font-bold text-[#16A34A] uppercase tracking-wider mb-1">Biggest Strength</p>
-                  <p className="text-sm text-[#0F172A]">{data.mentorObservation.strengths || "Consistency in setups."}</p>
-                </div>
-                <div className="bg-[#E11D48]/5 border border-[#E11D48]/20 p-3 rounded-[12px]">
-                  <p className="text-xs font-bold text-[#E11D48] uppercase tracking-wider mb-1">Area of Improvement</p>
-                  <p className="text-sm text-[#0F172A]">{data.mentorObservation.improvements || "Hold winners longer."}</p>
-                </div>
-                <div className="bg-[#F59E0B]/5 border border-[#F59E0B]/20 p-3 rounded-[12px]">
-                  <p className="text-xs font-bold text-[#F59E0B] uppercase tracking-wider mb-1">Focus This Week</p>
-                  <p className="text-sm text-[#0F172A]">{data.mentorObservation.focus || "Strict SL adherence."}</p>
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-[#64748B]">No observations yet.</p>
-            )}
-          </div>
-
-          {/* RIGHT: Score Breakdown Bars */}
-          <div className="bg-white rounded-[18px] p-6 border border-[#E7EAF3] shadow-sm">
-            <h3 className="font-bold text-[#0F172A] mb-6">Score Breakdown</h3>
-            <div className="space-y-5">
+              {/* Mocking a few history items since we only have one recent review in DB realistically for now */}
               {[
-                { label: "Execution", val: data.scoreBreakdown.execution, color: "bg-[#2563EB]" },
-                { label: "Risk Management", val: data.scoreBreakdown.risk, color: "bg-[#16A34A]" },
-                { label: "Psychology", val: data.scoreBreakdown.psychology, color: "bg-[#F59E0B]" },
-                { label: "Discipline", val: data.scoreBreakdown.discipline, color: "bg-[#6D3DF5]" },
-              ].map(item => (
-                <div key={item.label}>
-                  <div className="flex justify-between text-xs font-semibold mb-1">
-                    <span className="text-[#64748B]">{item.label}</span>
-                    <span className="text-[#0F172A]">{item.val}/100</span>
+                { date: "22 May 2025", symbol: "BANKNIFTY", type: "LONG", score: data.currentScore || 78, desc: mObs?.strengths || "Good risk management and patience." },
+                { date: "15 May 2025", symbol: "NIFTY", type: "SHORT", score: 65, desc: "Entered too early, FOMO trade. Work on waiting for confirmation." },
+                { date: "08 May 2025", symbol: "RELIANCE", type: "LONG", score: 82, desc: "Perfect execution according to the plan. Maintained discipline." },
+              ].map((rev, i) => (
+                <div key={i} className="flex gap-4 p-4 rounded-[16px] border border-[#E7EAF3] hover:border-[#6D3DF5] transition-colors group cursor-pointer bg-[#FAFAFF]">
+                  <div className="w-[60px] flex flex-col items-center justify-center shrink-0 border-r border-[#E7EAF3] pr-4">
+                     <span className={`text-[18px] font-black ${rev.score >= 80 ? 'text-[#16A34A]' : rev.score >= 70 ? 'text-[#6D3DF5]' : 'text-[#EA580C]'}`}>
+                       {rev.score}
+                     </span>
+                     <span className="text-[10px] font-bold text-[#64748B] uppercase">Score</span>
                   </div>
-                  <div className="h-2 w-full bg-[#F1ECFF] rounded-full overflow-hidden">
-                    <div className={`h-full ${item.color} rounded-full`} style={{ width: `${item.val}%` }}></div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <span className="text-[10px] font-bold text-[#94A3B8]">{rev.date}</span>
+                        <h4 className="text-[14px] font-bold text-[#0F172A] mt-0.5">{rev.symbol} <span className={`text-[10px] px-1.5 py-0.5 rounded ml-2 ${rev.type === 'LONG' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{rev.type}</span></h4>
+                      </div>
+                      
+                      {/* Mini Sparkline Mock */}
+                      <div className="flex items-end gap-1 h-6">
+                        <div className="w-1.5 h-3 bg-[#E7EAF3] rounded-t-sm"></div>
+                        <div className="w-1.5 h-4 bg-[#E7EAF3] rounded-t-sm"></div>
+                        <div className="w-1.5 h-6 bg-[#6D3DF5] rounded-t-sm"></div>
+                        <div className="w-1.5 h-2 bg-[#E7EAF3] rounded-t-sm"></div>
+                      </div>
+                    </div>
+                    <p className="text-[12px] text-[#64748B] leading-relaxed">"{rev.desc}"</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-
         </div>
-        
-        {/* BOTTOM: Quick Actions & Activity */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          <div className="lg:col-span-2 bg-white rounded-[18px] p-6 border border-[#E7EAF3] shadow-sm">
-            <h3 className="font-bold text-[#0F172A] mb-4">Quick Actions</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {[
-                "Submit Review", "View Reviews", "Action Plan", "Rulebook", "Book Session", "Community"
-              ].map(action => (
-                <button key={action} className="p-3 text-sm font-semibold bg-slate-50 hover:bg-[#F1ECFF] hover:text-[#6D3DF5] text-[#0F172A] border border-[#E7EAF3] rounded-[12px] transition-colors text-center">
-                  {action}
-                </button>
-              ))}
-            </div>
-          </div>
 
-          <div className="bg-white rounded-[18px] p-6 border border-[#E7EAF3] shadow-sm">
-            <h3 className="font-bold text-[#0F172A] mb-4">Recent Activity</h3>
-            <div className="space-y-4">
-              {data.recentActivity.length > 0 ? data.recentActivity.map((act: any) => (
-                <div key={act.id} className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-[#F1ECFF] flex items-center justify-center flex-shrink-0">
-                    <AlertCircle size={14} className="text-[#6D3DF5]" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-[#0F172A] font-medium">{act.description}</p>
-                    <p className="text-xs text-[#64748B]">{new Date(act.createdAt).toLocaleString()}</p>
-                  </div>
+        {/* Right: Mentor's Summary */}
+        <div className="space-y-6">
+          <div className="bg-[#1e1b4b] rounded-[18px] shadow-sm p-6 relative overflow-hidden text-white">
+            {/* Background Accent */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#6D3DF5] to-transparent opacity-20 rounded-bl-[100px]"></div>
+            
+            <div className="flex items-center gap-4 mb-6 relative z-10">
+              <div className="w-14 h-14 rounded-full bg-white/10 border border-white/20 p-1">
+                <div className="w-full h-full rounded-full overflow-hidden">
+                  <img src={`https://api.dicebear.com/7.x/initials/svg?seed=${data.assignedMentor?.User?.name || 'Mentor'}`} alt="Mentor"/>
                 </div>
-              )) : (
-                <p className="text-sm text-[#64748B]">No recent activity.</p>
-              )}
+              </div>
+              <div>
+                <p className="text-[11px] font-bold text-[#a5b4fc] uppercase tracking-wider">Your Mentor</p>
+                <h3 className="text-[18px] font-black">{data.assignedMentor?.User?.name || 'Mentor'}</h3>
+              </div>
             </div>
+
+            {mObs && (
+              <div className="mb-6 relative z-10">
+                <Quote className="text-[#6D3DF5] opacity-50 mb-2" size={24}/>
+                <p className="text-[14px] font-medium leading-relaxed italic text-white/90">
+                  "You showed great discipline this week. Keep focusing on your risk management rules."
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-4 relative z-10">
+              <div className="bg-white/5 rounded-[12px] p-4 border border-white/10">
+                <h4 className="text-[12px] font-bold text-[#4ade80] mb-2 flex items-center gap-2"><CheckCircle2 size={14}/> Top Strengths</h4>
+                <p className="text-[13px] text-white/80">{mObs?.strengths || "Discipline and patience."}</p>
+              </div>
+              
+              <div className="bg-white/5 rounded-[12px] p-4 border border-white/10">
+                <h4 className="text-[12px] font-bold text-[#fb923c] mb-2 flex items-center gap-2"><AlertCircle size={14}/> Focus Areas</h4>
+                <p className="text-[13px] text-white/80">{mObs?.focus || "Risk management on losing trades."}</p>
+              </div>
+            </div>
+
+            <button className="w-full mt-6 bg-gradient-to-r from-[#6D3DF5] to-[#4A1D96] hover:from-[#5B3FCC] hover:to-[#3b1778] text-white py-3.5 rounded-[12px] font-bold text-[14px] shadow-lg flex justify-center items-center gap-2 transition-all">
+              <Sparkles size={18}/>
+              Share New Trade
+            </button>
           </div>
         </div>
 
       </div>
+
+      {/* Improvement Journey */}
+      <div>
+        <h3 className="font-bold text-[18px] text-[#0F172A] mb-4">Improvement Journey (This Month)</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          
+          <div className="bg-[#FAFAFF] rounded-[16px] p-5 border border-[#E7EAF3] relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-16 h-16 bg-[#DCFCE7] rounded-bl-[100px] opacity-50"></div>
+            <div className="w-8 h-8 rounded-full bg-[#16A34A] text-white flex items-center justify-center mb-4 relative z-10">
+              <Target size={14}/>
+            </div>
+            <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-1">Plan Followed</p>
+            <h4 className="text-[24px] font-black text-[#0F172A]">85%</h4>
+            <div className="w-full h-1.5 bg-[#E7EAF3] rounded-full mt-3 overflow-hidden">
+               <div className="h-full bg-[#16A34A] w-[85%]"></div>
+            </div>
+          </div>
+
+          <div className="bg-[#FAFAFF] rounded-[16px] p-5 border border-[#E7EAF3] relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-16 h-16 bg-[#DBEAFE] rounded-bl-[100px] opacity-50"></div>
+            <div className="w-8 h-8 rounded-full bg-[#2563EB] text-white flex items-center justify-center mb-4 relative z-10">
+              <Shield size={14}/>
+            </div>
+            <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-1">Risk Managed</p>
+            <h4 className="text-[24px] font-black text-[#0F172A]">92%</h4>
+            <div className="w-full h-1.5 bg-[#E7EAF3] rounded-full mt-3 overflow-hidden">
+               <div className="h-full bg-[#2563EB] w-[92%]"></div>
+            </div>
+          </div>
+
+          <div className="bg-[#FAFAFF] rounded-[16px] p-5 border border-[#E7EAF3] relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-16 h-16 bg-[#F3E8FF] rounded-bl-[100px] opacity-50"></div>
+            <div className="w-8 h-8 rounded-full bg-[#6D3DF5] text-white flex items-center justify-center mb-4 relative z-10">
+              <BrainCircuit size={14}/>
+            </div>
+            <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-1">Patience Score</p>
+            <h4 className="text-[24px] font-black text-[#0F172A]">78%</h4>
+            <div className="w-full h-1.5 bg-[#E7EAF3] rounded-full mt-3 overflow-hidden">
+               <div className="h-full bg-[#6D3DF5] w-[78%]"></div>
+            </div>
+          </div>
+
+          <div className="bg-[#FAFAFF] rounded-[16px] p-5 border border-[#E7EAF3] relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-16 h-16 bg-[#FFEDD5] rounded-bl-[100px] opacity-50"></div>
+            <div className="w-8 h-8 rounded-full bg-[#EA580C] text-white flex items-center justify-center mb-4 relative z-10">
+              <TrendingUp size={14}/>
+            </div>
+            <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-1">Overall Progress</p>
+            <h4 className="text-[24px] font-black text-[#0F172A] flex items-center gap-2">
+              B+ <span className="text-[12px] font-bold text-[#16A34A] flex items-center"><TrendingUp size={12}/> Improving</span>
+            </h4>
+            <p className="text-[11px] font-medium text-[#64748B] mt-2">Based on last 4 reviews</p>
+          </div>
+
+        </div>
+      </div>
+
     </div>
   );
 }

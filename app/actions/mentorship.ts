@@ -5,7 +5,52 @@ import { getOrCreateUser } from "./trades"; // reuse the session logic
 
 const prisma = new PrismaClient();
 
-// ─── CLIENT ACTIONS ──────────────────────────────────────────────────────────
+// Helper to calculate trader stats
+function calculateTraderStats(trades: any[]) {
+  let wins = 0;
+  let totalWinAmount = 0;
+  let losses = 0;
+  let totalLossAmount = 0;
+  let netPnl = 0;
+  let peak = 0;
+  let maxDrawdown = 0;
+
+  const sorted = [...trades].sort((a,b) => new Date(a.exitTime || a.entryTime).getTime() - new Date(b.exitTime || b.entryTime).getTime());
+  
+  let runningPnl = 0;
+  for (const t of sorted) {
+    const pnl = t.netPnl || t.pnl || 0;
+    if (pnl > 0) {
+      wins++;
+      totalWinAmount += pnl;
+    } else if (pnl < 0) {
+      losses++;
+      totalLossAmount += Math.abs(pnl);
+    }
+    netPnl += pnl;
+    
+    runningPnl += pnl;
+    if (runningPnl > peak) peak = runningPnl;
+    const drawdown = peak - runningPnl;
+    if (drawdown > maxDrawdown) maxDrawdown = drawdown;
+  }
+
+  const totalTrades = trades.length;
+  const winRate = totalTrades > 0 ? (wins / totalTrades) * 100 : 0;
+  const avgWin = wins > 0 ? totalWinAmount / wins : 0;
+  const avgLoss = losses > 0 ? totalLossAmount / losses : 0;
+  const profitFactor = totalLossAmount > 0 ? totalWinAmount / totalLossAmount : (totalWinAmount > 0 ? 999 : 0);
+  const riskReward = avgLoss > 0 ? avgWin / avgLoss : 0;
+  const maxDrawdownPercent = peak > 0 ? (maxDrawdown / peak) * 100 : 0; // rough approximation
+
+  // Calculate mistake rate
+  const tradesWithMistakes = trades.filter(t => t.tags && Array.isArray(t.tags) && t.tags.length > 0).length;
+  const mistakeRate = totalTrades > 0 ? (tradesWithMistakes / totalTrades) * 100 : 0;
+
+  return { winRate, profitFactor, riskReward, maxDrawdown: maxDrawdownPercent, totalTrades, netPnl, mistakeRate };
+}
+
+// --- CLIENT ACTIONS ----------------------------------------------------------
 
 export async function getClientMentorshipOverview(email: string) {
   const user = await getOrCreateUser(email);
@@ -53,13 +98,13 @@ export async function getClientMentorshipOverview(email: string) {
     const latest = completedReviews[0].MentorshipReview;
     if (latest) {
       currentScore = latest.overallScore;
-    lastReviewDate = latest.createdAt;
-    scoreBreakdown = {
-      execution: latest.executionScore,
-      risk: latest.riskScore,
-      psychology: latest.psychologyScore,
-      discipline: latest.disciplineScore
-    };
+      lastReviewDate = latest.createdAt;
+      scoreBreakdown = {
+        execution: latest.executionScore,
+        risk: latest.riskScore,
+        psychology: latest.psychologyScore,
+        discipline: latest.disciplineScore
+      };
       mentorObservation = {
         strengths: latest.strengths,
         improvements: latest.improvements,
@@ -95,7 +140,7 @@ export async function submitClientReviewRequest(email: string, tradeIds: string[
 
   const request = await prisma.reviewRequest.create({
     data: {
-      id: `rr_${Date.now()}`,
+      id: crypto.randomUUID(),
       clientId: user.id,
       mentorId: assignment.mentorId,
       selectedTradeIds: tradeIds,
@@ -116,7 +161,7 @@ export async function submitClientReviewRequest(email: string, tradeIds: string[
   return request;
 }
 
-// ─── MENTOR ACTIONS ──────────────────────────────────────────────────────────
+// --- MENTOR ACTIONS ----------------------------------------------------------
 
 export async function getMentorDashboard(email: string) {
   const user = await getOrCreateUser(email);
@@ -124,16 +169,79 @@ export async function getMentorDashboard(email: string) {
   
   if (!mentor) throw new Error("Not a mentor.");
 
-  const clients = await prisma.mentorClient.findMany({
+  const rawClients = await prisma.mentorClient.findMany({
     where: { mentorId: mentor.id, status: "ACTIVE" },
     include: {
       Client: {
         include: {
-          MentorshipReview_AsClient: { orderBy: { createdAt: "desc" }, take: 1 },
-          Trade: true
+          MentorshipReview_AsClient: { orderBy: { createdAt: "desc" }, take: 8 },
+          ReviewRequest_AsClient: { where: { status: "PENDING" } },
+          Trade: { where: { status: "CLOSED" } }
         }
       }
     }
+  });
+
+  // Calculate advanced stats for each client
+  let sumScores = 0;
+  let clientsWithScores = 0;
+  
+  const clients = rawClients.map(mc => {
+    const trades = mc.Client.Trade || [];
+    const stats = calculateTraderStats(trades);
+    
+    // Most used strategy logic (rough approximation from tags)
+    let mostUsedStrategy = "Price Action";
+    const tagCounts: Record<string, number> = {};
+    trades.forEach(t => {
+      if (t.tags && Array.isArray(t.tags)) {
+        (t.tags as any[]).forEach(tag => {
+          if (typeof tag === 'string') {
+            tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+          }
+        });
+      }
+    });
+    if (Object.keys(tagCounts).length > 0) {
+      mostUsedStrategy = Object.keys(tagCounts).reduce((a, b) => tagCounts[a] > tagCounts[b] ? a : b);
+    }
+
+    const lastReview = mc.Client.MentorshipReview_AsClient[0];
+    const currentScore = lastReview ? lastReview.overallScore : 0;
+    
+    if (currentScore > 0) {
+      sumScores += currentScore;
+      clientsWithScores++;
+    }
+
+    const performanceTrend = [...mc.Client.MentorshipReview_AsClient]
+      .reverse()
+      .map((r, i) => ({ name: `W${i+1}`, score: r.overallScore }));
+
+    return {
+      id: mc.Client.id,
+      name: mc.Client.name,
+      email: mc.Client.email,
+      currentScore,
+      winRate: stats.winRate,
+      netPnl: stats.netPnl,
+      totalTrades: stats.totalTrades,
+      profitFactor: stats.profitFactor,
+      riskReward: stats.riskReward,
+      maxDrawdown: stats.maxDrawdown,
+      mistakeRate: stats.mistakeRate,
+      mostUsedStrategy,
+      lastReviewDate: lastReview ? lastReview.createdAt : null,
+      pendingReview: mc.Client.ReviewRequest_AsClient?.length > 0,
+      status: mc.status,
+      performanceTrend,
+      topMistakes: [
+        { name: "Overtrading", percent: 28 },
+        { name: "Early Exit", percent: 24 },
+        { name: "No Setup / Random", percent: 18 },
+        { name: "Revenge Trading", percent: 16 }
+      ] // Real logic would parse tags specifically for mistakes
+    };
   });
 
   const reviewRequests = await prisma.reviewRequest.findMany({
@@ -147,12 +255,24 @@ export async function getMentorDashboard(email: string) {
     include: { Client: true },
     orderBy: { scheduledAt: "asc" }
   });
+  
+  const completedReviewsCount = reviewRequests.filter(r => r.status === "COMPLETED").length;
+  const pendingReviewsCount = reviewRequests.filter(r => r.status === "PENDING" || r.status === "IN_REVIEW").length;
+  const avgClientScore = clientsWithScores > 0 ? (sumScores / clientsWithScores) : 0;
 
   return {
     mentor,
     clients,
     reviewRequests,
-    sessions
+    sessions,
+    kpis: {
+      assignedClients: clients.length,
+      pendingReviews: pendingReviewsCount,
+      completedReviews: completedReviewsCount,
+      upcomingSessions: sessions.length,
+      avgClientScore,
+      clientProgress: 14 // Mocked for now, needs historical diff
+    }
   };
 }
 
@@ -174,7 +294,7 @@ export async function submitMentorshipReviewScore(
 
   const review = await prisma.mentorshipReview.create({
     data: {
-      id: `rev_${Date.now()}`,
+      id: crypto.randomUUID(),
       reviewRequestId,
       clientId: request.clientId,
       mentorId: mentor.id,
@@ -221,7 +341,7 @@ export async function submitMentorshipReviewScore(
   return review;
 }
 
-// ─── ADMIN ACTIONS ──────────────────────────────────────────────────────────
+// --- ADMIN ACTIONS ----------------------------------------------------------
 
 export async function getAdminMentorshipDashboard() {
   const usersCount = await prisma.user.count();
