@@ -3,18 +3,20 @@ import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-async function getUserFromSession() {
-  return await prisma.user.findFirst();
+async function getUserFromSession(email: string | null) {
+  if (!email) return null;
+  return await prisma.user.findUnique({ where: { email } });
 }
 
 export async function GET(req: Request) {
   try {
-    const user = await getUserFromSession();
+    const { searchParams } = new URL(req.url);
+    const email = searchParams.get("email");
+    const user = await getUserFromSession(email);
+    
     if (!user) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
-
-    const { searchParams } = new URL(req.url);
     const startDateParam = searchParams.get("startDate");
     const endDateParam = searchParams.get("endDate");
 

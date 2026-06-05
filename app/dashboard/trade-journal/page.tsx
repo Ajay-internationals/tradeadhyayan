@@ -32,23 +32,30 @@ export default function TradeJournalPage() {
   
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("All Trades");
+  const [trades, setTrades] = useState<any[]>([]);
 
   useEffect(() => {
-    // Fetch real metrics from the API
-    const fetchKpis = async () => {
+    const fetchData = async () => {
       try {
-        const res = await fetch("/api/journal/kpis");
-        const json = await res.json();
-        if (json.success) {
-          setKpis(json.data);
-        }
+        const userEmail = localStorage.getItem("trade_adhyayan_user") || "student1_loss@tradeadhyayan.com";
+        const [kpiRes, tradesRes] = await Promise.all([
+          fetch(`/api/journal/kpis?email=${userEmail}`),
+          fetch(`/api/journal/trades?email=${userEmail}`)
+        ]);
+
+        const kpiJson = await kpiRes.json();
+        if (kpiJson.success) setKpis(kpiJson.data);
+
+        const tradesJson = await tradesRes.json();
+        if (tradesJson.success) setTrades(tradesJson.data);
+
       } catch (err) {
-        console.error("Failed to fetch KPIs:", err);
+        console.error("Failed to fetch data:", err);
       } finally {
         setLoading(false);
       }
     };
-    fetchKpis();
+    fetchData();
   }, []);
 
   return (
@@ -163,32 +170,77 @@ export default function TradeJournalPage() {
           </div>
         </div>
 
-        {/* Table Body (Empty State for now) */}
-        <div className="p-12 flex flex-col items-center justify-center text-center">
-          <div className="w-16 h-16 bg-[#F4F0FF] rounded-full flex items-center justify-center text-[#7C3AED] mb-4">
-            <BookOpen size={24} />
+        {/* Table Body */}
+        {trades.length === 0 ? (
+          <div className="p-12 flex flex-col items-center justify-center text-center">
+            <div className="w-16 h-16 bg-[#F4F0FF] rounded-full flex items-center justify-center text-[#7C3AED] mb-4">
+              <BookOpen size={24} />
+            </div>
+            <h3 className="text-base font-black text-[#0F172A] mb-2">No trades added yet.</h3>
+            <p className="text-xs font-semibold text-[#64748B] max-w-sm mb-6 leading-relaxed">
+              Add your first trade manually or connect your broker to start journaling and calculating your metrics.
+            </p>
+            <div className="flex gap-4">
+              <Link 
+                href="/dashboard/trade-journal/manual-add"
+                className="px-5 py-2.5 bg-[#7C3AED] hover:bg-[#6D28D9] text-white rounded-xl text-xs font-black tracking-wide transition-colors shadow-sm flex items-center gap-2"
+              >
+                <Plus size={16} />
+                Add Trade
+              </Link>
+              <Link 
+                href="/dashboard/trade-journal/broker-sync"
+                className="px-5 py-2.5 bg-white border border-[#E9E6F5] hover:border-[#10B981] hover:text-[#10B981] text-[#64748B] rounded-xl text-xs font-black tracking-wide transition-colors shadow-sm flex items-center gap-2"
+              >
+                <RefreshCw size={14} />
+                Connect Broker
+              </Link>
+            </div>
           </div>
-          <h3 className="text-base font-black text-[#0F172A] mb-2">No trades added yet.</h3>
-          <p className="text-xs font-semibold text-[#64748B] max-w-sm mb-6 leading-relaxed">
-            Add your first trade manually or connect your broker to start journaling and calculating your metrics.
-          </p>
-          <div className="flex gap-4">
-            <Link 
-              href="/dashboard/trade-journal/manual-add"
-              className="px-5 py-2.5 bg-[#7C3AED] hover:bg-[#6D28D9] text-white rounded-xl text-xs font-black tracking-wide transition-colors shadow-sm flex items-center gap-2"
-            >
-              <Plus size={16} />
-              Add Trade
-            </Link>
-            <Link 
-              href="/dashboard/trade-journal/broker-sync"
-              className="px-5 py-2.5 bg-white border border-[#E9E6F5] hover:border-[#10B981] hover:text-[#10B981] text-[#64748B] rounded-xl text-xs font-black tracking-wide transition-colors shadow-sm flex items-center gap-2"
-            >
-              <RefreshCw size={14} />
-              Connect Broker
-            </Link>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-[#E9E6F5] text-xs font-bold text-[#64748B] uppercase tracking-wider">
+                  <th className="py-4 px-6">Symbol</th>
+                  <th className="py-4 px-6">Type</th>
+                  <th className="py-4 px-6">Entry / Exit</th>
+                  <th className="py-4 px-6">Qty</th>
+                  <th className="py-4 px-6">Net P&L</th>
+                  <th className="py-4 px-6">Status</th>
+                  <th className="py-4 px-6">Date</th>
+                </tr>
+              </thead>
+              <tbody className="text-sm">
+                {trades.map((trade: any) => (
+                  <tr key={trade.id} className="border-b border-[#E9E6F5] hover:bg-slate-50/50 transition-colors">
+                    <td className="py-4 px-6 font-bold text-[#0F172A]">{trade.symbol}</td>
+                    <td className="py-4 px-6">
+                      <span className={`px-2 py-1 rounded-[6px] text-[10px] font-bold ${trade.direction === 'LONG' ? 'bg-[#ECFDF5] text-[#10B981]' : 'bg-[#FDF2F8] text-[#EC4899]'}`}>
+                        {trade.direction}
+                      </span>
+                    </td>
+                    <td className="py-4 px-6 text-[#64748B] font-semibold">
+                      ₹{trade.entryPrice} {trade.exitPrice ? `/ ₹${trade.exitPrice}` : ''}
+                    </td>
+                    <td className="py-4 px-6 font-semibold text-[#0F172A]">{trade.quantity}</td>
+                    <td className={`py-4 px-6 font-black ${trade.netPnl > 0 ? 'text-[#10B981]' : trade.netPnl < 0 ? 'text-[#EC4899]' : 'text-[#64748B]'}`}>
+                      {trade.netPnl ? `₹${trade.netPnl}` : '-'}
+                    </td>
+                    <td className="py-4 px-6">
+                      <span className={`px-2 py-1 rounded-[6px] text-[10px] font-bold ${trade.status === 'CLOSED' ? 'bg-slate-100 text-slate-600' : 'bg-blue-50 text-blue-600'}`}>
+                        {trade.status}
+                      </span>
+                    </td>
+                    <td className="py-4 px-6 text-xs font-semibold text-[#64748B]">
+                      {new Date(trade.entryTime).toLocaleDateString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
+        )}
       </div>
 
     </div>
