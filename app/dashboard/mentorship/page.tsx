@@ -233,7 +233,7 @@ export default function MentorshipOverviewPage() {
           <div className="bg-white rounded-[18px] p-6 border border-[#E7EAF3] shadow-sm">
             <h3 className="font-bold text-[#0F172A] mb-4">Recent Activity</h3>
             <div className="space-y-4">
-              {data.recentActivity.length > 0 ? data.recentActivity.map(act => (
+              {data.recentActivity.length > 0 ? data.recentActivity.map((act: any) => (
                 <div key={act.id} className="flex gap-3">
                   <div className="w-8 h-8 rounded-full bg-[#F1ECFF] flex items-center justify-center flex-shrink-0">
                     <AlertCircle size={14} className="text-[#6D3DF5]" />
