@@ -202,9 +202,18 @@ export async function submitClientReviewRequest(email: string, tradeIds: string[
 
 export async function getMentorDashboard(email: string) {
   const user = await getOrCreateUser(email);
-  const mentor = await prisma.mentor.findUnique({ where: { email: user.email } });
   
-  if (!mentor) throw new Error("Not a mentor.");
+  // Try email-based lookup first, then fall back to userId-based lookup
+  let mentor = await prisma.mentor.findFirst({
+    where: {
+      OR: [
+        { email: user.email },
+        { userId: user.id }
+      ]
+    }
+  });
+  
+  if (!mentor) throw new Error(`No mentor profile found for email: ${user.email}. Please contact admin to set up your mentor account.`);
 
   const rawClients = await prisma.mentorClient.findMany({
     where: { mentorId: mentor.id, status: "ACTIVE" },
@@ -351,7 +360,9 @@ export async function submitMentorshipReviewScore(
   feedback: { strengths: string; improvements: string; actionPlan: string; focus: string }
 ) {
   const user = await getOrCreateUser(mentorEmail);
-  const mentor = await prisma.mentor.findUnique({ where: { email: user.email } });
+  const mentor = await prisma.mentor.findFirst({
+    where: { OR: [{ email: user.email }, { userId: user.id }] }
+  });
   if (!mentor) throw new Error("Not a mentor.");
 
   const request = await prisma.reviewRequest.findUnique({ where: { id: reviewRequestId } });
