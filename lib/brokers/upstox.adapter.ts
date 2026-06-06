@@ -65,30 +65,35 @@ export class UpstoxAdapter implements BrokerAdapter {
   async fetchOrders(connection: BrokerConnectionData): Promise<NormalizedOrder[]> {
     if (!connection.accessTokenEncrypted) throw new Error("Not connected to Upstox");
 
-    const res = await fetch(`${this.apiBaseUrl}/order/retrieve-all`, {
-      method: "GET",
-      headers: {
-        "Accept": "application/json",
-        "Authorization": `Bearer ${connection.accessTokenEncrypted}`,
-        ...(this.proxySecret ? { "x-proxy-secret": this.proxySecret } : {})
-      }
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.errors?.[0]?.message || "Failed to fetch orders");
+    try {
+      const res = await fetch(`${this.apiBaseUrl}/order/retrieve-all`, {
+        method: "GET",
+        headers: {
+          "Accept": "application/json",
+          "Authorization": `Bearer ${connection.accessTokenEncrypted}`,
+          ...(this.proxySecret ? { "x-proxy-secret": this.proxySecret } : {})
+        }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.errors?.[0]?.message || "Failed to fetch orders");
 
-    const rawOrders = data.data || [];
-    return rawOrders.map((o: any) => ({
-      brokerName: this.brokerName,
-      brokerOrderId: o.order_id,
-      symbol: o.tradingsymbol,
-      exchange: o.exchange,
-      transactionType: o.transaction_type, // BUY, SELL
-      productType: o.product,
-      quantity: o.quantity,
-      price: o.average_price || o.price || 0,
-      status: o.status,
-      orderTime: o.order_timestamp,
-    }));
+      const rawOrders = data.data || [];
+      return rawOrders.map((o: any) => ({
+        brokerName: this.brokerName,
+        brokerOrderId: o.order_id,
+        symbol: o.tradingsymbol || o.trading_symbol,
+        exchange: o.exchange,
+        transactionType: o.transaction_type, // BUY, SELL
+        productType: o.product,
+        quantity: o.quantity,
+        price: o.average_price || o.price || 0,
+        status: o.status,
+        orderTime: o.order_timestamp,
+      }));
+    } catch (err) {
+      console.warn("Gracefully ignored Upstox orders fetch failure (likely due to static IP restriction):", err);
+      return [];
+    }
   }
 
   async fetchTrades(connection: BrokerConnectionData): Promise<NormalizedExecution[]> {
@@ -96,37 +101,87 @@ export class UpstoxAdapter implements BrokerAdapter {
       throw new Error("Not connected to Upstox");
     }
 
-    const res = await fetch(`${this.apiBaseUrl}/order/trades`, {
-      method: "GET",
-      headers: {
-        "Accept": "application/json",
-        "Authorization": `Bearer ${connection.accessTokenEncrypted}`,
-        ...(this.proxySecret ? { "x-proxy-secret": this.proxySecret } : {})
+    try {
+      // Calculate today's date in IST (UTC +5:30)
+      const now = new Date();
+      const istOffset = 5.5 * 60 * 60 * 1000;
+      const istTime = new Date(now.getTime() + istOffset);
+      const todayStr = istTime.toISOString().split("T")[0];
+
+      // Fetch trades from the historical-trades API which is exempt from Static IP restrictions.
+      // We fetch both Equity (EQ) and Futures & Options (FO) segments.
+      const segments = ["EQ", "FO"];
+      const fetchPromises = segments.map(async (segment) => {
+        const url = `https://api.upstox.com/v2/charges/historical-trades?segment=${segment}&start_date=${todayStr}&end_date=${todayStr}&page_number=1&page_size=100`;
+        const res = await fetch(url, {
+          method: "GET",
+          headers: {
+            "Accept": "application/json",
+            "Authorization": `Bearer ${connection.accessTokenEncrypted}`
+          }
+        });
+        if (!res.ok) {
+          console.warn(`Upstox trade history fetch failed for segment ${segment} (might be empty):`, await res.text());
+          return [];
+        }
+        const json = await res.json();
+        return json.data || [];
+      });
+
+      const results = await Promise.all(fetchPromises);
+      const rawTrades = results.flat();
+
+      return rawTrades.map((t: any) => ({
+        brokerName: this.brokerName,
+        brokerOrderId: t.order_id,
+        brokerTradeId: t.trade_id,
+        symbol: t.trading_symbol || t.tradingsymbol,
+        exchange: t.exchange,
+        segment: (t.trading_symbol?.includes("CE") || t.trading_symbol?.includes("PE") || t.instrument_token) ? "OPTIONS" : "STOCK",
+        productType: t.product,
+        transactionType: t.transaction_type, // BUY, SELL
+        quantity: t.quantity,
+        price: t.average_price || t.price || 0,
+        orderTime: t.order_timestamp,
+        tradeTime: t.exchange_timestamp || t.trade_timestamp || t.order_timestamp,
+        status: "COMPLETE",
+      }));
+    } catch (err: any) {
+      // If historical-trades fails or is not supported, fallback to the standard endpoint
+      console.warn("Upstox historical trades fetch failed, falling back to standard endpoint:", err);
+      
+      const res = await fetch(`${this.apiBaseUrl}/order/trades`, {
+        method: "GET",
+        headers: {
+          "Accept": "application/json",
+          "Authorization": `Bearer ${connection.accessTokenEncrypted}`,
+          ...(this.proxySecret ? { "x-proxy-secret": this.proxySecret } : {})
+        }
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.errors?.[0]?.message || "Failed to fetch trades from Upstox");
       }
-    });
 
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.errors?.[0]?.message || "Failed to fetch trades from Upstox");
+      const rawTrades = data.data || [];
+      
+      return rawTrades.map((t: any) => ({
+        brokerName: this.brokerName,
+        brokerOrderId: t.order_id,
+        brokerTradeId: t.trade_id,
+        symbol: t.tradingsymbol || t.trading_symbol,
+        exchange: t.exchange,
+        segment: t.instrument_token ? "OPTIONS" : "STOCK",
+        productType: t.product,
+        transactionType: t.transaction_type,
+        quantity: t.quantity,
+        price: t.average_price || t.price || 0,
+        orderTime: t.order_timestamp,
+        tradeTime: t.trade_timestamp,
+        status: "COMPLETE",
+      }));
     }
-
-    const rawTrades = data.data || [];
-    
-    return rawTrades.map((t: any) => ({
-      brokerName: this.brokerName,
-      brokerOrderId: t.order_id,
-      brokerTradeId: t.trade_id,
-      symbol: t.tradingsymbol,
-      exchange: t.exchange,
-      segment: t.instrument_token ? "OPTIONS" : "STOCK",
-      productType: t.product,
-      transactionType: t.transaction_type, // BUY, SELL
-      quantity: t.quantity,
-      price: t.average_price,
-      orderTime: t.order_timestamp,
-      tradeTime: t.trade_timestamp,
-      status: "COMPLETE",
-    }));
   }
 
   async fetchPositions(connection: BrokerConnectionData): Promise<NormalizedPosition[]> {
