@@ -19,7 +19,7 @@ export class ZerodhaAdapter implements BrokerAdapter {
 
   async exchangeToken(authCode: string, userId: string, origin?: string): Promise<BrokerToken> {
     if (!this.apiKey || !this.apiSecret) {
-      throw new Error("Zerodha API keys not configured");
+      throw new Error("Zerodha API credentials are not configured. Please set ZERODHA_API_KEY and ZERODHA_API_SECRET in environment variables.");
     }
 
     const checksum = crypto
@@ -42,8 +42,14 @@ export class ZerodhaAdapter implements BrokerAdapter {
     });
 
     const data = await res.json();
+    
+    // Log the full Zerodha response for debugging
+    console.log("[Zerodha exchangeToken] HTTP Status:", res.status);
+    console.log("[Zerodha exchangeToken] Response:", JSON.stringify(data));
+    
     if (data.status !== "success") {
-      throw new Error(data.message || "Failed to exchange Zerodha token");
+      const errMsg = data.message || data.error_type || "Failed to exchange Zerodha token";
+      throw new Error(`Zerodha token exchange failed: ${errMsg} (HTTP ${res.status})`);
     }
 
     return {

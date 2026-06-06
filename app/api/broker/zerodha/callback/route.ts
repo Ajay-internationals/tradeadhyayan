@@ -10,14 +10,25 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const token = searchParams.get("request_token");
+    const action = searchParams.get("action"); // Zerodha also sends this
+    
+    // Log env var presence for debugging (never log actual values)
+    console.log("[Zerodha Callback] ZERODHA_API_KEY set:", !!process.env.ZERODHA_API_KEY);
+    console.log("[Zerodha Callback] ZERODHA_API_SECRET set:", !!process.env.ZERODHA_API_SECRET);
+    console.log("[Zerodha Callback] request_token received:", !!token);
+    console.log("[Zerodha Callback] action:", action);
     
     if (!token) {
-      return NextResponse.json({ error: "Missing request_token in callback" }, { status: 400 });
+      // Check if user cancelled (action=login)
+      const origin = new URL(req.url).origin;
+      return NextResponse.redirect(`${origin}/dashboard/trade-journal/broker-sync?status=error&message=${encodeURIComponent("No request_token received from Zerodha. Did you cancel the login?")}`);
     }
 
     const cookieHeader = req.headers.get("cookie") || "";
     const emailCookie = cookieHeader.split(";").find(c => c.trim().startsWith("oauth_user_email="));
     const email = emailCookie ? decodeURIComponent(emailCookie.split("=")[1].trim()) : null;
+    
+    console.log("[Zerodha Callback] email from cookie:", email || "(none - will use MOCK_USER_ID)");
 
     let userId = MOCK_USER_ID;
     if (email) {
@@ -76,3 +87,4 @@ export async function GET(req: Request) {
     return NextResponse.redirect(`${origin}/dashboard/trade-journal/broker-sync?status=error&message=${encodeURIComponent(error.message)}`);
   }
 }
+
