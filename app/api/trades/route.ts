@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { detectAndSaveMistakesForTrade } from "@/app/actions/trades";
 
 async function getUserFromSession() {
   return await prisma.user.findFirst();
@@ -7,13 +8,9 @@ async function getUserFromSession() {
 
 export async function POST(req: Request) {
   try {
-    const user = await getUserFromSession();
-    if (!user) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
-
     const data = await req.json();
     const {
+      email,
       symbol,
       instrumentType,
       direction, // "LONG" | "SHORT"
@@ -30,6 +27,19 @@ export async function POST(req: Request) {
       notes,
       batchId,
     } = data;
+
+    let user = null;
+    if (email) {
+      user = await prisma.user.findUnique({
+        where: { email: email.trim().toLowerCase() }
+      });
+    }
+    if (!user) {
+      user = await getUserFromSession();
+    }
+    if (!user) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
 
     // Validate minimum required fields
     if (!symbol || !direction || !entryPrice || !quantity || !entryTime) {
@@ -94,6 +104,7 @@ export async function POST(req: Request) {
         quantity: Number(quantity),
         entryTime: new Date(entryTime),
         exitTime: exitTime ? new Date(exitTime) : new Date(entryTime),
+        tradeDate: new Date(entryTime),
         stopLoss: stopLoss ? Number(stopLoss) : null,
         target: target ? Number(target) : null,
         charges: Number(charges),
@@ -108,6 +119,9 @@ export async function POST(req: Request) {
         updatedAt: new Date(),
       },
     });
+
+    // Run mistake detector on this manual trade
+    await detectAndSaveMistakesForTrade(user.id, trade.id);
 
     return NextResponse.json({ success: true, trade });
   } catch (error: any) {

@@ -126,8 +126,8 @@ export default function DashboardPage() {
             <h3 className="text-2xl font-black text-[#0F172A] tracking-tight">{metrics.winRate.toFixed(1)}%</h3>
           </div>
           <div className="bg-white p-5 rounded-3xl shadow-sm shadow-[#7C3AED]/5 border border-[#E9E6F5]">
-            <p className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-2">Profit Factor</p>
-            <h3 className="text-2xl font-black text-[#0F172A] tracking-tight">{metrics.profitFactor.toFixed(2)}</h3>
+            <p className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-2">Avg Risk to Reward</p>
+            <h3 className="text-2xl font-black text-[#0F172A] tracking-tight">1 : {metrics.riskReward.toFixed(1)}</h3>
           </div>
           <div className="bg-white p-5 rounded-3xl shadow-sm shadow-[#7C3AED]/5 border border-[#E9E6F5]">
             <p className="text-xs font-bold text-[#64748B] uppercase tracking-wider mb-2">Total Trades</p>

@@ -157,6 +157,7 @@ export async function POST(req: Request) {
             quantity,
             entryTime: new Date(entryExec.tradeTime || entryExec.orderTime),
             exitTime: new Date(exitExec.tradeTime || exitExec.orderTime),
+            tradeDate: new Date(entryExec.tradeTime || entryExec.orderTime),
             charges: 0,
             netPnl: grossPnl, // Mock assuming 0 charges
             pnl: grossPnl,

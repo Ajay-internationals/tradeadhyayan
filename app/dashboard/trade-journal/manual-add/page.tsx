@@ -66,8 +66,10 @@ export default function ManualAddTradePage() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      const email = localStorage.getItem('trade_adhyayan_user') || "";
       const payload = {
         ...formData,
+        email,
         entryTime: new Date(`${formData.entryDate}T${formData.entryTime}`).toISOString(),
         exitTime: formData.exitDate && formData.exitTime ? new Date(`${formData.exitDate}T${formData.exitTime}`).toISOString() : undefined,
       };
@@ -112,7 +114,9 @@ export default function ManualAddTradePage() {
         // Basic validation
         if (!symbol || !qty || !entryPrice) continue;
 
+        const email = localStorage.getItem('trade_adhyayan_user') || "";
         const payload = {
+          email,
           symbol,
           direction: direction?.toUpperCase().includes("SHORT") ? "SHORT" : "LONG",
           entryPrice: Number(entryPrice),

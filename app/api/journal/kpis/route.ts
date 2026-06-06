@@ -5,7 +5,9 @@ export const dynamic = "force-dynamic";
 
 async function getUserFromSession(email: string | null) {
   if (!email) return null;
-  return await prisma.user.findUnique({ where: { email } });
+  return await prisma.user.findUnique({
+    where: { email: email.trim().toLowerCase() }
+  });
 }
 
 export async function GET(req: Request) {
@@ -32,7 +34,7 @@ export async function GET(req: Request) {
     const trades = await prisma.trade.findMany({
       where: {
         userId: user.id,
-        tradeDate: {
+        entryTime: {
           gte: startDate,
           lte: endDate,
         }
