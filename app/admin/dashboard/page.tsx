@@ -161,63 +161,55 @@ export default async function AdminDashboardPage() {
           </div>
           
           <div className="space-y-6">
-            <div className="flex gap-4">
-              <div className="w-10 h-10 rounded-full bg-[#DCFCE7] flex items-center justify-center flex-shrink-0 z-10">
-                <UserPlus size={18} className="text-[#16A34A]" />
+            {data.activities.length === 0 ? (
+              <div className="py-8 text-center text-[#64748B] text-xs font-semibold">
+                No recent activities found.
               </div>
-              <div>
-                <p className="text-[13px] font-bold text-[#0F172A]">New mentor "Rohit Verma" added</p>
-                <p className="text-[12px] text-[#64748B] mt-0.5">Mentor account created successfully</p>
-                <p className="text-[10px] font-semibold text-[#94A3B8] mt-1 uppercase tracking-wide">20 May, 10:30 AM</p>
-              </div>
-            </div>
-
-            <div className="flex gap-4">
-              <div className="w-10 h-10 rounded-full bg-[#F1ECFF] flex items-center justify-center flex-shrink-0 z-10">
-                <User size={18} className="text-[#6D3DF5]" />
-              </div>
-              <div>
-                <p className="text-[13px] font-bold text-[#0F172A]">Ankit Verma assigned to Ajay Sharma</p>
-                <p className="text-[12px] text-[#64748B] mt-0.5">Client allocated to mentor</p>
-                <p className="text-[10px] font-semibold text-[#94A3B8] mt-1 uppercase tracking-wide">20 May, 09:45 AM</p>
-              </div>
-            </div>
-
-            <div className="flex gap-4">
-              <div className="w-10 h-10 rounded-full bg-[#E0F2FE] flex items-center justify-center flex-shrink-0 z-10">
-                <Calendar size={18} className="text-[#0284C7]" />
-              </div>
-              <div>
-                <p className="text-[13px] font-bold text-[#0F172A]">Review completed by Neha Singh for Rohit Kumar</p>
-                <p className="text-[12px] text-[#64748B] mt-0.5">Weekly review has been submitted</p>
-                <p className="text-[10px] font-semibold text-[#94A3B8] mt-1 uppercase tracking-wide">20 May, 09:15 AM</p>
-              </div>
-            </div>
-
-            <div className="flex gap-4">
-              <div className="w-10 h-10 rounded-full bg-[#FFEDD5] flex items-center justify-center flex-shrink-0 z-10">
-                <Calendar size={18} className="text-[#EA580C]" />
-              </div>
-              <div>
-                <p className="text-[13px] font-bold text-[#0F172A]">Group session "Weekly Market Review" scheduled</p>
-                <p className="text-[12px] text-[#64748B] mt-0.5">22 May, 7:00 PM</p>
-                <p className="text-[10px] font-semibold text-[#94A3B8] mt-1 uppercase tracking-wide">20 May, 08:50 AM</p>
-              </div>
-            </div>
-            
-            <div className="flex gap-4">
-              <div className="w-10 h-10 rounded-full bg-[#DCFCE7] flex items-center justify-center flex-shrink-0 z-10">
-                <IndianRupee size={18} className="text-[#16A34A]" />
-              </div>
-              <div>
-                <p className="text-[13px] font-bold text-[#0F172A]">Payout processed for Ajay Sharma</p>
-                <p className="text-[12px] text-[#64748B] mt-0.5">Amount: ₹39,992 for April 2025</p>
-                <p className="text-[10px] font-semibold text-[#94A3B8] mt-1 uppercase tracking-wide">19 May, 06:20 PM</p>
-              </div>
-            </div>
+            ) : (
+              data.activities.map((act: any) => {
+                let Icon = Activity;
+                let bg = "bg-[#F1ECFF]";
+                let iconColor = "text-[#6D3DF5]";
+                
+                if (act.activityType.includes("USER") || act.activityType.includes("CLIENT") || act.activityType.includes("ALLOCAT")) {
+                  Icon = UserPlus;
+                  bg = "bg-[#DCFCE7]";
+                  iconColor = "text-[#16A34A]";
+                } else if (act.activityType.includes("REVIEW")) {
+                  Icon = Calendar;
+                  bg = "bg-[#E0F2FE]";
+                  iconColor = "text-[#0284C7]";
+                } else if (act.activityType.includes("PAYOUT")) {
+                  Icon = IndianRupee;
+                  bg = "bg-[#DCFCE7]";
+                  iconColor = "text-[#16A34A]";
+                } else if (act.activityType.includes("MENTOR")) {
+                  Icon = UserCheck;
+                  bg = "bg-[#F3E8FF]";
+                  iconColor = "text-[#9333EA]";
+                }
+                
+                return (
+                  <div key={act.id} className="flex gap-4 relative z-10">
+                    <div className={`w-10 h-10 rounded-full ${bg} flex items-center justify-center flex-shrink-0`}>
+                      <Icon size={18} className={iconColor} />
+                    </div>
+                    <div>
+                      <p className="text-[13px] font-bold text-[#0F172A]">{act.description}</p>
+                      <p className="text-[12px] text-[#64748B] mt-0.5">{act.activityType.replace(/_/g, ' ')}</p>
+                      <p className="text-[10px] font-semibold text-[#94A3B8] mt-1 uppercase tracking-wide">
+                        {new Date(act.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })
+            )}
             
             {/* Timeline Line */}
-            <div className="absolute left-[43px] top-[100px] bottom-[60px] w-[2px] bg-[#E7EAF3] z-0"></div>
+            {data.activities.length > 0 && (
+              <div className="absolute left-[43px] top-[100px] bottom-[60px] w-[2px] bg-[#E7EAF3] z-0"></div>
+            )}
           </div>
         </div>
       </div>
