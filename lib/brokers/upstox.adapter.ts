@@ -15,6 +15,10 @@ export class UpstoxAdapter implements BrokerAdapter {
     return process.env.UPSTOX_API_BASE_URL || "https://api-v2.upstox.com";
   }
 
+  private get proxySecret() {
+    return process.env.PROXY_SECRET_TOKEN || "";
+  }
+
   async generateLoginUrl(userId: string, origin?: string): Promise<string> {
     if (!this.clientId) throw new Error("Upstox Client ID not configured");
     // Use the specific callback URL configured in the user's Upstox app
@@ -41,7 +45,8 @@ export class UpstoxAdapter implements BrokerAdapter {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
-        "Accept": "application/json"
+        "Accept": "application/json",
+        ...(this.proxySecret ? { "x-proxy-secret": this.proxySecret } : {})
       },
       body: params.toString()
     });
@@ -64,7 +69,8 @@ export class UpstoxAdapter implements BrokerAdapter {
       method: "GET",
       headers: {
         "Accept": "application/json",
-        "Authorization": `Bearer ${connection.accessTokenEncrypted}`
+        "Authorization": `Bearer ${connection.accessTokenEncrypted}`,
+        ...(this.proxySecret ? { "x-proxy-secret": this.proxySecret } : {})
       }
     });
     const data = await res.json();
@@ -94,7 +100,8 @@ export class UpstoxAdapter implements BrokerAdapter {
       method: "GET",
       headers: {
         "Accept": "application/json",
-        "Authorization": `Bearer ${connection.accessTokenEncrypted}`
+        "Authorization": `Bearer ${connection.accessTokenEncrypted}`,
+        ...(this.proxySecret ? { "x-proxy-secret": this.proxySecret } : {})
       }
     });
 
@@ -129,7 +136,8 @@ export class UpstoxAdapter implements BrokerAdapter {
       method: "GET",
       headers: {
         "Accept": "application/json",
-        "Authorization": `Bearer ${connection.accessTokenEncrypted}`
+        "Authorization": `Bearer ${connection.accessTokenEncrypted}`,
+        ...(this.proxySecret ? { "x-proxy-secret": this.proxySecret } : {})
       }
     });
     const data = await res.json();
@@ -156,7 +164,8 @@ export class UpstoxAdapter implements BrokerAdapter {
       method: "GET",
       headers: {
         "Accept": "application/json",
-        "Authorization": `Bearer ${connection.accessTokenEncrypted}`
+        "Authorization": `Bearer ${connection.accessTokenEncrypted}`,
+        ...(this.proxySecret ? { "x-proxy-secret": this.proxySecret } : {})
       }
     });
     const data = await res.json();

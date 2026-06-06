@@ -629,7 +629,13 @@ export async function triggerBrokerSync(
         const today = new Date().toISOString().split("T")[0];
         const res = await fetch(
           `${baseUrl}/v2/charges/historical-charges?from_date=${today}&to_date=${today}&segment=EQ`,
-          { headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" } }
+          {
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              Accept: "application/json",
+              ...(process.env.PROXY_SECRET_TOKEN ? { "x-proxy-secret": process.env.PROXY_SECRET_TOKEN } : {})
+            }
+          }
         );
         if (res.ok) {
           const json = await res.json();
@@ -648,7 +654,13 @@ export async function triggerBrokerSync(
           // Fallback: fetch trade book
           const tradeRes = await fetch(
             `${baseUrl}/v2/trade/info`,
-            { headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" } }
+            {
+              headers: {
+                Authorization: `Bearer ${apiKey}`,
+                Accept: "application/json",
+                ...(process.env.PROXY_SECRET_TOKEN ? { "x-proxy-secret": process.env.PROXY_SECRET_TOKEN } : {})
+              }
+            }
           );
           if (tradeRes.ok) {
             const tradeJson = await tradeRes.json();
