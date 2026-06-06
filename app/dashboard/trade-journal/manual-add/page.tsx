@@ -187,7 +187,7 @@ export default function ManualAddTradePage() {
   };
 
   return (
-    <div className="p-[20px] max-w-[1440px] mx-auto space-y-[16px]">
+    <div className="pt-2 px-[20px] pb-[20px] max-w-[1440px] mx-auto space-y-[16px]">
       <Toaster position="top-right" />
       {/* Header */}
       <header className="flex items-center gap-4 pb-3 border-b border-[#E9E6F5]">

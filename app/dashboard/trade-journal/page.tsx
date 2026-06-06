@@ -59,7 +59,7 @@ export default function TradeJournalPage() {
   }, []);
 
   return (
-    <div className="p-[28px] max-w-7xl mx-auto space-y-[20px]">
+    <div className="pt-2 px-[28px] pb-[28px] max-w-7xl mx-auto space-y-[20px]">
       {/* Header */}
       <header className="flex justify-between items-end pb-4 border-b border-[#E9E6F5]">
         <div>

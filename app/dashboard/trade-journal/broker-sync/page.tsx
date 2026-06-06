@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, RefreshCw, CheckCircle2, AlertCircle, Clock, Link as LinkIcon, Settings, ChevronRight, ChevronDown, Check, Info, Shield, HelpCircle, ExternalLink, Activity, X, Trash2 } from "lucide-react";
 import { toast, Toaster } from "react-hot-toast";
+import { disconnectBroker } from "@/app/actions/trades";
 
 function BrokerSyncContent() {
   const [syncingBroker, setSyncingBroker] = useState<string | null>(null);
@@ -127,15 +128,30 @@ function BrokerSyncContent() {
     }
   };
 
+  const handleDisconnect = async (brokerName: string) => {
+    try {
+      const email = localStorage.getItem("trade_adhyayan_user") || "";
+      const confirmed = window.confirm(`Are you sure you want to disconnect ${brokerName}?`);
+      if (!confirmed) return;
+
+      await disconnectBroker(email, brokerName);
+      toast.success(`${brokerName} disconnected successfully!`);
+      fetchConnections(); // Refresh statuses
+    } catch (err: any) {
+      console.error(err);
+      toast.error(`Failed to disconnect ${brokerName}.`);
+    }
+  };
+
   if (isLoading) {
-    return <div className="p-[28px] text-center text-slate-500 font-bold">Loading broker configurations...</div>;
+    return <div className="pt-2 px-[28px] pb-[28px] text-center text-slate-500 font-bold">Loading broker configurations...</div>;
   }
 
   return (
-    <div className="p-[28px] max-w-[1440px] mx-auto space-y-[24px]">
+    <div className="pt-2 px-[28px] pb-[28px] max-w-[1440px] mx-auto space-y-[24px]">
       <Toaster position="top-right" />
       {/* Page Header */}
-      <header className="flex items-center gap-4 pb-4 border-b border-[#E9E6F5] h-[80px]">
+      <header className="flex items-center gap-4 pb-4 border-b border-[#E9E6F5]">
         <Link href="/dashboard/trade-journal" className="w-10 h-10 bg-white border border-[#E9E6F5] rounded-xl flex items-center justify-center text-[#64748B] hover:text-[#7C3AED] hover:border-[#7C3AED] transition-colors cursor-pointer shadow-sm">
           <ArrowLeft size={16} />
         </Link>
@@ -181,6 +197,7 @@ function BrokerSyncContent() {
                 bg="bg-[#F14922]/10"
                 onConnect={() => handleConnect("Zerodha")}
                 onSync={() => handleSync("Zerodha")}
+                onDisconnect={() => handleDisconnect("Zerodha")}
                 isSyncing={syncingBroker === "Zerodha"}
               />
               <BrokerCard 
@@ -193,6 +210,7 @@ function BrokerSyncContent() {
                 bg="bg-[#512379]/10"
                 onConnect={() => handleConnect("Upstox")}
                 onSync={() => handleSync("Upstox")}
+                onDisconnect={() => handleDisconnect("Upstox")}
                 isSyncing={syncingBroker === "Upstox"}
               />
               <BrokerCard 
@@ -205,6 +223,7 @@ function BrokerSyncContent() {
                 bg="bg-[#0E8FEF]/10"
                 onConnect={() => handleConnect("FYERS")}
                 onSync={() => handleSync("FYERS")}
+                onDisconnect={() => handleDisconnect("FYERS")}
                 isSyncing={syncingBroker === "FYERS"}
               />
               <BrokerCard 
@@ -377,7 +396,7 @@ export default function BrokerSyncPage() {
   );
 }
 
-function BrokerCard({ name, connectionData, status, logoUrl, logo, color, bg, onConnect, onSync, isSyncing }: any) {
+function BrokerCard({ name, connectionData, status, logoUrl, logo, color, bg, onConnect, onSync, onDisconnect, isSyncing }: any) {
   const isConnected = status === "CONNECTED";
   const isExpired = status === "TOKEN_EXPIRED";
   
@@ -392,8 +411,9 @@ function BrokerCard({ name, connectionData, status, logoUrl, logo, color, bg, on
   };
 
   const handleDisconnect = async () => {
-    // Basic disconnect UI logic (could also call an API to delete the connection)
-    alert("Disconnecting broker...");
+    if (onDisconnect) {
+      onDisconnect();
+    }
   };
 
   return (
