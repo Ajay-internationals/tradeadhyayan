@@ -554,9 +554,21 @@ export async function addBrokerConnection(email: string, brokerName: string, sta
 export async function disconnectBroker(email: string, brokerName: string) {
   try {
     const user = await getOrCreateUser(email);
-    const connectionId = `bc_${user.id}_${brokerName}`;
+    
+    // Find connection first because the ID might be conn_${timestamp} or bc_${userId}_${brokerName}
+    const connection = await prisma.brokerConnection.findFirst({
+      where: {
+        userId: user.id,
+        brokerName
+      }
+    });
+
+    if (!connection) {
+      throw new Error(`Connection for ${brokerName} not found.`);
+    }
+
     return await prisma.brokerConnection.update({
-      where: { id: connectionId },
+      where: { id: connection.id },
       data: {
         status: "DISCONNECTED",
         accessTokenEncrypted: null,
