@@ -11,6 +11,10 @@ export class UpstoxAdapter implements BrokerAdapter {
     return process.env.UPSTOX_CLIENT_SECRET || "";
   }
 
+  private get apiBaseUrl() {
+    return process.env.UPSTOX_API_BASE_URL || "https://api-v2.upstox.com";
+  }
+
   async generateLoginUrl(userId: string, origin?: string): Promise<string> {
     if (!this.clientId) throw new Error("Upstox Client ID not configured");
     // Use the specific callback URL configured in the user's Upstox app
@@ -33,7 +37,7 @@ export class UpstoxAdapter implements BrokerAdapter {
     params.append("redirect_uri", redirectUri);
     params.append("grant_type", "authorization_code");
 
-    const res = await fetch("https://api-v2.upstox.com/login/authorization/token", {
+    const res = await fetch(`${this.apiBaseUrl}/login/authorization/token`, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -56,7 +60,7 @@ export class UpstoxAdapter implements BrokerAdapter {
   async fetchOrders(connection: BrokerConnectionData): Promise<NormalizedOrder[]> {
     if (!connection.accessTokenEncrypted) throw new Error("Not connected to Upstox");
 
-    const res = await fetch("https://api-v2.upstox.com/order/retrieve-all", {
+    const res = await fetch(`${this.apiBaseUrl}/order/retrieve-all`, {
       method: "GET",
       headers: {
         "Accept": "application/json",
@@ -86,7 +90,7 @@ export class UpstoxAdapter implements BrokerAdapter {
       throw new Error("Not connected to Upstox");
     }
 
-    const res = await fetch("https://api-v2.upstox.com/order/trades", {
+    const res = await fetch(`${this.apiBaseUrl}/order/trades`, {
       method: "GET",
       headers: {
         "Accept": "application/json",
@@ -121,7 +125,7 @@ export class UpstoxAdapter implements BrokerAdapter {
   async fetchPositions(connection: BrokerConnectionData): Promise<NormalizedPosition[]> {
     if (!connection.accessTokenEncrypted) throw new Error("Not connected to Upstox");
 
-    const res = await fetch("https://api-v2.upstox.com/portfolio/short-term-positions", {
+    const res = await fetch(`${this.apiBaseUrl}/portfolio/short-term-positions`, {
       method: "GET",
       headers: {
         "Accept": "application/json",
@@ -148,7 +152,7 @@ export class UpstoxAdapter implements BrokerAdapter {
   async fetchHoldings(connection: BrokerConnectionData): Promise<NormalizedHolding[]> {
     if (!connection.accessTokenEncrypted) throw new Error("Not connected to Upstox");
 
-    const res = await fetch("https://api-v2.upstox.com/portfolio/long-term-holdings", {
+    const res = await fetch(`${this.apiBaseUrl}/portfolio/long-term-holdings`, {
       method: "GET",
       headers: {
         "Accept": "application/json",

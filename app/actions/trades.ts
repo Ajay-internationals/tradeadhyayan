@@ -625,9 +625,10 @@ export async function triggerBrokerSync(
     if (brokerName === "Upstox" && apiKey) {
       try {
         // Upstox v2: Get today's trade book (requires access token — using apiKey as bearer for now)
+        const baseUrl = process.env.UPSTOX_API_BASE_URL || "https://api.upstox.com";
         const today = new Date().toISOString().split("T")[0];
         const res = await fetch(
-          `https://api.upstox.com/v2/charges/historical-charges?from_date=${today}&to_date=${today}&segment=EQ`,
+          `${baseUrl}/v2/charges/historical-charges?from_date=${today}&to_date=${today}&segment=EQ`,
           { headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" } }
         );
         if (res.ok) {
@@ -646,7 +647,7 @@ export async function triggerBrokerSync(
         } else {
           // Fallback: fetch trade book
           const tradeRes = await fetch(
-            "https://api.upstox.com/v2/trade/info",
+            `${baseUrl}/v2/trade/info`,
             { headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" } }
           );
           if (tradeRes.ok) {
