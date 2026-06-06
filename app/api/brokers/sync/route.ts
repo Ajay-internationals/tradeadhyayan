@@ -6,10 +6,18 @@ import { FyersAdapter } from "@/lib/brokers/fyers.adapter";
 
 export async function POST(req: Request) {
   try {
-    const { brokerName } = await req.json();
+    const { brokerName, email } = await req.json();
 
-    // In a real scenario, this comes from authentication session
-    const mockUserId = "cmp86dqje0000l2040im7xgg1";
+    // Resolve user from email (if provided)
+    let userId = "cmp86dqje0000l2040im7xgg1"; // default/mock fallback
+    if (email) {
+      const user = await prisma.user.findUnique({
+        where: { email: email.trim().toLowerCase() }
+      });
+      if (user) {
+        userId = user.id;
+      }
+    }
 
     let adapter;
     if (brokerName === "Zerodha") {
@@ -24,7 +32,7 @@ export async function POST(req: Request) {
 
     // Fetch connection from database
     const connection = await prisma.brokerConnection.findFirst({
-      where: { userId: mockUserId, brokerName }
+      where: { userId, brokerName }
     });
 
     if (!connection || !connection.accessTokenEncrypted) {
@@ -41,16 +49,16 @@ export async function POST(req: Request) {
     
     // Clear old snapshots
     await prisma.$transaction([
-      prisma.brokerOrder.deleteMany({ where: { userId: mockUserId, brokerName } }),
-      prisma.brokerPosition.deleteMany({ where: { userId: mockUserId, brokerName } }),
-      prisma.brokerHolding.deleteMany({ where: { userId: mockUserId, brokerName } }),
+      prisma.brokerOrder.deleteMany({ where: { userId, brokerName } }),
+      prisma.brokerPosition.deleteMany({ where: { userId, brokerName } }),
+      prisma.brokerHolding.deleteMany({ where: { userId, brokerName } }),
     ]);
 
     // Insert new snapshots
     if (orders.length > 0) {
       await prisma.brokerOrder.createMany({
         data: orders.map(o => ({
-          userId: mockUserId,
+          userId,
           brokerName,
           brokerOrderId: o.brokerOrderId,
           symbol: o.symbol,
@@ -68,7 +76,7 @@ export async function POST(req: Request) {
     if (positions.length > 0) {
       await prisma.brokerPosition.createMany({
         data: positions.map(p => ({
-          userId: mockUserId,
+          userId,
           brokerName,
           symbol: p.symbol,
           exchange: p.exchange,
@@ -85,7 +93,7 @@ export async function POST(req: Request) {
     if (holdings.length > 0) {
       await prisma.brokerHolding.createMany({
         data: holdings.map(h => ({
-          userId: mockUserId,
+          userId,
           brokerName,
           symbol: h.symbol,
           exchange: h.exchange,
@@ -120,7 +128,7 @@ export async function POST(req: Request) {
 
     await prisma.trade.deleteMany({
       where: {
-        userId: mockUserId,
+        userId,
         source: brokerName.toUpperCase(),
         entryTime: {
           gte: startOfDay
@@ -146,7 +154,7 @@ export async function POST(req: Request) {
         await prisma.trade.create({
           data: {
             id: `trd_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-            userId: mockUserId,
+            userId,
             brokerConnectionId: connection.id,
             source: brokerName.toUpperCase(),
             symbol: entryExec.symbol,

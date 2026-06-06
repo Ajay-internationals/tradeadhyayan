@@ -202,7 +202,7 @@ export async function submitClientReviewRequest(email: string, tradeIds: string[
 
 export async function getMentorDashboard(email: string) {
   const user = await getOrCreateUser(email);
-  const mentor = await prisma.mentor.findUnique({ where: { userId: user.id } });
+  const mentor = await prisma.mentor.findUnique({ where: { email: user.email } });
   
   if (!mentor) throw new Error("Not a mentor.");
 
@@ -351,7 +351,7 @@ export async function submitMentorshipReviewScore(
   feedback: { strengths: string; improvements: string; actionPlan: string; focus: string }
 ) {
   const user = await getOrCreateUser(mentorEmail);
-  const mentor = await prisma.mentor.findUnique({ where: { userId: user.id } });
+  const mentor = await prisma.mentor.findUnique({ where: { email: user.email } });
   if (!mentor) throw new Error("Not a mentor.");
 
   const request = await prisma.reviewRequest.findUnique({ where: { id: reviewRequestId } });

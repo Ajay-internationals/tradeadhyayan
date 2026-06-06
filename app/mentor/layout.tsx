@@ -23,7 +23,7 @@ export default function MentorLayout({ children }: { children: React.ReactNode }
   ];
 
   return (
-    <div className="flex min-h-screen bg-[#FAFAFF] font-['Inter',sans-serif]">
+    <div className="flex min-h-screen bg-[#FAFAFF] font-sans">
       {/* Sidebar */}
       <aside className="w-[260px] bg-white border-r border-[#E7EAF3] flex flex-col h-screen sticky top-0">
         

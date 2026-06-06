@@ -3,6 +3,8 @@ import { ZerodhaAdapter } from "@/lib/brokers/zerodha.adapter";
 import { UpstoxAdapter } from "@/lib/brokers/upstox.adapter";
 import { FyersAdapter } from "@/lib/brokers/fyers.adapter";
 
+import { prisma } from "@/lib/db";
+
 export const dynamic = "force-dynamic";
 
 // In a real app, this would come from the auth session.
@@ -12,6 +14,7 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const broker = searchParams.get("broker");
+    const email = searchParams.get("email");
 
     if (!broker) {
       return NextResponse.json({ error: "Broker parameter is required" }, { status: 400 });
@@ -28,11 +31,25 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Unsupported broker" }, { status: 400 });
     }
 
+    let userId = MOCK_USER_ID;
+    if (email) {
+      const user = await prisma.user.findUnique({
+        where: { email: email.trim().toLowerCase() }
+      });
+      if (user) {
+        userId = user.id;
+      }
+    }
+
     // Pass the base URL so adapters know where to redirect back
     const origin = new URL(req.url).origin;
-    const loginUrl = await adapter.generateLoginUrl(MOCK_USER_ID, origin);
+    const loginUrl = await adapter.generateLoginUrl(userId, origin);
     
-    return NextResponse.redirect(loginUrl);
+    const response = NextResponse.redirect(loginUrl);
+    if (email) {
+      response.cookies.set("oauth_user_email", email.trim().toLowerCase(), { maxAge: 600, path: "/" });
+    }
+    return response;
 
   } catch (error: any) {
     console.error("Broker OAuth Init Error:", error);

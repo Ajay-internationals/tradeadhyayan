@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { FyersAdapter } from "@/lib/brokers/fyers.adapter";
 
+export const dynamic = "force-dynamic";
+
 const MOCK_USER_ID = "cmp86dqje0000l2040im7xgg1";
 
 export async function GET(req: Request) {
@@ -13,17 +15,31 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Missing authorization code in callback" }, { status: 400 });
     }
 
+    const cookieHeader = req.headers.get("cookie") || "";
+    const emailCookie = cookieHeader.split(";").find(c => c.trim().startsWith("oauth_user_email="));
+    const email = emailCookie ? decodeURIComponent(emailCookie.split("=")[1].trim()) : null;
+
+    let userId = MOCK_USER_ID;
+    if (email) {
+      const user = await prisma.user.findUnique({
+        where: { email: email.trim().toLowerCase() }
+      });
+      if (user) {
+        userId = user.id;
+      }
+    }
+
     const adapter = new FyersAdapter();
     const origin = new URL(req.url).origin;
     
     // Exchange the code for an access token
-    const brokerToken = await adapter.exchangeToken(authCode, MOCK_USER_ID, origin);
+    const brokerToken = await adapter.exchangeToken(authCode, userId, origin);
 
     // Save connection to DB
     const connectionId = `conn_${Date.now()}`;
     
     const existing = await prisma.brokerConnection.findFirst({
-      where: { userId: MOCK_USER_ID, brokerName: adapter.brokerName }
+      where: { userId, brokerName: adapter.brokerName }
     });
 
     if (existing) {
@@ -41,7 +57,7 @@ export async function GET(req: Request) {
       await prisma.brokerConnection.create({
         data: {
           id: connectionId,
-          userId: MOCK_USER_ID,
+          userId,
           brokerName: adapter.brokerName,
           status: "CONNECTED",
           accessTokenEncrypted: brokerToken.accessToken,

@@ -36,7 +36,8 @@ function BrokerSyncContent() {
 
   const fetchConnections = async () => {
     try {
-      const res = await fetch("/api/brokers/status");
+      const email = localStorage.getItem("trade_adhyayan_user") || "";
+      const res = await fetch(`/api/brokers/status?email=${encodeURIComponent(email)}`);
       const data = await res.json();
       if (data.success) {
         setConnections(data.connections);
@@ -73,22 +74,28 @@ function BrokerSyncContent() {
   };
 
   const handleConnect = (broker: string) => {
+    const email = localStorage.getItem("trade_adhyayan_user") || "";
     toast.success(`Redirecting to ${broker} login...`);
-    window.location.href = `/api/brokers/oauth/init?broker=${broker}`;
+    window.location.href = `/api/brokers/oauth/init?broker=${broker}&email=${encodeURIComponent(email)}`;
   };
 
   const handleSync = async (brokerName: string) => {
     setSyncingBroker(brokerName);
     try {
+      const email = localStorage.getItem("trade_adhyayan_user") || "";
       const res = await fetch('/api/brokers/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ brokerName })
+        body: JSON.stringify({ brokerName, email })
       });
       const data = await res.json();
       
       if (data.success) {
-        toast.success(`${data.records} trades synced from ${brokerName}!`);
+        if (data.records === 0) {
+          toast.success("No trades taken till now");
+        } else {
+          toast.success(`${data.records} trades synced from ${brokerName}!`);
+        }
         
         const newSync = {
           id: data.batchId,
@@ -103,7 +110,9 @@ function BrokerSyncContent() {
             `> Fetching live trades from ${brokerName}...`,
             `> Parsed ${data.rawExecutions} raw executions.`,
             "> Normalizing symbols and grouping BUY/SELL legs...",
-            `> Transaction successfully committed ${data.records} trades to DB.`
+            data.records === 0 
+              ? "> No trades taken till now."
+              : `> Transaction successfully committed ${data.records} trades to DB.`
           ]
         };
         

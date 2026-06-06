@@ -15,17 +15,31 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Missing request_token in callback" }, { status: 400 });
     }
 
+    const cookieHeader = req.headers.get("cookie") || "";
+    const emailCookie = cookieHeader.split(";").find(c => c.trim().startsWith("oauth_user_email="));
+    const email = emailCookie ? decodeURIComponent(emailCookie.split("=")[1].trim()) : null;
+
+    let userId = MOCK_USER_ID;
+    if (email) {
+      const user = await prisma.user.findUnique({
+        where: { email: email.trim().toLowerCase() }
+      });
+      if (user) {
+        userId = user.id;
+      }
+    }
+
     const adapter = new ZerodhaAdapter();
     const origin = new URL(req.url).origin;
     
     // Exchange the code for an access token
-    const brokerToken = await adapter.exchangeToken(token, MOCK_USER_ID, origin);
+    const brokerToken = await adapter.exchangeToken(token, userId, origin);
 
     // Save connection to DB
     const connectionId = `conn_${Date.now()}`;
     
     const existing = await prisma.brokerConnection.findFirst({
-      where: { userId: MOCK_USER_ID, brokerName: adapter.brokerName }
+      where: { userId, brokerName: adapter.brokerName }
     });
 
     if (existing) {
@@ -43,7 +57,7 @@ export async function GET(req: Request) {
       await prisma.brokerConnection.create({
         data: {
           id: connectionId,
-          userId: MOCK_USER_ID,
+          userId,
           brokerName: adapter.brokerName,
           status: "CONNECTED",
           accessTokenEncrypted: brokerToken.accessToken,
