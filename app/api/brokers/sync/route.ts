@@ -4,6 +4,8 @@ import { ZerodhaAdapter } from "@/lib/brokers/zerodha.adapter";
 import { UpstoxAdapter } from "@/lib/brokers/upstox.adapter";
 import { FyersAdapter } from "@/lib/brokers/fyers.adapter";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: Request) {
   try {
     const { brokerName, email } = await req.json();

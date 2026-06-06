@@ -87,7 +87,8 @@ export class ZerodhaAdapter implements BrokerAdapter {
   async fetchTrades(connection: BrokerConnectionData): Promise<NormalizedExecution[]> {
     if (!connection.accessTokenEncrypted) throw new Error("Not connected to Zerodha");
 
-    const res = await fetch("https://api.kite.trade/portfolio/trades", {
+    // Correct Zerodha endpoint: /trades (NOT /portfolio/trades)
+    const res = await fetch("https://api.kite.trade/trades", {
       method: "GET",
       headers: {
         "X-Kite-Version": "3",
@@ -96,8 +97,10 @@ export class ZerodhaAdapter implements BrokerAdapter {
     });
 
     const data = await res.json();
+    console.log("[Zerodha fetchTrades] HTTP:", res.status, "status:", data.status);
+    
     if (data.status !== "success") {
-      throw new Error(data.message || "Failed to fetch trades from Zerodha");
+      throw new Error(`Zerodha trades fetch failed: ${data.message || data.error_type || "Unknown error"} (HTTP ${res.status})`);
     }
 
     const rawTrades = data.data || [];
