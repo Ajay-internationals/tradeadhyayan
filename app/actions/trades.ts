@@ -3,6 +3,9 @@
 import { prisma } from "@/lib/db";
 import { InstrumentType, TradeDirection, TradeResult, MistakeSeverity, GoalStatus, BrokerStatus } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { ProxyAgent } from "undici";
+
+const upstoxProxyAgent = process.env.UPSTOX_PROXY_URL ? new ProxyAgent(process.env.UPSTOX_PROXY_URL) : undefined;
 
 // Map database trade object to frontend dashboard format
 function mapDbTradeToFrontend(dbTrade: any) {
@@ -646,8 +649,9 @@ export async function triggerBrokerSync(
               Authorization: `Bearer ${apiKey}`,
               Accept: "application/json",
               ...(process.env.PROXY_SECRET_TOKEN ? { "x-proxy-secret": process.env.PROXY_SECRET_TOKEN } : {})
-            }
-          }
+            },
+            dispatcher: upstoxProxyAgent
+          } as any
         );
         if (res.ok) {
           const json = await res.json();
@@ -671,8 +675,9 @@ export async function triggerBrokerSync(
                 Authorization: `Bearer ${apiKey}`,
                 Accept: "application/json",
                 ...(process.env.PROXY_SECRET_TOKEN ? { "x-proxy-secret": process.env.PROXY_SECRET_TOKEN } : {})
-              }
-            }
+              },
+              dispatcher: upstoxProxyAgent
+            } as any
           );
           if (tradeRes.ok) {
             const tradeJson = await tradeRes.json();

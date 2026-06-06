@@ -1,7 +1,13 @@
 import { BrokerAdapter, BrokerConnectionData, BrokerToken, NormalizedExecution, NormalizedOrder, NormalizedPosition, NormalizedHolding } from "./adapter.interface";
+import { ProxyAgent } from "undici";
 
 export class UpstoxAdapter implements BrokerAdapter {
   brokerName = "Upstox";
+
+  private get proxyAgent() {
+    const url = process.env.UPSTOX_PROXY_URL;
+    return url ? new ProxyAgent(url) : undefined;
+  }
 
   private get clientId() {
     return process.env.UPSTOX_CLIENT_ID || "";
@@ -48,8 +54,9 @@ export class UpstoxAdapter implements BrokerAdapter {
         "Accept": "application/json",
         ...(this.proxySecret ? { "x-proxy-secret": this.proxySecret } : {})
       },
-      body: params.toString()
-    });
+      body: params.toString(),
+      dispatcher: this.proxyAgent
+    } as any);
 
     const data = await res.json();
     if (!res.ok) {
@@ -72,8 +79,9 @@ export class UpstoxAdapter implements BrokerAdapter {
           "Accept": "application/json",
           "Authorization": `Bearer ${connection.accessTokenEncrypted}`,
           ...(this.proxySecret ? { "x-proxy-secret": this.proxySecret } : {})
-        }
-      });
+        },
+        dispatcher: this.proxyAgent
+      } as any);
       const data = await res.json();
       if (!res.ok) throw new Error(data.errors?.[0]?.message || "Failed to fetch orders");
 
@@ -118,8 +126,9 @@ export class UpstoxAdapter implements BrokerAdapter {
           headers: {
             "Accept": "application/json",
             "Authorization": `Bearer ${connection.accessTokenEncrypted}`
-          }
-        });
+          },
+          dispatcher: this.proxyAgent
+        } as any);
         if (!res.ok) {
           console.warn(`Upstox trade history fetch failed for segment ${segment} (might be empty):`, await res.text());
           return [];
@@ -156,8 +165,9 @@ export class UpstoxAdapter implements BrokerAdapter {
           "Accept": "application/json",
           "Authorization": `Bearer ${connection.accessTokenEncrypted}`,
           ...(this.proxySecret ? { "x-proxy-secret": this.proxySecret } : {})
-        }
-      });
+        },
+        dispatcher: this.proxyAgent
+      } as any);
 
       const data = await res.json();
       if (!res.ok) {
@@ -193,8 +203,9 @@ export class UpstoxAdapter implements BrokerAdapter {
         "Accept": "application/json",
         "Authorization": `Bearer ${connection.accessTokenEncrypted}`,
         ...(this.proxySecret ? { "x-proxy-secret": this.proxySecret } : {})
-      }
-    });
+      },
+      dispatcher: this.proxyAgent
+    } as any);
     const data = await res.json();
     if (!res.ok) throw new Error(data.errors?.[0]?.message || "Failed to fetch positions");
 
@@ -221,8 +232,9 @@ export class UpstoxAdapter implements BrokerAdapter {
         "Accept": "application/json",
         "Authorization": `Bearer ${connection.accessTokenEncrypted}`,
         ...(this.proxySecret ? { "x-proxy-secret": this.proxySecret } : {})
-      }
-    });
+      },
+      dispatcher: this.proxyAgent
+    } as any);
     const data = await res.json();
     if (!res.ok) throw new Error(data.errors?.[0]?.message || "Failed to fetch holdings");
 
