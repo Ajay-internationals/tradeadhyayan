@@ -69,10 +69,10 @@ export default function ClientMentorshipPage() {
       {/* Top Metric Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {[
-          { label: "Trades Shared", val: "24", icon: Share2, color: "text-blue-600", bg: "bg-blue-100" },
-          { label: "Reviewed", val: "18", icon: FileText, color: "text-green-600", bg: "bg-green-100" },
+          { label: "Trades Shared", val: data.tradesSharedCount?.toString() || "0", icon: Share2, color: "text-blue-600", bg: "bg-blue-100" },
+          { label: "Reviewed", val: data.reviewedCount?.toString() || "0", icon: FileText, color: "text-green-600", bg: "bg-green-100" },
           { label: "Avg Mentor Score", val: data.currentScore ? `${data.currentScore.toFixed(0)}/100` : "N/A", icon: Target, color: "text-purple-600", bg: "bg-purple-100" },
-          { label: "Improvement Areas", val: "2", icon: AlertCircle, color: "text-orange-600", bg: "bg-orange-100" },
+          { label: "Improvement Areas", val: data.mentorObservation?.improvements ? "1" : "0", icon: AlertCircle, color: "text-orange-600", bg: "bg-orange-100" },
           { label: "Action Taken", val: data.activeActionItems > 0 ? "Yes" : "Pending", icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-100" },
         ].map(kpi => (
           <div key={kpi.label} className="bg-white p-5 rounded-[18px] border border-[#E7EAF3] shadow-sm">
@@ -100,38 +100,39 @@ export default function ClientMentorshipPage() {
             </div>
             
             <div className="space-y-4">
-              {/* Mocking a few history items since we only have one recent review in DB realistically for now */}
-              {[
-                { date: "22 May 2025", symbol: "BANKNIFTY", type: "LONG", score: data.currentScore || 78, desc: mObs?.strengths || "Good risk management and patience." },
-                { date: "15 May 2025", symbol: "NIFTY", type: "SHORT", score: 65, desc: "Entered too early, FOMO trade. Work on waiting for confirmation." },
-                { date: "08 May 2025", symbol: "RELIANCE", type: "LONG", score: 82, desc: "Perfect execution according to the plan. Maintained discipline." },
-              ].map((rev, i) => (
-                <div key={i} className="flex gap-4 p-4 rounded-[16px] border border-[#E7EAF3] hover:border-[#6D3DF5] transition-colors group cursor-pointer bg-[#FAFAFF]">
-                  <div className="w-[60px] flex flex-col items-center justify-center shrink-0 border-r border-[#E7EAF3] pr-4">
-                     <span className={`text-[18px] font-black ${rev.score >= 80 ? 'text-[#16A34A]' : rev.score >= 70 ? 'text-[#6D3DF5]' : 'text-[#EA580C]'}`}>
-                       {rev.score}
-                     </span>
-                     <span className="text-[10px] font-bold text-[#64748B] uppercase">Score</span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <span className="text-[10px] font-bold text-[#94A3B8]">{rev.date}</span>
-                        <h4 className="text-[14px] font-bold text-[#0F172A] mt-0.5">{rev.symbol} <span className={`text-[10px] px-1.5 py-0.5 rounded ml-2 ${rev.type === 'LONG' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{rev.type}</span></h4>
-                      </div>
-                      
-                      {/* Mini Sparkline Mock */}
-                      <div className="flex items-end gap-1 h-6">
-                        <div className="w-1.5 h-3 bg-[#E7EAF3] rounded-t-sm"></div>
-                        <div className="w-1.5 h-4 bg-[#E7EAF3] rounded-t-sm"></div>
-                        <div className="w-1.5 h-6 bg-[#6D3DF5] rounded-t-sm"></div>
-                        <div className="w-1.5 h-2 bg-[#E7EAF3] rounded-t-sm"></div>
-                      </div>
+              {data.completedReviewsData && data.completedReviewsData.length > 0 ? (
+                data.completedReviewsData.map((rev: any, i: number) => (
+                  <div key={i} className="flex gap-4 p-4 rounded-[16px] border border-[#E7EAF3] hover:border-[#6D3DF5] transition-colors group cursor-pointer bg-[#FAFAFF]">
+                    <div className="w-[60px] flex flex-col items-center justify-center shrink-0 border-r border-[#E7EAF3] pr-4">
+                       <span className={`text-[18px] font-black ${rev.score >= 80 ? 'text-[#16A34A]' : rev.score >= 70 ? 'text-[#6D3DF5]' : 'text-[#EA580C]'}`}>
+                         {rev.score.toFixed(0)}
+                       </span>
+                       <span className="text-[10px] font-bold text-[#64748B] uppercase">Score</span>
                     </div>
-                    <p className="text-[12px] text-[#64748B] leading-relaxed">"{rev.desc}"</p>
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <span className="text-[10px] font-bold text-[#94A3B8]">{new Date(rev.date).toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                          <h4 className="text-[14px] font-bold text-[#0F172A] mt-0.5">{rev.symbol} <span className={`text-[10px] px-1.5 py-0.5 rounded ml-2 ${rev.type === 'LONG' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{rev.type}</span></h4>
+                        </div>
+                        
+                        {/* Mini Sparkline Mock */}
+                        <div className="flex items-end gap-1 h-6">
+                          <div className="w-1.5 h-3 bg-[#E7EAF3] rounded-t-sm"></div>
+                          <div className="w-1.5 h-4 bg-[#E7EAF3] rounded-t-sm"></div>
+                          <div className="w-1.5 h-6 bg-[#6D3DF5] rounded-t-sm"></div>
+                          <div className="w-1.5 h-2 bg-[#E7EAF3] rounded-t-sm"></div>
+                        </div>
+                      </div>
+                      <p className="text-[12px] text-[#64748B] leading-relaxed">"{rev.desc}"</p>
+                    </div>
                   </div>
+                ))
+              ) : (
+                <div className="p-12 text-center text-[#64748B] font-medium border border-dashed border-[#E7EAF3] rounded-[16px]">
+                  No completed reviews yet. Share a trade with your mentor to get started!
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>

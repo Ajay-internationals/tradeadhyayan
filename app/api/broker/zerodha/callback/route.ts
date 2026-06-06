@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { ZerodhaAdapter } from "@/lib/brokers/zerodha.adapter";
 
+export const dynamic = "force-dynamic";
+
 const MOCK_USER_ID = "cmp86dqje0000l2040im7xgg1";
 
 export async function GET(req: Request) {

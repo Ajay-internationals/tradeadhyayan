@@ -235,48 +235,56 @@ export default async function AdminDashboardPage() {
          </div>
 
          {/* Mentor Performance */}
-         <div className="bg-white rounded-[18px] border border-[#E7EAF3] shadow-sm p-6">
-            <h3 className="font-bold text-[18px] text-[#0F172A] mb-6">Mentor Performance (This Month)</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="text-[11px] font-bold text-[#64748B] border-b border-[#E7EAF3] uppercase tracking-wider">
-                    <th className="pb-3 px-1">Mentor</th>
-                    <th className="pb-3 px-1 text-center">Avg Score</th>
-                    <th className="pb-3 px-1 text-center">Reviews Done</th>
-                    <th className="pb-3 px-1 text-center">Sessions</th>
-                    <th className="pb-3 px-1 text-right">Client Retention</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.mentors.slice(0,5).map((m:any) => (
-                    <tr key={m.id} className="border-b border-[#E7EAF3] last:border-0">
-                      <td className="py-3 px-1 text-[13px] font-bold text-[#0F172A]">{m.name}</td>
-                      <td className="py-3 px-1 text-center text-[13px] font-semibold text-[#0F172A]">72/100</td>
-                      <td className="py-3 px-1 text-center text-[13px] font-semibold text-[#0F172A]">{m.ReviewRequest?.filter((r:any) => r.status==='COMPLETED').length || 0}</td>
-                      <td className="py-3 px-1 text-center text-[13px] font-semibold text-[#0F172A]">8</td>
-                      <td className="py-3 px-1 text-right text-[13px] font-bold text-[#16A34A]">95%</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="mt-4 text-center">
-               <button className="text-[13px] font-bold text-[#6D3DF5] hover:underline">
-                 View Detailed Report
-               </button>
-            </div>
-         </div>
-
-         {/* Reviews Overview */}
-         <div className="bg-white rounded-[18px] border border-[#E7EAF3] shadow-sm p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="font-bold text-[18px] text-[#0F172A]">Reviews Overview</h3>
-              <select className="text-[12px] font-bold text-[#0F172A] border border-[#E7EAF3] rounded-full px-3 py-1 bg-white outline-none">
-                <option>This Month</option>
-              </select>
-            </div>
-            <AdminCharts chartType="reviews" />
+          <div className="bg-white rounded-[18px] border border-[#E7EAF3] shadow-sm p-6">
+             <h3 className="font-bold text-[18px] text-[#0F172A] mb-6">Mentor Performance (This Month)</h3>
+             <div className="overflow-x-auto">
+               <table className="w-full text-left">
+                 <thead>
+                   <tr className="text-[11px] font-bold text-[#64748B] border-b border-[#E7EAF3] uppercase tracking-wider">
+                     <th className="pb-3 px-1">Mentor</th>
+                     <th className="pb-3 px-1 text-center">Avg Score</th>
+                     <th className="pb-3 px-1 text-center">Reviews Done</th>
+                     <th className="pb-3 px-1 text-center">Sessions</th>
+                     <th className="pb-3 px-1 text-right">Client Retention</th>
+                   </tr>
+                 </thead>
+                 <tbody>
+                   {data.mentors.slice(0,5).map((m:any) => (
+                     <tr key={m.id} className="border-b border-[#E7EAF3] last:border-0">
+                       <td className="py-3 px-1 text-[13px] font-bold text-[#0F172A]">{m.name}</td>
+                       <td className="py-3 px-1 text-center text-[13px] font-semibold text-[#0F172A]">
+                         {m.avgScore > 0 ? `${m.avgScore.toFixed(0)}/100` : "N/A"}
+                       </td>
+                       <td className="py-3 px-1 text-center text-[13px] font-semibold text-[#0F172A]">
+                         {m.reviewsDone}
+                       </td>
+                       <td className="py-3 px-1 text-center text-[13px] font-semibold text-[#0F172A]">
+                         {m.sessionsCount}
+                       </td>
+                       <td className="py-3 px-1 text-right text-[13px] font-bold text-[#16A34A]">
+                         {m.retentionRate}%
+                       </td>
+                     </tr>
+                   ))}
+                 </tbody>
+               </table>
+             </div>
+             <div className="mt-4 text-center">
+                <button className="text-[13px] font-bold text-[#6D3DF5] hover:underline">
+                  View Detailed Report
+                </button>
+             </div>
+          </div>
+ 
+          {/* Reviews Overview */}
+          <div className="bg-white rounded-[18px] border border-[#E7EAF3] shadow-sm p-6">
+             <div className="flex justify-between items-center mb-6">
+               <h3 className="font-bold text-[18px] text-[#0F172A]">Reviews Overview</h3>
+               <select className="text-[12px] font-bold text-[#0F172A] border border-[#E7EAF3] rounded-full px-3 py-1 bg-white outline-none">
+                 <option>This Month</option>
+               </select>
+             </div>
+             <AdminCharts chartType="reviews" data={data.weeklyStats} />
             <div className="mt-6 text-center">
                <button className="text-[13px] font-bold text-[#6D3DF5] border border-[#E7EAF3] px-6 py-2 rounded-full hover:bg-slate-50 transition-colors">
                  View All Reviews

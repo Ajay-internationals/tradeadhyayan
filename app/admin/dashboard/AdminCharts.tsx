@@ -59,11 +59,11 @@ export function AdminCharts({ chartType, data }: { chartType: "allocation" | "re
   }
 
   // Line Chart for Reviews
-  const lineData = [
-    { name: 'Week 1', completed: 35, pending: 12 },
-    { name: 'Week 2', completed: 48, pending: 18 },
-    { name: 'Week 3', completed: 52, pending: 14 },
-    { name: 'Week 4', completed: 43, pending: 8 },
+  const lineData = data && data.length > 0 ? data : [
+    { name: 'Week 1', completed: 0, pending: 0 },
+    { name: 'Week 2', completed: 0, pending: 0 },
+    { name: 'Week 3', completed: 0, pending: 0 },
+    { name: 'Week 4', completed: 0, pending: 0 },
   ];
 
   return (

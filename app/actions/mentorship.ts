@@ -115,6 +115,40 @@ export async function getClientMentorshipOverview(email: string) {
 
   const pendingCount = reviewRequests.filter(r => r.status === "PENDING").length;
 
+  // Calculate trades shared and completed reviews counts dynamically
+  let tradesSharedCount = 0;
+  reviewRequests.forEach(r => {
+    tradesSharedCount += r.selectedTradeIds?.length || 0;
+  });
+  const reviewedCount = completedReviews.length;
+
+  // Fetch details for all completed reviews to display real trade history
+  const completedReviewsData = [];
+  for (const req of completedReviews) {
+    if (!req.MentorshipReview) continue;
+    
+    let symbol = "N/A";
+    let direction = "LONG";
+    if (req.selectedTradeIds && req.selectedTradeIds.length > 0) {
+      const firstTrade = await prisma.trade.findUnique({
+        where: { id: req.selectedTradeIds[0] }
+      });
+      if (firstTrade) {
+        symbol = firstTrade.symbol;
+        direction = firstTrade.direction;
+      }
+    }
+    
+    completedReviewsData.push({
+      id: req.id,
+      date: req.completedAt || req.submittedAt,
+      symbol,
+      type: direction,
+      score: req.MentorshipReview.overallScore,
+      desc: req.MentorshipReview.strengths || "Completed review with no strength notes."
+    });
+  }
+
   return {
     assignedMentor: assignment?.Mentor || null,
     currentScore,
@@ -125,7 +159,10 @@ export async function getClientMentorshipOverview(email: string) {
     activeActionItems: actionPlans.length,
     mentorObservation,
     recentActivity: activities,
-    actionPlans
+    actionPlans,
+    tradesSharedCount,
+    reviewedCount,
+    completedReviewsData
   };
 }
 
@@ -176,7 +213,8 @@ export async function getMentorDashboard(email: string) {
         include: {
           MentorshipReview_AsClient: { orderBy: { createdAt: "desc" }, take: 8 },
           ReviewRequest_AsClient: { where: { status: "PENDING" } },
-          Trade: { where: { status: "CLOSED" } }
+          Trade: { where: { status: "CLOSED" } },
+          Mistake: true
         }
       }
     }
@@ -218,6 +256,41 @@ export async function getMentorDashboard(email: string) {
       .reverse()
       .map((r, i) => ({ name: `W${i+1}`, score: r.overallScore }));
 
+    // Dynamically calculate top mistakes for the client from database records
+    const clientMistakes = mc.Client.Mistake || [];
+    const totalMistakes = clientMistakes.length;
+    const mistakeCounts: Record<string, number> = {};
+    clientMistakes.forEach(m => {
+      mistakeCounts[m.mistakeType] = (mistakeCounts[m.mistakeType] || 0) + 1;
+    });
+
+    let topMistakes = [
+      { name: "Overtrading", percent: 0 },
+      { name: "Early Exit", percent: 0 },
+      { name: "No Setup / Random", percent: 0 },
+      { name: "Revenge Trading", percent: 0 }
+    ];
+
+    if (totalMistakes > 0) {
+      const sortedMistakes = Object.entries(mistakeCounts)
+        .map(([name, count]) => ({
+          name,
+          percent: Math.round((count / totalMistakes) * 100)
+        }))
+        .sort((a, b) => b.percent - a.percent);
+
+      const resultMistakes = sortedMistakes.slice(0, 4);
+      const existingNames = new Set(resultMistakes.map(m => m.name));
+      const defaults = ["Overtrading", "Early Exit", "No Setup / Random", "Revenge Trading"];
+      for (const d of defaults) {
+        if (resultMistakes.length >= 4) break;
+        if (!existingNames.has(d)) {
+          resultMistakes.push({ name: d, percent: 0 });
+        }
+      }
+      topMistakes = resultMistakes;
+    }
+
     return {
       id: mc.Client.id,
       name: mc.Client.name,
@@ -235,12 +308,7 @@ export async function getMentorDashboard(email: string) {
       pendingReview: mc.Client.ReviewRequest_AsClient?.length > 0,
       status: mc.status,
       performanceTrend,
-      topMistakes: [
-        { name: "Overtrading", percent: 28 },
-        { name: "Early Exit", percent: 24 },
-        { name: "No Setup / Random", percent: 18 },
-        { name: "Revenge Trading", percent: 16 }
-      ] // Real logic would parse tags specifically for mistakes
+      topMistakes
     };
   });
 
@@ -348,7 +416,9 @@ export async function getAdminMentorshipDashboard() {
   const mentors = await prisma.mentor.findMany({
     include: {
       MentorClient: { where: { status: "ACTIVE" } },
-      ReviewRequest: { where: { status: "PENDING" } }
+      ReviewRequest: true,
+      MentorshipReview: true,
+      MentorSession: true
     }
   });
 
@@ -371,6 +441,56 @@ export async function getAdminMentorshipDashboard() {
     take: 10
   });
 
+  // Calculate dynamic weekly completed vs pending reviews stats for the line chart (over 4 weeks)
+  const now = new Date();
+  const weeklyStats = [];
+  for (let i = 3; i >= 0; i--) {
+    const startOfWeek = new Date(now.getTime() - (i + 1) * 7 * 24 * 60 * 60 * 1000);
+    const endOfWeek = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
+    
+    const completed = await prisma.reviewRequest.count({
+      where: {
+        status: "COMPLETED",
+        completedAt: {
+          gte: startOfWeek,
+          lte: endOfWeek
+        }
+      }
+    });
+    
+    const pending = await prisma.reviewRequest.count({
+      where: {
+        status: "PENDING",
+        submittedAt: {
+          gte: startOfWeek,
+          lte: endOfWeek
+        }
+      }
+    });
+    
+    weeklyStats.push({
+      name: `Week ${4 - i}`,
+      completed,
+      pending
+    });
+  }
+
+  // Attach computed real metrics to each mentor
+  const mappedMentors = mentors.map(m => {
+    const reviewsDone = m.MentorshipReview.length;
+    const totalScore = m.MentorshipReview.reduce((sum, r) => sum + r.overallScore, 0);
+    const avgScore = reviewsDone > 0 ? totalScore / reviewsDone : 0;
+    const sessionsCount = m.MentorSession.length;
+    
+    return {
+      ...m,
+      avgScore,
+      reviewsDone,
+      sessionsCount,
+      retentionRate: 95 // approximate default retention
+    };
+  });
+
   return {
     kpis: {
       totalUsers: usersCount,
@@ -381,7 +501,8 @@ export async function getAdminMentorshipDashboard() {
       monthlyRevenue,
       capacityUsedPercent: totalCapacity > 0 ? (usedCapacity / totalCapacity) * 100 : 0
     },
-    mentors,
-    activities
+    mentors: mappedMentors,
+    activities,
+    weeklyStats
   };
 }
