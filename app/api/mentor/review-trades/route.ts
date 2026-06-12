@@ -48,7 +48,6 @@ export async function GET(req: Request) {
           select: {
             mistakeType: true,
             severity: true,
-            description: true,
           }
         }
       },
