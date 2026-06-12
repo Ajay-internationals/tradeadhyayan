@@ -9,7 +9,7 @@ import {
 import { useRouter } from "next/navigation";
 import toast, { Toaster } from "react-hot-toast";
 
-export default function MentorReviewsPage({ searchParams }: { searchParams: { id?: string } }) {
+export default function MentorReviewsPage({ searchParams = {} }: { searchParams?: { id?: string } }) {
   const router = useRouter();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -23,11 +23,25 @@ export default function MentorReviewsPage({ searchParams }: { searchParams: { id
   const [scores, setScores] = useState({ execution: 50, risk: 50, psychology: 50, discipline: 50 });
   const [feedback, setFeedback] = useState({ strengths: "", improvements: "", actionPlan: "", focus: "" });
 
+  // Compute activeReview and activeId first so they are available for useEffect
+  const activeReview = data?.reviewRequests?.find((r: any) => r.id === searchParams?.id)
+    || data?.reviewRequests?.filter((r: any) => r.status === "PENDING")[0];
+  const activeId = activeReview?.id;
+
   useEffect(() => {
     const email = localStorage.getItem('trade_adhyayan_user');
     if (!email) { router.push('/login'); return; }
     loadData(email);
   }, [router]);
+
+  // Trigger trade fetch when activeReview changes
+  useEffect(() => {
+    if (activeReview?.selectedTradeIds) {
+      fetchTradesForReview(activeReview.selectedTradeIds);
+    } else {
+      setTrades([]);
+    }
+  }, [activeId, activeReview?.selectedTradeIds]);
 
   async function loadData(email: string) {
     try {
@@ -54,27 +68,6 @@ export default function MentorReviewsPage({ searchParams }: { searchParams: { id
       setTradesLoading(false);
     }
   }
-
-  if (loading) return (
-    <div className="flex h-[80vh] items-center justify-center">
-      <div className="animate-spin w-8 h-8 border-4 border-[#6D3DF5] border-t-transparent rounded-full" />
-    </div>
-  );
-
-  if (!data) return <div className="p-6">No data available.</div>;
-
-  const activeReview = data.reviewRequests?.find((r: any) => r.id === searchParams.id)
-    || data.reviewRequests?.filter((r: any) => r.status === "PENDING")[0];
-
-  // Trigger trade fetch when activeReview changes
-  const activeId = activeReview?.id;
-  useEffect(() => {
-    if (activeReview?.selectedTradeIds) {
-      fetchTradesForReview(activeReview.selectedTradeIds);
-    } else {
-      setTrades([]);
-    }
-  }, [activeId]);
 
   const handleSubmit = async () => {
     if (!activeReview) return;
@@ -125,7 +118,9 @@ export default function MentorReviewsPage({ searchParams }: { searchParams: { id
                       </div>
                       <div>
                         <p className="text-[13px] font-bold text-[#0F172A]">{req.Client?.name || 'Client'}</p>
-                        <p className="text-[10px] font-semibold text-[#64748B]">{new Date(req.submittedAt).toLocaleDateString()}</p>
+                        <p className="text-[10px] font-semibold text-[#64748B]">
+                          {req.submittedAt ? new Date(req.submittedAt).toLocaleDateString("en-IN") : "—"}
+                        </p>
                       </div>
                     </div>
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${req.status === 'COMPLETED' ? 'bg-[#DCFCE7] text-[#16A34A]' : 'bg-[#FFEDD5] text-[#EA580C]'}`}>
@@ -162,7 +157,7 @@ export default function MentorReviewsPage({ searchParams }: { searchParams: { id
                   <div>
                     <h2 className="text-[20px] font-black text-[#0F172A]">{activeReview.Client?.name}'s Review</h2>
                     <p className="text-[13px] font-medium text-[#64748B]">
-                      Submitted {new Date(activeReview.submittedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                      Submitted {activeReview.submittedAt ? new Date(activeReview.submittedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}
                       &nbsp;·&nbsp;
                       <span className="text-[#6D3DF5] font-bold">{activeReview.selectedTradeIds?.length || 0} trades attached</span>
                     </p>
@@ -277,19 +272,19 @@ export default function MentorReviewsPage({ searchParams }: { searchParams: { id
                         },
                         {
                           label: "Winners",
-                          val: trades.filter(t => (t.netPnl ?? t.pnl ?? 0) > 0).length,
+                          val: trades.filter(t => Number(t.netPnl ?? t.pnl ?? 0) > 0).length,
                           color: "text-[#16A34A]", bg: "bg-green-50"
                         },
                         {
                           label: "Losers",
-                          val: trades.filter(t => (t.netPnl ?? t.pnl ?? 0) < 0).length,
+                          val: trades.filter(t => Number(t.netPnl ?? t.pnl ?? 0) < 0).length,
                           color: "text-[#E11D48]", bg: "bg-red-50"
                         },
                         {
                           label: "Net P&L",
-                          val: `${trades.reduce((sum, t) => sum + (t.netPnl ?? t.pnl ?? 0), 0) >= 0 ? "+" : ""}₹${Math.abs(trades.reduce((sum, t) => sum + (t.netPnl ?? t.pnl ?? 0), 0)).toLocaleString()}`,
-                          color: trades.reduce((sum, t) => sum + (t.netPnl ?? t.pnl ?? 0), 0) >= 0 ? "text-[#16A34A]" : "text-[#E11D48]",
-                          bg: trades.reduce((sum, t) => sum + (t.netPnl ?? t.pnl ?? 0), 0) >= 0 ? "bg-green-50" : "bg-red-50"
+                          val: `${trades.reduce((sum, t) => sum + Number(t.netPnl ?? t.pnl ?? 0), 0) >= 0 ? "+" : ""}₹${Math.abs(trades.reduce((sum, t) => sum + Number(t.netPnl ?? t.pnl ?? 0), 0)).toLocaleString()}`,
+                          color: trades.reduce((sum, t) => sum + Number(t.netPnl ?? t.pnl ?? 0), 0) >= 0 ? "text-[#16A34A]" : "text-[#E11D48]",
+                          bg: trades.reduce((sum, t) => sum + Number(t.netPnl ?? t.pnl ?? 0), 0) >= 0 ? "bg-green-50" : "bg-red-50"
                         },
                       ].map(stat => (
                         <div key={stat.label} className={`${stat.bg} rounded-[12px] p-3 border border-[#E7EAF3] text-center`}>
