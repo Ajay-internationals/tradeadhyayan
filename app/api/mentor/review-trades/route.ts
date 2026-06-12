@@ -7,15 +7,10 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const idsParam = searchParams.get("ids");
 
-  if (!idsParam) {
-    return NextResponse.json({ trades: [] });
-  }
+  if (!idsParam) return NextResponse.json({ trades: [] });
 
   const ids = idsParam.split(",").map(id => id.trim()).filter(Boolean);
-
-  if (ids.length === 0) {
-    return NextResponse.json({ trades: [] });
-  }
+  if (ids.length === 0) return NextResponse.json({ trades: [] });
 
   try {
     const trades = await prisma.trade.findMany({
@@ -35,15 +30,17 @@ export async function GET(req: Request) {
         status: true,
         tags: true,
         notes: true,
-        strategy: true,
-        tradeType: true,
-        exchange: true,
+        setup: true,
         stopLoss: true,
         target: true,
-        riskReward: true,
-        emotionTag: true,
-        mistakeTags: true,
-        // Include related mistakes if any
+        rr: true,
+        mood: true,
+        result: true,
+        exchange: true,
+        segment: true,
+        instrumentType: true,
+        followedPlan: true,
+        confidenceLevel: true,
         Mistake: {
           select: {
             mistakeType: true,
