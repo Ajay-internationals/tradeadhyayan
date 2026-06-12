@@ -292,6 +292,8 @@ model User {
   CalculatorSettings                        CalculatorSettings?
   ClientActionPlan_AsClient                 ClientActionPlan[]  @relation("ActionPlanClient")
   ClientRulebook_AsClient                   ClientRulebook[]    @relation("RulebookClient")
+  GoogleCalendarConnection                  GoogleCalendarConnection?
+  MentorshipSession_AsClient                MentorshipSession[] @relation("MentorshipSessionClient")
 }
 
 model UserSetting {
@@ -414,6 +416,8 @@ model Mentor {
   MentorAudit           MentorAudit[]
   MentorSetupWizard     MentorSetupWizard?
   ClientActionPlan      ClientActionPlan[]
+  MentorAvailabilitySlot MentorAvailabilitySlot[]
+  MentorshipSession_AsMentor MentorshipSession[] @relation("MentorshipSessionMentor")
 }
 
 model MentorClient {
@@ -903,3 +907,66 @@ model ActivityLog {
   description  String
   createdAt    DateTime @default(now())
 }
+
+// ─── MENTORSHIP SESSION SYSTEM ─────────────────────────────────────────────────
+
+model GoogleCalendarConnection {
+  id           String    @id @default(cuid())
+  userId       String    @unique
+  accessToken  String    @db.Text
+  refreshToken String    @db.Text
+  scope        String?
+  expiryDate   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  User         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model MentorAvailabilitySlot {
+  id        String   @id @default(cuid())
+  mentorId  String
+  dayOfWeek Int      // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  startTime String   // "18:00"
+  endTime   String   // "21:00"
+  slotSize  Int      @default(45) // minutes
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  Mentor    Mentor   @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+
+  @@index([mentorId, dayOfWeek])
+}
+
+model MentorshipSession {
+  id                 String        @id @default(cuid())
+  clientId           String
+  mentorId           String
+  title              String
+  sessionType        String        @default("1:1")
+  startTime          DateTime
+  endTime            DateTime
+  status             SessionStatus @default(UPCOMING)
+  googleEventId      String?
+  googleCalendarLink String?
+  googleMeetLink     String?
+  bookedByRole       String        // CLIENT, MENTOR, ADMIN
+  notes              String?       @db.Text
+  mentorNotes        String?       @db.Text
+  cancellationReason String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  Client             User          @relation("MentorshipSessionClient", fields: [clientId], references: [id], onDelete: Cascade)
+  MentorRef          Mentor        @relation("MentorshipSessionMentor", fields: [mentorId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, status])
+  @@index([mentorId, status])
+  @@index([startTime])
+}
+
+enum SessionStatus {
+  UPCOMING
+  COMPLETED
+  CANCELLED
+  RESCHEDULED
+  NO_SHOW
+}
+
