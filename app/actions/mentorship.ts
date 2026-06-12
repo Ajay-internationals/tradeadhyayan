@@ -1,9 +1,8 @@
 "use server";
 
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/db";
 import { getOrCreateUser } from "./trades"; // reuse the session logic
 
-const prisma = new PrismaClient();
 
 // Helper to calculate trader stats
 function calculateTraderStats(trades: any[]) {
