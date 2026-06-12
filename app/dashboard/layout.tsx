@@ -16,7 +16,8 @@ import {
   Wrench, 
   Target, 
   Calendar, 
-  Settings 
+  Settings,
+  Video
 } from "lucide-react";
 
 export default function TradeJournalLayout({ children }: { children: React.ReactNode }) {
@@ -30,6 +31,7 @@ export default function TradeJournalLayout({ children }: { children: React.React
     { label: "Broker Sync", href: "/dashboard/trade-journal/broker-sync", icon: RefreshCw },
     { label: "Mistakes", href: "/dashboard/mistakes", icon: AlertTriangle },
     { label: "Mentorship", href: "/dashboard/mentorship", icon: UserCheck },
+    { label: "Sessions", href: "/dashboard/sessions", icon: Video },
     { label: "Reports", href: "/dashboard/reports", icon: BarChart2 },
     { label: "Strategies", href: "/dashboard/strategies", icon: Crosshair },
     { label: "Tools", href: "/dashboard/tools", icon: Wrench },
