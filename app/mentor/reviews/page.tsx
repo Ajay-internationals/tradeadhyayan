@@ -101,7 +101,7 @@ export default function MentorReviewsPage({ searchParams = {} }: { searchParams?
           <div className="bg-white rounded-[18px] border border-[#E7EAF3] shadow-sm p-6 h-[calc(100vh-140px)] flex flex-col">
             <h3 className="font-bold text-[18px] text-[#0F172A] mb-6">Review Requests</h3>
             <div className="space-y-3 overflow-y-auto flex-1 pr-1 custom-scrollbar">
-              {data.reviewRequests?.map((req: any) => (
+              {data?.reviewRequests?.map((req: any) => (
                 <div
                   key={req.id}
                   onClick={() => router.push(`/mentor/reviews?id=${req.id}`)}
@@ -137,7 +137,7 @@ export default function MentorReviewsPage({ searchParams = {} }: { searchParams?
                   </div>
                 </div>
               ))}
-              {(!data.reviewRequests || data.reviewRequests.length === 0) && (
+              {(!data?.reviewRequests || data?.reviewRequests.length === 0) && (
                 <p className="text-sm text-center text-[#64748B] mt-10">No review requests found.</p>
               )}
             </div>
