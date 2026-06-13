@@ -14,6 +14,7 @@ export default function MentorReviewsPage({ searchParams = {} }: { searchParams?
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Trades for the active review
   const [trades, setTrades] = useState<any[]>([]);
@@ -47,8 +48,9 @@ export default function MentorReviewsPage({ searchParams = {} }: { searchParams?
     try {
       const result = await getMentorDashboard(email);
       setData(result);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      setError(e.message || "An error occurred while fetching the mentor dashboard data.");
     } finally {
       setLoading(false);
     }
@@ -61,8 +63,14 @@ export default function MentorReviewsPage({ searchParams = {} }: { searchParams?
     try {
       const res = await fetch(`/api/mentor/review-trades?ids=${tradeIds.join(",")}`);
       const json = await res.json();
-      setTrades(json.trades || []);
+      if (!res.ok) {
+        toast.error(json.error || "Failed to load trades for review");
+        setTrades([]);
+      } else {
+        setTrades(json.trades || []);
+      }
     } catch {
+      toast.error("Network error: Failed to fetch trades");
       setTrades([]);
     } finally {
       setTradesLoading(false);
@@ -83,6 +91,30 @@ export default function MentorReviewsPage({ searchParams = {} }: { searchParams?
       setSubmitting(false);
     }
   };
+
+  if (loading) return (
+    <div className="flex h-[80vh] items-center justify-center">
+      <div className="animate-spin w-8 h-8 border-4 border-[#6D3DF5] border-t-transparent rounded-full" />
+    </div>
+  );
+
+  if (!data) return (
+    <div className="p-12 text-center max-w-[800px] mx-auto mt-20 bg-white rounded-[18px] border border-[#E7EAF3] shadow-sm">
+      <h2 className="text-[24px] font-black text-[#0F172A] mb-4">Dashboard Error</h2>
+      <p className="text-[14px] font-medium text-[#64748B] mb-2">Unable to retrieve mentor dashboard info.</p>
+      {error && (
+        <p className="text-[12px] text-rose-500 font-medium bg-rose-50 border border-rose-100 rounded-[8px] px-4 py-3 mb-6">
+          {error}
+        </p>
+      )}
+      <p className="text-[12px] text-[#64748B] mb-6">
+        Make sure your account is registered as a mentor. If the issue persists, contact admin.
+      </p>
+      <a href="/login" className="bg-[#6D3DF5] text-white text-[13px] font-bold px-6 py-2.5 rounded-[8px] hover:bg-[#5C2DE0] transition-colors">
+        Back to Login
+      </a>
+    </div>
+  );
 
   return (
     <div className="p-6 max-w-[1600px] mx-auto space-y-6" style={{ backgroundColor: "#FAFAFF" }}>
