@@ -475,7 +475,7 @@ export default function MistakesPage() {
             <h3 className="text-lg font-bold text-slate-800">No major mistakes detected</h3>
             <p className="text-sm text-slate-500 max-w-sm">Your recent trades look disciplined. Keep following your trading rules.</p>
             <button
-              onClick={() => router.push('/dashboard/journal')}
+              onClick={() => router.push('/dashboard/trade-journal')}
               className="mt-2 px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl shadow-sm transition-all"
             >
               Review Journal
