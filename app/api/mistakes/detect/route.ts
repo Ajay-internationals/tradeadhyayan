@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+
 // Severity logic based on Section 5
 function calculateSeverity(lossImpact: number, mistakeType: string): "HIGH" | "MEDIUM" | "LOW" {
   if (lossImpact > 3000 || mistakeType === "No Stop Loss") {
