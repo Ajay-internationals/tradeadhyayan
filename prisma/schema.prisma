@@ -230,6 +230,7 @@ model Trade {
   updatedAt          DateTime
   MentorReview       MentorReview?
   Mistake            Mistake[]
+  TradeMistake       TradeMistake[]    @relation("TradeTradeMistakes")
   BrokerConnection   BrokerConnection? @relation(fields: [brokerConnectionId], references: [id])
   Strategy           Strategy?         @relation(fields: [strategyId], references: [id])
   User               User              @relation(fields: [userId], references: [id])
@@ -279,6 +280,7 @@ model User {
   MentorReview_MentorReview_mentorIdToUser  MentorReview[]      @relation("MentorReview_mentorIdToUser")
   MentorReview_MentorReview_studentIdToUser MentorReview[]      @relation("MentorReview_studentIdToUser")
   Mistake                                   Mistake[]
+  TradeMistake                              TradeMistake[]      @relation("UserTradeMistakes")
   Strategy                                  Strategy[]
   Trade                                     Trade[]
   TradePlan                                 TradePlan[]
@@ -981,5 +983,30 @@ enum SessionStatus {
   CANCELLED
   RESCHEDULED
   NO_SHOW
+}
+
+model TradeMistake {
+  id          String   @id @default(cuid())
+  userId      String
+  tradeId     String
+
+  type        String
+  severity    String
+  reason      String
+  lossImpact  Float?
+  rootCause   String?
+  suggestion  String?
+  mentorNote  String?  @db.Text
+  status      String   @default("OPEN")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation("UserTradeMistakes", fields: [userId], references: [id], onDelete: Cascade)
+  trade       Trade    @relation("TradeTradeMistakes", fields: [tradeId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tradeId])
+  @@index([userId, createdAt])
 }
 
