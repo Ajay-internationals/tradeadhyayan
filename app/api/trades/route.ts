@@ -120,8 +120,16 @@ export async function POST(req: Request) {
       },
     });
 
-    // Run mistake detector on this manual trade
+    // Run mistake detector on this manual trade (legacy)
     await detectAndSaveMistakesForTrade(user.id, trade.id);
+
+    // Trigger the new TradeMistake auto-detection in the background
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3000}`;
+    fetch(`${appUrl}/api/mistakes/detect`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id })
+    }).catch(err => console.error("Auto detect API trigger failed:", err));
 
     return NextResponse.json({ success: true, trade });
   } catch (error: any) {

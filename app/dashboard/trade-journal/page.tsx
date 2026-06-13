@@ -49,6 +49,13 @@ export default function TradeJournalPage() {
         const tradesJson = await tradesRes.json();
         if (tradesJson.success) setTrades(tradesJson.data);
 
+        // Trigger mistake detection in the background to keep mistakes up to date
+        fetch("/api/mistakes/detect", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: userEmail })
+        }).catch(err => console.error("Auto detect trigger failed:", err));
+
       } catch (err) {
         console.error("Failed to fetch data:", err);
       } finally {
