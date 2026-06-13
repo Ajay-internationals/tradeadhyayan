@@ -37,10 +37,55 @@ export default function MentorSessionsPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [mentorId, setMentorId] = useState<string | null>(null);
   const [tab, setTab] = useState<"sessions" | "availability" | "calendar" | "settings">("sessions");
-  const [sessions, setSessions] = useState<any[]>([]);
-  const [availabilitySlots, setAvailabilitySlots] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [calendarConnected, setCalendarConnected] = useState(false);
+  
+  const [sessions, setSessions] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      const email = localStorage.getItem("trade_adhyayan_user");
+      if (email) {
+        const cached = localStorage.getItem(`ta_cache_mentor_sessions_${email}`);
+        if (cached) {
+          try { return JSON.parse(cached); } catch {}
+        }
+      }
+    }
+    return [];
+  });
+
+  const [availabilitySlots, setAvailabilitySlots] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      const email = localStorage.getItem("trade_adhyayan_user");
+      if (email) {
+        const cached = localStorage.getItem(`ta_cache_mentor_slots_${email}`);
+        if (cached) {
+          try { return JSON.parse(cached); } catch {}
+        }
+      }
+    }
+    return [];
+  });
+
+  const [calendarConnected, setCalendarConnected] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const email = localStorage.getItem("trade_adhyayan_user");
+      if (email) {
+        const cached = localStorage.getItem(`ta_cache_mentor_calendar_connected_${email}`);
+        if (cached) {
+          return cached === "true";
+        }
+      }
+    }
+    return false;
+  });
+
+  const [loading, setLoading] = useState(() => {
+    if (typeof window !== "undefined") {
+      const email = localStorage.getItem("trade_adhyayan_user");
+      if (email && localStorage.getItem(`ta_cache_mentor_sessions_${email}`)) {
+        return false;
+      }
+    }
+    return true;
+  });
 
   // Availability form
   const [avForm, setAvForm] = useState({ dayOfWeek: 1, startTime: "18:00", endTime: "21:00", slotSize: 45 });
@@ -66,9 +111,9 @@ export default function MentorSessionsPage() {
       setUserId(data.userId);
       setMentorId(data.mentorId);
       await Promise.all([
-        loadSessions(data.userId),
-        loadSlots(data.mentorId),
-        checkCalendar(data.userId),
+        loadSessions(data.userId, email),
+        loadSlots(data.mentorId, email),
+        checkCalendar(data.userId, email),
       ]);
     } catch {
       // Fallback: get userId from localStorage
@@ -79,31 +124,45 @@ export default function MentorSessionsPage() {
     }
   }
 
-  async function loadSessions(uid: string) {
+  async function loadSessions(uid: string, email?: string) {
     try {
       const res = await fetch("/api/mentorship/sessions", {
         headers: { "x-user-id": uid, "x-user-role": "MENTOR" }
       });
       const data = await res.json();
-      setSessions(data.sessions || []);
+      const s = data.sessions || [];
+      setSessions(s);
+      const activeEmail = email || (typeof window !== "undefined" ? localStorage.getItem("trade_adhyayan_user") : null);
+      if (activeEmail) {
+        localStorage.setItem(`ta_cache_mentor_sessions_${activeEmail}`, JSON.stringify(s));
+      }
     } catch {}
   }
 
-  async function loadSlots(mid: string) {
+  async function loadSlots(mid: string, email?: string) {
     try {
       const res = await fetch(`/api/mentor/availability-slots?mentorId=${mid}`);
       const data = await res.json();
-      setAvailabilitySlots(data.slots || []);
+      const s = data.slots || [];
+      setAvailabilitySlots(s);
+      const activeEmail = email || (typeof window !== "undefined" ? localStorage.getItem("trade_adhyayan_user") : null);
+      if (activeEmail) {
+        localStorage.setItem(`ta_cache_mentor_slots_${activeEmail}`, JSON.stringify(s));
+      }
     } catch {}
   }
 
-  async function checkCalendar(uid: string) {
+  async function checkCalendar(uid: string, email?: string) {
     // Check if Google Calendar connected by trying to fetch connection status
     try {
       const res = await fetch(`/api/google/status?userId=${uid}`);
       if (res.ok) {
         const data = await res.json();
         setCalendarConnected(data.connected);
+        const activeEmail = email || (typeof window !== "undefined" ? localStorage.getItem("trade_adhyayan_user") : null);
+        if (activeEmail) {
+          localStorage.setItem(`ta_cache_mentor_calendar_connected_${activeEmail}`, String(data.connected));
+        }
       }
     } catch {}
   }

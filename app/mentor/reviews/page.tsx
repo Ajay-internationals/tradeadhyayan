@@ -11,8 +11,27 @@ import toast, { Toaster } from "react-hot-toast";
 
 export default function MentorReviewsPage({ searchParams = {} }: { searchParams?: { id?: string } }) {
   const router = useRouter();
-  const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<any>(() => {
+    if (typeof window !== "undefined") {
+      const email = localStorage.getItem("trade_adhyayan_user");
+      if (email) {
+        const cached = localStorage.getItem(`ta_cache_mentor_reviews_${email}`);
+        if (cached) {
+          try { return JSON.parse(cached); } catch {}
+        }
+      }
+    }
+    return null;
+  });
+  const [loading, setLoading] = useState(() => {
+    if (typeof window !== "undefined") {
+      const email = localStorage.getItem("trade_adhyayan_user");
+      if (email && localStorage.getItem(`ta_cache_mentor_reviews_${email}`)) {
+        return false;
+      }
+    }
+    return true;
+  });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,6 +67,8 @@ export default function MentorReviewsPage({ searchParams = {} }: { searchParams?
     try {
       const result = await getMentorDashboard(email);
       setData(result);
+      localStorage.setItem(`ta_cache_mentor_reviews_${email}`, JSON.stringify(result));
+      setError(null);
     } catch (e: any) {
       console.error(e);
       setError(e.message || "An error occurred while fetching the mentor dashboard data.");
@@ -56,22 +77,36 @@ export default function MentorReviewsPage({ searchParams = {} }: { searchParams?
     }
   }
 
-  // Fetch actual trades when a review is selected
+  // Fetch actual trades when a review is selected (SWR Enabled)
   async function fetchTradesForReview(tradeIds: string[]) {
     if (!tradeIds || tradeIds.length === 0) { setTrades([]); return; }
-    setTradesLoading(true);
+    
+    const cacheKey = `ta_cache_trades_${tradeIds.join(",")}`;
+    if (typeof window !== "undefined") {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        try {
+          setTrades(JSON.parse(cached));
+        } catch {}
+      } else {
+        setTradesLoading(true);
+      }
+    } else {
+      setTradesLoading(true);
+    }
+
     try {
       const res = await fetch(`/api/mentor/review-trades?ids=${tradeIds.join(",")}`);
       const json = await res.json();
       if (!res.ok) {
         toast.error(json.error || "Failed to load trades for review");
-        setTrades([]);
       } else {
-        setTrades(json.trades || []);
+        const freshTrades = json.trades || [];
+        setTrades(freshTrades);
+        localStorage.setItem(cacheKey, JSON.stringify(freshTrades));
       }
     } catch {
       toast.error("Network error: Failed to fetch trades");
-      setTrades([]);
     } finally {
       setTradesLoading(false);
     }
@@ -84,6 +119,8 @@ export default function MentorReviewsPage({ searchParams = {} }: { searchParams?
       const email = localStorage.getItem('trade_adhyayan_user');
       await submitMentorshipReviewScore(email!, activeReview.id, scores, feedback);
       toast.success("Review submitted successfully!");
+      // Clear cache for reviews so it reloads fresh on submit
+      localStorage.removeItem(`ta_cache_mentor_reviews_${email}`);
       await loadData(email!);
     } catch (e: any) {
       toast.error(e.message || "Failed to submit review");

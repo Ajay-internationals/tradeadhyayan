@@ -234,6 +234,9 @@ model Trade {
   Strategy           Strategy?         @relation(fields: [strategyId], references: [id])
   User               User              @relation(fields: [userId], references: [id])
   TradePlan          TradePlan?
+
+  @@index([userId])
+  @@index([userId, entryTime])
 }
 
 model TradePlan {
@@ -429,6 +432,8 @@ model MentorClient {
   status       String   @default("ACTIVE")
   Mentor       Mentor   @relation(fields: [mentorId], references: [id], onDelete: Cascade)
   Client       User     @relation("ClientToMentor", fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([mentorId])
 }
 
 model ReviewRequest {
@@ -445,6 +450,9 @@ model ReviewRequest {
   Mentor           Mentor            @relation(fields: [mentorId], references: [id], onDelete: Cascade)
   MentorshipReview MentorshipReview?
   MentorSlaLog     MentorSlaLog?
+
+  @@index([mentorId])
+  @@index([clientId])
 }
 
 model MentorshipReview {
@@ -467,6 +475,9 @@ model MentorshipReview {
   ReviewRequest    ReviewRequest @relation(fields: [reviewRequestId], references: [id], onDelete: Cascade)
   Client           User          @relation("ClientMentorshipReview", fields: [clientId], references: [id], onDelete: Cascade)
   Mentor           Mentor        @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+
+  @@index([mentorId])
+  @@index([clientId])
 }
 
 // ─── MENTORSHIP BUSINESS SYSTEM ────────────────────────────────────────────────

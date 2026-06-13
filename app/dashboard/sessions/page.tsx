@@ -26,11 +26,46 @@ function fmtDate(dt: string) {
 
 export default function ClientSessionsPage() {
   const router = useRouter();
-  const [userId, setUserId] = useState<string | null>(null);
-  const [mentorId, setMentorId] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      const email = localStorage.getItem("trade_adhyayan_user");
+      if (email) {
+        return localStorage.getItem(`ta_cache_client_userId_${email}`);
+      }
+    }
+    return null;
+  });
+  const [mentorId, setMentorId] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      const email = localStorage.getItem("trade_adhyayan_user");
+      if (email) {
+        return localStorage.getItem(`ta_cache_client_mentorId_${email}`);
+      }
+    }
+    return null;
+  });
   const [tab, setTab] = useState<"upcoming" | "book" | "history">("upcoming");
-  const [sessions, setSessions] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [sessions, setSessions] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      const email = localStorage.getItem("trade_adhyayan_user");
+      if (email) {
+        const cached = localStorage.getItem(`ta_cache_client_sessions_${email}`);
+        if (cached) {
+          try { return JSON.parse(cached); } catch {}
+        }
+      }
+    }
+    return [];
+  });
+  const [loading, setLoading] = useState(() => {
+    if (typeof window !== "undefined") {
+      const email = localStorage.getItem("trade_adhyayan_user");
+      if (email && localStorage.getItem(`ta_cache_client_sessions_${email}`)) {
+        return false;
+      }
+    }
+    return true;
+  });
 
   // Booking flow
   const [selectedDate, setSelectedDate] = useState("");
@@ -64,15 +99,17 @@ export default function ClientSessionsPage() {
       if (userRes.ok) {
         const userData = await userRes.json();
         setUserId(userData.id);
+        localStorage.setItem(`ta_cache_client_userId_${email}`, userData.id);
 
         // Get assigned mentor
         const assignRes = await fetch(`/api/mentorship/my-mentor?userId=${userData.id}`);
         if (assignRes.ok) {
           const assignData = await assignRes.json();
           setMentorId(assignData.mentorId);
+          localStorage.setItem(`ta_cache_client_mentorId_${email}`, assignData.mentorId);
         }
 
-        await loadSessions(userData.id);
+        await loadSessions(userData.id, email);
       }
     } catch (e) {
       console.error(e);
@@ -81,13 +118,18 @@ export default function ClientSessionsPage() {
     }
   }
 
-  async function loadSessions(uid: string) {
+  async function loadSessions(uid: string, email?: string) {
     try {
       const res = await fetch("/api/mentorship/sessions", {
         headers: { "x-user-id": uid, "x-user-role": "CLIENT" }
       });
       const data = await res.json();
-      setSessions(data.sessions || []);
+      const s = data.sessions || [];
+      setSessions(s);
+      const activeEmail = email || (typeof window !== "undefined" ? localStorage.getItem("trade_adhyayan_user") : null);
+      if (activeEmail) {
+        localStorage.setItem(`ta_cache_client_sessions_${activeEmail}`, JSON.stringify(s));
+      }
     } catch {}
   }
 
