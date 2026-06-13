@@ -113,7 +113,7 @@ export async function createMentorshipGoogleMeetSession({
 
     googleEventId = googleEvent.data.id ?? undefined;
     googleCalendarLink = googleEvent.data.htmlLink ?? undefined;
-    googleMeetLink = customMeetLink || googleEvent.data.hangoutLink ?? googleEvent.data.conferenceData?.entryPoints?.find(
+    googleMeetLink = (customMeetLink || googleEvent.data.hangoutLink) ?? googleEvent.data.conferenceData?.entryPoints?.find(
       (e) => e.entryPointType === "video"
     )?.uri ?? undefined;
   } catch (err: any) {
