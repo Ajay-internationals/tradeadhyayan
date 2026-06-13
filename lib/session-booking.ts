@@ -10,6 +10,7 @@ export async function createMentorshipGoogleMeetSession({
   endTime,
   bookedByRole,
   notes,
+  customMeetLink,
 }: {
   clientId: string;
   mentorId: string;
@@ -19,6 +20,7 @@ export async function createMentorshipGoogleMeetSession({
   endTime: Date;
   bookedByRole: "CLIENT" | "MENTOR" | "ADMIN";
   notes?: string;
+  customMeetLink?: string;
 }) {
   // Fetch mentor (with user info for email/name)
   const mentor = await prisma.mentor.findUnique({
@@ -63,56 +65,63 @@ export async function createMentorshipGoogleMeetSession({
   try {
     const calendar = await getGoogleCalendarClient(mentor.userId);
 
-    const googleEvent = await calendar.events.insert({
-      calendarId: "primary",
-      conferenceDataVersion: 1,
-      sendUpdates: "all",
-      requestBody: {
-        summary: title,
-        description:
-          notes ||
-          `Trade Adhyayan mentorship session between ${mentor.User.name} and ${client.name}`,
-        start: {
-          dateTime: startTime.toISOString(),
-          timeZone: "Asia/Kolkata",
-        },
-        end: {
-          dateTime: endTime.toISOString(),
-          timeZone: "Asia/Kolkata",
-        },
-        attendees: [
-          { email: mentor.User.email, displayName: mentor.User.name },
-          { email: client.email, displayName: client.name },
+    const requestBody: any = {
+      summary: title,
+      description:
+        notes ||
+        `Trade Adhyayan mentorship session between ${mentor.User.name} and ${client.name}`,
+      start: {
+        dateTime: startTime.toISOString(),
+        timeZone: "Asia/Kolkata",
+      },
+      end: {
+        dateTime: endTime.toISOString(),
+        timeZone: "Asia/Kolkata",
+      },
+      attendees: [
+        { email: mentor.User.email, displayName: mentor.User.name },
+        { email: client.email, displayName: client.name },
+      ],
+      reminders: {
+        useDefault: false,
+        overrides: [
+          { method: "email", minutes: 24 * 60 },
+          { method: "popup", minutes: 30 },
         ],
-        reminders: {
-          useDefault: false,
-          overrides: [
-            { method: "email", minutes: 24 * 60 },
-            { method: "popup", minutes: 30 },
-          ],
-        },
-        conferenceData: {
-          createRequest: {
-            requestId: `trade-adhyayan-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-            conferenceSolutionKey: {
-              type: "hangoutsMeet",
-            },
+      },
+    };
+
+    if (customMeetLink) {
+      requestBody.location = customMeetLink;
+    } else {
+      requestBody.conferenceData = {
+        createRequest: {
+          requestId: `trade-adhyayan-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          conferenceSolutionKey: {
+            type: "hangoutsMeet",
           },
         },
-      },
+      };
+    }
+
+    const googleEvent = await calendar.events.insert({
+      calendarId: "primary",
+      conferenceDataVersion: customMeetLink ? 0 : 1,
+      sendUpdates: "all",
+      requestBody,
     });
 
     googleEventId = googleEvent.data.id ?? undefined;
     googleCalendarLink = googleEvent.data.htmlLink ?? undefined;
-    googleMeetLink =
-      googleEvent.data.hangoutLink ??
-      googleEvent.data.conferenceData?.entryPoints?.find(
-        (e) => e.entryPointType === "video"
-      )?.uri ??
-      undefined;
+    googleMeetLink = customMeetLink || googleEvent.data.hangoutLink ?? googleEvent.data.conferenceData?.entryPoints?.find(
+      (e) => e.entryPointType === "video"
+    )?.uri ?? undefined;
   } catch (err: any) {
     // If Google Calendar not connected, session is still created without Meet link
     console.warn("Google Calendar not available:", err.message);
+    if (customMeetLink) {
+      googleMeetLink = customMeetLink;
+    }
   }
 
   // Create session in DB

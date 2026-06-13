@@ -975,6 +975,7 @@ model MentorshipSession {
 }
 
 enum SessionStatus {
+  REQUESTED
   UPCOMING
   COMPLETED
   CANCELLED
