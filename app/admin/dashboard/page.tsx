@@ -13,7 +13,7 @@ export default async function AdminDashboardPage() {
   const data = await getAdminMentorshipDashboard();
 
   return (
-    <div className="p-6 max-w-[1600px] mx-auto space-y-6" style={{ backgroundColor: "#FAFAFF", minHeight: "100vh" }}>
+    <div className="p-6 max-w-[1600px] mx-auto space-y-6" style={{ backgroundColor: "#F8FAFC", minHeight: "100vh" }}>
       {/* Topbar */}
       <div className="flex justify-between items-center mb-8">
         <div>
@@ -22,19 +22,19 @@ export default async function AdminDashboardPage() {
         </div>
         
         <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-[#E7EAF3] shadow-sm cursor-pointer hover:border-[#6D3DF5] transition-colors">
+          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-[#E9E6F5] shadow-sm cursor-pointer hover:border-[#6D3DF5] transition-colors">
             <Calendar size={16} className="text-[#64748B]" />
             <span className="text-sm font-bold text-[#0F172A]">20 - 26 May 2025</span>
           </div>
           
           <div className="relative cursor-pointer">
             <Bell size={24} className="text-[#64748B]" />
-            <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center border-2 border-[#FAFAFF]">
+            <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center border-2 border-[#F8FAFC]">
               12
             </div>
           </div>
           
-          <div className="flex items-center gap-3 bg-white pl-2 pr-4 py-1.5 rounded-full border border-[#E7EAF3] cursor-pointer shadow-sm">
+          <div className="flex items-center gap-3 bg-white pl-2 pr-4 py-1.5 rounded-full border border-[#E9E6F5] cursor-pointer shadow-sm">
             <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center overflow-hidden border border-indigo-200">
                <img src="https://i.pravatar.cc/150?img=11" alt="Admin" className="w-full h-full object-cover" />
             </div>
@@ -57,7 +57,7 @@ export default async function AdminDashboardPage() {
           { label: "Monthly Revenue", val: "₹" + data.kpis.monthlyRevenue.toLocaleString(), sub: "+12.4% vs last month", icon: IndianRupee, bg: "bg-[#DCFCE7]", iconColor: "text-[#16A34A]", col: "flex-1" },
           { label: "Mentor Capacity Used", val: data.kpis.capacityUsedPercent.toFixed(0) + "%", sub: "Average utilization", icon: UserCircle2, bg: "bg-[#FFEDD5]", iconColor: "text-[#EA580C]", col: "flex-1" },
         ].map((kpi, idx) => (
-          <div key={idx} className={`${kpi.col} min-w-[140px] bg-white p-5 rounded-[18px] border border-[#E7EAF3] shadow-sm hover:shadow-md transition-shadow relative overflow-hidden`}>
+          <div key={idx} className={`${kpi.col} min-w-[140px] bg-white p-5 rounded-[22px] border border-[#E9E6F5] shadow-sm hover:shadow-md transition-shadow relative overflow-hidden`}>
             <div className="flex items-center gap-3 mb-4">
               <div className={`w-10 h-10 rounded-full ${kpi.bg} flex items-center justify-center`}>
                 <kpi.icon size={20} className={kpi.iconColor} />
@@ -74,7 +74,7 @@ export default async function AdminDashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Mentor Overview (Spans 2 cols) */}
-        <div className="lg:col-span-2 bg-white rounded-[18px] border border-[#E7EAF3] shadow-sm p-6">
+        <div className="lg:col-span-2 bg-white rounded-[22px] border border-[#E9E6F5] shadow-sm p-6">
           <div className="flex justify-between items-center mb-6">
             <h3 className="font-bold text-[18px] text-[#0F172A]">Mentor Overview</h3>
             <button className="bg-[#F1ECFF] text-[#6D3DF5] px-4 py-1.5 rounded-full text-xs font-bold hover:bg-[#E4DEFF] transition-colors">
@@ -85,7 +85,7 @@ export default async function AdminDashboardPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="text-[11px] font-bold text-[#64748B] border-b border-[#E7EAF3] uppercase tracking-wider">
+                <tr className="text-[11px] font-bold text-[#64748B] border-b border-[#E9E6F5] uppercase tracking-wider">
                   <th className="pb-4 px-2">Mentor</th>
                   <th className="pb-4 px-2">Assigned Clients</th>
                   <th className="pb-4 px-2">Capacity</th>
@@ -101,7 +101,7 @@ export default async function AdminDashboardPage() {
                   const util = m.capacity > 0 ? (assigned / m.capacity) * 100 : 0;
                   const pending = m.ReviewRequest?.length || 0;
                   return (
-                    <tr key={m.id} className="border-b border-[#E7EAF3] last:border-0 hover:bg-slate-50 transition-colors">
+                    <tr key={m.id} className="border-b border-[#E9E6F5] last:border-0 hover:bg-slate-50 transition-colors">
                       <td className="py-4 px-2">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-slate-200 overflow-hidden">
@@ -134,7 +134,7 @@ export default async function AdminDashboardPage() {
                         </div>
                       </td>
                       <td className="py-4 px-2 text-right">
-                        <button className="text-[12px] font-bold text-[#6D3DF5] hover:text-[#5B3FCC] px-3 py-1 border border-[#E7EAF3] rounded-[8px] hover:bg-slate-50 transition-colors">
+                        <button className="text-[12px] font-bold text-[#6D3DF5] hover:text-[#5B3FCC] px-3 py-1 border border-[#E9E6F5] rounded-[8px] hover:bg-slate-50 transition-colors">
                           View
                         </button>
                       </td>
@@ -145,14 +145,14 @@ export default async function AdminDashboardPage() {
             </table>
           </div>
           <div className="mt-6 text-center">
-             <button className="text-[13px] font-bold text-[#6D3DF5] border border-[#E7EAF3] px-6 py-2 rounded-full hover:bg-slate-50 transition-colors">
+             <button className="text-[13px] font-bold text-[#6D3DF5] border border-[#E9E6F5] px-6 py-2 rounded-full hover:bg-slate-50 transition-colors">
                Manage Mentors
              </button>
           </div>
         </div>
 
         {/* Recent Activities Timeline */}
-        <div className="bg-white rounded-[18px] border border-[#E7EAF3] shadow-sm p-6 relative">
+        <div className="bg-white rounded-[22px] border border-[#E9E6F5] shadow-sm p-6 relative">
           <div className="flex justify-between items-center mb-6">
             <h3 className="font-bold text-[18px] text-[#0F172A]">Recent Activities</h3>
             <button className="bg-[#F1ECFF] text-[#6D3DF5] px-4 py-1.5 rounded-full text-xs font-bold hover:bg-[#E4DEFF] transition-colors">
@@ -208,7 +208,7 @@ export default async function AdminDashboardPage() {
             
             {/* Timeline Line */}
             {data.activities.length > 0 && (
-              <div className="absolute left-[43px] top-[100px] bottom-[60px] w-[2px] bg-[#E7EAF3] z-0"></div>
+              <div className="absolute left-[43px] top-[100px] bottom-[60px] w-[2px] bg-[#E9E6F5] z-0"></div>
             )}
           </div>
         </div>
@@ -216,23 +216,23 @@ export default async function AdminDashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
          {/* Client Allocation Summary */}
-         <div className="bg-white rounded-[18px] border border-[#E7EAF3] shadow-sm p-6">
+         <div className="bg-white rounded-[22px] border border-[#E9E6F5] shadow-sm p-6">
             <h3 className="font-bold text-[18px] text-[#0F172A] mb-6">Client Allocation Summary</h3>
             <AdminCharts chartType="allocation" data={data.mentors} />
             <div className="mt-6 text-center">
-               <button className="text-[13px] font-bold text-[#6D3DF5] border border-[#E7EAF3] px-6 py-2 rounded-full hover:bg-slate-50 transition-colors">
+               <button className="text-[13px] font-bold text-[#6D3DF5] border border-[#E9E6F5] px-6 py-2 rounded-full hover:bg-slate-50 transition-colors">
                  Manage Allocation
                </button>
             </div>
          </div>
 
          {/* Mentor Performance */}
-          <div className="bg-white rounded-[18px] border border-[#E7EAF3] shadow-sm p-6">
+          <div className="bg-white rounded-[22px] border border-[#E9E6F5] shadow-sm p-6">
              <h3 className="font-bold text-[18px] text-[#0F172A] mb-6">Mentor Performance (This Month)</h3>
              <div className="overflow-x-auto">
                <table className="w-full text-left">
                  <thead>
-                   <tr className="text-[11px] font-bold text-[#64748B] border-b border-[#E7EAF3] uppercase tracking-wider">
+                   <tr className="text-[11px] font-bold text-[#64748B] border-b border-[#E9E6F5] uppercase tracking-wider">
                      <th className="pb-3 px-1">Mentor</th>
                      <th className="pb-3 px-1 text-center">Avg Score</th>
                      <th className="pb-3 px-1 text-center">Reviews Done</th>
@@ -242,7 +242,7 @@ export default async function AdminDashboardPage() {
                  </thead>
                  <tbody>
                    {data.mentors.slice(0,5).map((m:any) => (
-                     <tr key={m.id} className="border-b border-[#E7EAF3] last:border-0">
+                     <tr key={m.id} className="border-b border-[#E9E6F5] last:border-0">
                        <td className="py-3 px-1 text-[13px] font-bold text-[#0F172A]">{m.name}</td>
                        <td className="py-3 px-1 text-center text-[13px] font-semibold text-[#0F172A]">
                          {m.avgScore > 0 ? `${m.avgScore.toFixed(0)}/100` : "N/A"}
@@ -269,16 +269,16 @@ export default async function AdminDashboardPage() {
           </div>
  
           {/* Reviews Overview */}
-          <div className="bg-white rounded-[18px] border border-[#E7EAF3] shadow-sm p-6">
+          <div className="bg-white rounded-[22px] border border-[#E9E6F5] shadow-sm p-6">
              <div className="flex justify-between items-center mb-6">
                <h3 className="font-bold text-[18px] text-[#0F172A]">Reviews Overview</h3>
-               <select className="text-[12px] font-bold text-[#0F172A] border border-[#E7EAF3] rounded-full px-3 py-1 bg-white outline-none">
+               <select className="text-[12px] font-bold text-[#0F172A] border border-[#E9E6F5] rounded-full px-3 py-1 bg-white outline-none">
                  <option>This Month</option>
                </select>
              </div>
              <AdminCharts chartType="reviews" data={data.weeklyStats} />
             <div className="mt-6 text-center">
-               <button className="text-[13px] font-bold text-[#6D3DF5] border border-[#E7EAF3] px-6 py-2 rounded-full hover:bg-slate-50 transition-colors">
+               <button className="text-[13px] font-bold text-[#6D3DF5] border border-[#E9E6F5] px-6 py-2 rounded-full hover:bg-slate-50 transition-colors">
                  View All Reviews
                </button>
             </div>
@@ -287,17 +287,17 @@ export default async function AdminDashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Mentor Payout Overview */}
-        <div className="lg:col-span-2 bg-white rounded-[18px] border border-[#E7EAF3] shadow-sm p-6">
+        <div className="lg:col-span-2 bg-white rounded-[22px] border border-[#E9E6F5] shadow-sm p-6">
           <div className="flex items-center gap-4 mb-6">
             <h3 className="font-bold text-[18px] text-[#0F172A]">Mentor Payout Overview</h3>
-            <select className="text-[12px] font-bold text-[#0F172A] border border-[#E7EAF3] rounded-full px-3 py-1 bg-white outline-none">
+            <select className="text-[12px] font-bold text-[#0F172A] border border-[#E9E6F5] rounded-full px-3 py-1 bg-white outline-none">
                 <option>May 2025</option>
             </select>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="text-[11px] font-bold text-[#64748B] border-b border-[#E7EAF3] uppercase tracking-wider">
+                <tr className="text-[11px] font-bold text-[#64748B] border-b border-[#E9E6F5] uppercase tracking-wider">
                   <th className="pb-3 px-2">Mentor</th>
                   <th className="pb-3 px-2">Clients</th>
                   <th className="pb-3 px-2">Revenue Generated</th>
@@ -313,7 +313,7 @@ export default async function AdminDashboardPage() {
                   const revenue = assigned * 4999;
                   const payout = revenue * (m.payoutShare / 100);
                   return (
-                    <tr key={m.id} className="border-b border-[#E7EAF3] last:border-0 hover:bg-slate-50">
+                    <tr key={m.id} className="border-b border-[#E9E6F5] last:border-0 hover:bg-slate-50">
                       <td className="py-4 px-2">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-slate-200 overflow-hidden">
@@ -344,11 +344,11 @@ export default async function AdminDashboardPage() {
         </div>
 
         {/* System Summary */}
-        <div className="bg-white rounded-[18px] border border-[#E7EAF3] shadow-sm p-6">
+        <div className="bg-white rounded-[22px] border border-[#E9E6F5] shadow-sm p-6">
           <h3 className="font-bold text-[18px] text-[#0F172A] mb-6">System Summary</h3>
           <div className="grid grid-cols-2 gap-4">
             
-            <div className="bg-[#FAFAFF] rounded-[16px] p-4 border border-[#E7EAF3]">
+            <div className="bg-[#F8FAFC] rounded-[20px] p-4 border border-[#E9E6F5]">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-8 h-8 rounded-full bg-[#F3E8FF] flex items-center justify-center">
                   <Server size={14} className="text-[#9333EA]" />
@@ -359,7 +359,7 @@ export default async function AdminDashboardPage() {
               <p className="text-[11px] font-bold text-[#6D3DF5] mt-1">13% Used</p>
             </div>
 
-            <div className="bg-[#FAFAFF] rounded-[16px] p-4 border border-[#E7EAF3]">
+            <div className="bg-[#F8FAFC] rounded-[20px] p-4 border border-[#E9E6F5]">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-8 h-8 rounded-full bg-[#E0F2FE] flex items-center justify-center">
                   <Mail size={14} className="text-[#0284C7]" />
@@ -370,7 +370,7 @@ export default async function AdminDashboardPage() {
               <p className="text-[11px] font-bold text-[#64748B] mt-1">This Month</p>
             </div>
 
-            <div className="bg-[#FAFAFF] rounded-[16px] p-4 border border-[#E7EAF3]">
+            <div className="bg-[#F8FAFC] rounded-[20px] p-4 border border-[#E9E6F5]">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-8 h-8 rounded-full bg-[#FEF08A] flex items-center justify-center">
                   <Activity size={14} className="text-[#CA8A04]" />
@@ -381,7 +381,7 @@ export default async function AdminDashboardPage() {
               <p className="text-[11px] font-bold text-[#16A34A] mt-1">Live Now</p>
             </div>
 
-            <div className="bg-[#FAFAFF] rounded-[16px] p-4 border border-[#E7EAF3]">
+            <div className="bg-[#F8FAFC] rounded-[20px] p-4 border border-[#E9E6F5]">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-8 h-8 rounded-full bg-[#DCFCE7] flex items-center justify-center">
                   <ShieldCheck size={14} className="text-[#16A34A]" />

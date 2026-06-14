@@ -148,6 +148,30 @@ export async function getClientMentorshipOverview(email: string) {
     });
   }
 
+  // Fetch details for pending reviews
+  const pendingReviewsData = [];
+  const pendingReqs = reviewRequests.filter(r => r.status === "PENDING" || r.status === "IN_REVIEW");
+  for (const req of pendingReqs) {
+    let symbol = "N/A";
+    let direction = "LONG";
+    if (req.selectedTradeIds && req.selectedTradeIds.length > 0) {
+      const firstTrade = await prisma.trade.findUnique({
+        where: { id: req.selectedTradeIds[0] }
+      });
+      if (firstTrade) {
+        symbol = firstTrade.symbol;
+        direction = firstTrade.direction;
+      }
+    }
+    pendingReviewsData.push({
+      id: req.id,
+      date: req.submittedAt,
+      symbol,
+      type: direction,
+      status: req.status
+    });
+  }
+
   return {
     assignedMentor: assignment?.Mentor || null,
     currentScore,
@@ -161,7 +185,8 @@ export async function getClientMentorshipOverview(email: string) {
     actionPlans,
     tradesSharedCount,
     reviewedCount,
-    completedReviewsData
+    completedReviewsData,
+    pendingReviewsData
   };
 }
 

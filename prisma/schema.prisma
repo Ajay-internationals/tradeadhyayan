@@ -152,17 +152,28 @@ model Mistake {
 }
 
 model Strategy {
-  id          String   @id
-  userId      String
-  name        String
-  description String?
-  rulesJson   Json?
-  status      String   @default("ACTIVE")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime
-  category    String   @default("Custom")
-  User        User     @relation(fields: [userId], references: [id])
-  Trade       Trade[]
+  id              String   @id
+  userId          String
+  name            String
+  type            String   @default("Custom")
+  description     String?
+  rulesJson       Json?
+  market          String?
+  instrument      String?
+  timeframe       String?
+  setupRules      String?
+  entryRules      String?
+  exitRules       String?
+  stopLossRules   String?
+  targetRules     String?
+  riskPerTrade    Float?
+  maxTradesPerDay Int?
+  status          String   @default("ACTIVE")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  category        String   @default("Custom")
+  User            User     @relation(fields: [userId], references: [id])
+  Trade           Trade[]
 
   @@index([userId])
 }
@@ -300,6 +311,7 @@ model User {
   ClientRulebook_AsClient                   ClientRulebook[]    @relation("RulebookClient")
   GoogleCalendarConnection                  GoogleCalendarConnection?
   MentorshipSession_AsClient                MentorshipSession[] @relation("MentorshipSessionClient")
+  Watchlist                                 Watchlist[]
 }
 
 model UserSetting {
@@ -1008,5 +1020,71 @@ model TradeMistake {
   @@index([userId])
   @@index([tradeId])
   @@index([userId, createdAt])
+}
+
+model Watchlist {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  createdAt DateTime @default(now())
+  items     WatchlistItem[]
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model WatchlistItem {
+  id              String @id @default(cuid())
+  watchlistId     String
+  symbol          String
+  exchange        String
+  instrumentToken String?
+  watchlist       Watchlist @relation(fields: [watchlistId], references: [id], onDelete: Cascade)
+}
+
+model Instrument {
+  id              String @id @default(cuid())
+  broker          String
+  exchange        String
+  symbol          String
+  name            String?
+  instrumentToken String
+  lotSize         Int?
+  tickSize        Float?
+  segment         String?
+  expiry          DateTime?
+  strike          Float?
+  instrumentType  String?
+}
+
+model Candle {
+  id        String   @id @default(cuid())
+  symbol    String
+  exchange  String
+  interval  String
+  time      DateTime
+  open      Float
+  high      Float
+  low       Float
+  close     Float
+  volume    Float?
+  oi        Float?
+}
+
+model OptionChainSnapshot {
+  id        String   @id @default(cuid())
+  symbol    String
+  expiry    DateTime
+  strike    Float
+  ceLtp     Float?
+  peLtp     Float?
+  ceOi      Float?
+  peOi      Float?
+  ceVolume  Float?
+  peVolume  Float?
+  iv        Float?
+  delta     Float?
+  gamma     Float?
+  theta     Float?
+  vega      Float?
+  createdAt DateTime @default(now())
 }
 

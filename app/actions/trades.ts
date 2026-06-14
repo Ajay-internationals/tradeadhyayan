@@ -601,6 +601,77 @@ export async function getSyncLogs(email: string) {
   }
 }
 
+export async function getBrokerSyncStats(email: string) {
+  try {
+    const user = await getOrCreateUser(email);
+    const totalTrades = await prisma.trade.count({
+      where: { userId: user.id }
+    });
+    const syncedTrades = await prisma.trade.count({
+      where: { userId: user.id, source: { in: ["BROKER", "ZERODHA", "UPSTOX", "FYERS"] } }
+    });
+    const positions = await prisma.brokerPosition.count({
+      where: { userId: user.id }
+    });
+    
+    // For account capital/balance
+    const accountBalance = user.initialCapital || 248560;
+
+    // Data breakdown
+    const trades = await prisma.trade.findMany({
+      where: { userId: user.id, status: "CLOSED" },
+      select: { entryTime: true, exitTime: true }
+    });
+    
+    let intradayCount = 0;
+    let swingCount = 0;
+    let positionalCount = 0;
+    let othersCount = 0;
+    
+    trades.forEach(t => {
+      if (!t.entryTime || !t.exitTime) {
+        othersCount++;
+        return;
+      }
+      const entry = new Date(t.entryTime);
+      const exit = new Date(t.exitTime);
+      const diffDays = Math.ceil(Math.abs(exit.getTime() - entry.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (entry.toDateString() === exit.toDateString()) {
+        intradayCount++;
+      } else if (diffDays <= 7) {
+        swingCount++;
+      } else {
+        positionalCount++;
+      }
+    });
+
+    return {
+      success: true,
+      totalTrades,
+      syncedTrades,
+      positions,
+      accountBalance,
+      dataBreakdown: {
+        intraday: intradayCount,
+        swing: swingCount,
+        positional: positionalCount,
+        others: othersCount
+      }
+    };
+  } catch (error) {
+    console.error("Error in getBrokerSyncStats:", error);
+    return {
+      success: false,
+      totalTrades: 0,
+      syncedTrades: 0,
+      positions: 0,
+      accountBalance: 0,
+      dataBreakdown: { intraday: 0, swing: 0, positional: 0, others: 0 }
+    };
+  }
+}
+
 export async function triggerBrokerSync(
   email: string,
   brokerName: string,

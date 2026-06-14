@@ -28,6 +28,8 @@ export function AdminCharts({ chartType, data }: { chartType: "allocation" | "re
                 paddingAngle={2}
                 dataKey="value"
                 stroke="none"
+                startAngle={90}
+                endAngle={-270}
               >
                 {pieData.map((entry: any, index: number) => (
                   <Cell key={`cell-${index}`} fill={entry.fill} />
@@ -80,7 +82,7 @@ export function AdminCharts({ chartType, data }: { chartType: "allocation" | "re
       </div>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={lineData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E7EAF3" />
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E9E6F5" />
           <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B', fontWeight: 600 }} dy={10} />
           <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B', fontWeight: 600 }} />
           <Tooltip 

@@ -23,9 +23,13 @@ export async function POST(req: Request) {
       target,
       charges = 0,
       setup,
+      strategyId,
       mood,
       notes,
       batchId,
+      followedPlan,
+      confidenceLevel,
+      tags
     } = data;
 
     let user = null;
@@ -116,6 +120,9 @@ export async function POST(req: Request) {
         mood,
         notes,
         brokerTradeId: batchId || null,
+        followedPlan: followedPlan !== undefined ? Boolean(followedPlan) : true,
+        confidenceLevel: confidenceLevel !== undefined ? Number(confidenceLevel) : null,
+        tags: tags ? JSON.parse(JSON.stringify(tags)) : null,
         updatedAt: new Date(),
       },
     });

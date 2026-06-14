@@ -1,350 +1,238 @@
-
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import toast from "react-hot-toast";
-import Link from "next/link";
-import "../dashboard.css";
-import {
-  getTrades,
-  addDbTrade,
-  deleteDbTrade,
-  getStrategies,
-  addStrategy,
-  getGoals,
-  addGoal,
-  updateGoalProgress,
-  getUserSettings,
-  saveUserSettings,
-  getCalendarEvents,
-  addCalendarEvent,
-  getBrokerConnections,
-  addBrokerConnection,
-  disconnectBroker,
-  getSyncLogs,
-  triggerBrokerSync,
-  getMistakes,
-  addMistake,
-  runAutoDetectMistakes,
-  getMentorReviews,
-  addMentorReview,
-  getDashboardData,
-  getMentorshipOverview,
-  submitReviewRequest
-} from "@/app/actions/trades";
-import {
-  TrendingUp,
-  Plus,
-  RefreshCw,
-  Trash2,
-  Lock,
-  ArrowLeft,
-  DollarSign,
-  TrendingDown,
-  Percent,
-  Activity,
-  Smile,
-  AlertTriangle,
-  Lightbulb,
-  BookOpen,
-  Settings,
-  Bell,
-  Calendar as CalendarIcon,
-  ChevronDown,
-  Info,
-  Layers,
-  Upload,
-  CheckCircle,
-  HelpCircle,
-  BarChart2,
-  Frown,
-  Compass,
-  Link2,
-  Sliders,
-  Search,
-  Star,
-  User,
-  Shield,
-  Layers3,
-  CheckSquare,
-  FileSpreadsheet,
-  Download,
-  Menu,
-  X as XIcon
+import React, { useState, useEffect } from "react";
+import { getClientMentorshipOverview, submitClientReviewRequest } from "@/app/actions/mentorship";
+import { 
+  CheckCircle2, AlertCircle, Quote, Sparkles, TrendingUp,
+  Target, Shield, BrainCircuit, Flag, ArrowRight, Share2, FileText,
+  Video, Clock, UserCheck, CalendarDays, Plus, XCircle,
+  Info, ThumbsUp, Star, MoreVertical, BookOpen, ChevronRight, Lightbulb
 } from "lucide-react";
-import {
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  PieChart,
-  Pie,
-  Cell
-} from "recharts";
 
-interface Trade {
-  id: string;
-  time: string;
-  asset: string;
-  type: "BUY" | "SELL";
-  pnl: number;
-  strategy: string;
-  emotion: string;
-  quantity?: number;
-  entryPrice?: number;
-  exitPrice?: number;
-  stopLoss?: number;
-  target?: number;
-  charges?: number;
-  netPnl?: number;
-  rr?: number;
-  followedPlan?: boolean;
-  notes?: string;
-  source?: string;
-  entryTime?: any;
-  exitTime?: any;
-}
-
-interface StrategyItem {
-  id: string;
-  name: string;
-  category: string;
-  description: string | null;
-  status: string;
-  createdAt: Date;
-}
-
-interface GoalItem {
-  id: string;
-  title: string;
-  category: string;
-  targetValue: number;
-  currentValue: number;
-  progress: number;
-  status: string;
-  targetDate: Date | null;
-}
-
-interface CalendarEventItem {
-  id: string;
-  title: string;
-  eventType: string;
-  startTime: Date;
-  status: string;
-}
-
-interface BrokerConnectionItem {
-  id: string;
-  brokerName: string;
-  status: string;
-  lastSyncAt: Date | null;
-}
-
-interface SyncLogItem {
-  id: string;
-  connectionId: string;
-  dataType: string;
-  recordsCount: number;
-  status: string;
-  errorMessage: string | null;
-  createdAt: Date;
-}
-
-const DEFAULT_TRADES: Trade[] = [
-  { id: "d1", time: "14:20 PM", asset: "NIFTY 22400 CE", type: "BUY", pnl: 12450, strategy: "Breakout", emotion: "Discipline ✓", quantity: 50, entryPrice: 125, exitPrice: 374, charges: 20, netPnl: 12430, rr: 2.5, followedPlan: true, source: "MANUAL", entryTime: new Date() },
-  { id: "d2", time: "11:05 AM", asset: "RELIANCE", type: "BUY", pnl: -3200, strategy: "Retest", emotion: "FOMO Entry ⚠️", quantity: 200, entryPrice: 2840, exitPrice: 2824, charges: 20, netPnl: -3220, rr: 1.5, followedPlan: false, source: "MANUAL", entryTime: new Date() },
-  { id: "d3", time: "Yesterday", asset: "HDFCBANK", type: "SELL", pnl: 8100, strategy: "Scalping", emotion: "Early Exit ⚠️", quantity: 300, entryPrice: 1540, exitPrice: 1513, charges: 20, netPnl: 8080, rr: 2.0, followedPlan: false, source: "MANUAL", entryTime: new Date() },
-];
-
-
-
-export default function ExtractedPage() {
-
-  const [activeTab, setActiveTab] = useState<"dashboard" | "market" | "journal" | "mistakes" | "mentor" | "reports" | "strategies" | "tools" | "goals" | "calendar" | "settings">("dashboard");
-  const [journalSubTab, setJournalSubTab] = useState<"single" | "upload" | "paste" | "broker">("single");
-  const [goalsSubTab, setGoalsSubTab] = useState<"active" | "completed" | "all">("active");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const router = useRouter();
-
-  const [authBrokerName, setAuthBrokerName] = useState<string | null>(null);
-  const [brokerApiKey, setBrokerApiKey] = useState("");
-  const [brokerApiSecret, setBrokerApiSecret] = useState("");
-  const [brokerClientId, setBrokerClientId] = useState("");
-
-  const [trades, setTrades] = useState<Trade[]>([]);
-  const [strategies, setStrategies] = useState<StrategyItem[]>([]);
-  const [goals, setGoals] = useState<GoalItem[]>([]);
-  const [calendarEvents, setCalendarEvents] = useState<CalendarEventItem[]>([]);
-  const [brokerConnections, setBrokerConnections] = useState<BrokerConnectionItem[]>([]);
-  const [syncLogs, setSyncLogs] = useState<SyncLogItem[]>([]);
-  const [settings, setSettings] = useState<any>(null);
-
-  const [userEmail, setUserEmail] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-
-  // Manual Add Form
-  const [asset, setAsset] = useState("");
-  const [tradeType, setTradeType] = useState<"BUY" | "SELL">("BUY");
-  const [pnl, setPnl] = useState("");
-  const [strategy, setStrategy] = useState("Breakout");
-  const [emotion, setEmotion] = useState("Discipline ✓");
-  const [entryPrice, setEntryPrice] = useState("");
-  const [exitPrice, setExitPrice] = useState("");
-  const [quantity, setQuantity] = useState("");
-  const [stopLoss, setStopLoss] = useState("");
-  const [target, setTarget] = useState("");
-  const [notes, setNotes] = useState("");
-  const [pastedText, setPastedText] = useState("");
-
-  // Create Strategy Form
-  const [newStratName, setNewStratName] = useState("");
-  const [newStratCategory, setNewStratCategory] = useState("Breakout");
-  const [newStratDesc, setNewStratDesc] = useState("");
-  const [newStratEntryRules, setNewStratEntryRules] = useState("");
-
-  // Create Goal Form
-  const [newGoalTitle, setNewGoalTitle] = useState("");
-  const [newGoalCategory, setNewGoalCategory] = useState("Performance");
-  const [newGoalValue, setNewGoalValue] = useState("");
-  const [newGoalDate, setNewGoalDate] = useState("");
-
-  // Create Calendar Event Form
-  const [newEvTitle, setNewEvTitle] = useState("");
-  const [newEvType, setNewEvType] = useState("Review");
-  const [newEvDate, setNewEvDate] = useState("");
-
-  // Mistakes Form
-  const [mistakeTradeId, setMistakeTradeId] = useState("");
-  const [mistakeType, setMistakeType] = useState("Revenge Trading");
-  const [mistakeSeverity, setMistakeSeverity] = useState<"LOW" | "MEDIUM" | "HIGH">("MEDIUM");
-  const [mistakeReason, setMistakeReason] = useState("");
-  const [mistakeLoss, setMistakeLoss] = useState("");
-  const [mistakeTip, setMistakeTip] = useState("");
-  const [mistakes, setMistakes] = useState<any[]>([]);
-  const [mistakeSummary, setMistakeSummary] = useState<any>(null);
-
-  // Mentor Review Form
-  const [mentorTradeId, setMentorTradeId] = useState("");
-  const [mentorScore, setMentorScore] = useState("");
-  const [mentorFeedback, setMentorFeedback] = useState("");
-  const [mentorStrengths, setMentorStrengths] = useState("");
-  const [mentorImprovements, setMentorImprovements] = useState("");
-  const [mentorReviews, setMentorReviews] = useState<any[]>([]);
-
-  // Mentorship System states
-  const [mentorshipData, setMentorshipData] = useState<any>(null);
-  const [mentorshipSubTab, setMentorshipSubTab] = useState<"overview" | "submit" | "reviews">("overview");
-  const [selectedReviewTradeIds, setSelectedReviewTradeIds] = useState<string[]>([]);
-  const [reviewNotes, setReviewNotes] = useState("");
-  const [disciplineRating, setDisciplineRating] = useState(5);
-  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
-  const [isMentorshipLoading, setIsMentorshipLoading] = useState(false);
-
-  // Tools Form Calculators
-  const [calcCapital, setCalcCapital] = useState("100000");
-  const [calcRiskPct, setCalcRiskPct] = useState("1");
-  const [calcEntry, setCalcEntry] = useState("100");
-  const [calcSL, setCalcSL] = useState("95");
-  const [calcTarget, setCalcTarget] = useState("110");
-  const [calcDirection, setCalcDirection] = useState<"BUY" | "SELL">("BUY");
-  const [calcHigh, setCalcHigh] = useState("22500");
-  const [calcLow, setCalcLow] = useState("22300");
-  const [calcClose, setCalcClose] = useState("22450");
-  const [fibHigh, setFibHigh] = useState("22500");
-  const [fibLow, setFibLow] = useState("22300");
-  const [fibDirection, setFibDirection] = useState<"LONG" | "SHORT">("LONG");
-
-  // Checklist state
-  const [checklist, setChecklist] = useState({
-    trend: false,
-    level: false,
-    trigger: false,
-    rr: false,
-    slOrder: false,
-    psychology: false,
-  });
-
-  // Settings states
-  const [settingsTheme, setSettingsTheme] = useState("Light");
-  const [settingsCurrency, setSettingsCurrency] = useState("INR");
-  const [settingsTimezone, setSettingsTimezone] = useState("Asia/Kolkata");
-  const [settingsRisk, setSettingsRisk] = useState("1");
-  const [settingsRR, setSettingsRR] = useState("1:2");
-  const [settingsBrokerage, setSettingsBrokerage] = useState(true);
-  const [settingsDateRange, setSettingsDateRange] = useState("This Week");
-
-  const [filterSearch, setFilterSearch] = useState("");
-  const [filterSetup, setFilterSetup] = useState("All");
-  const [filterEmotion, setFilterEmotion] = useState("All");
-  const [filterType, setFilterType] = useState("All");
-
+// Helper to generate SVG path for sparkline
+function generateSparklinePath(points: number[]): string {
+  if (!points || points.length === 0) return "";
+  const width = 100;
+  const height = 30;
+  const min = Math.min(...points);
+  const max = Math.max(...points);
+  const range = max - min || 1;
   
-const fetchMistakeSummary = async (emailParam?: string) => {
+  return points.map((p, idx) => {
+    const x = (idx / (points.length - 1)) * width;
+    const y = height - ((p - min) / range) * (height - 4) - 2;
+    return `${idx === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
+  }).join(" ");
+}
+
+// Circular progress component for Improvement Journey
+const ProgressRing = ({ percent, color, Icon }: { percent: number; color: string; Icon: React.ComponentType<any> }) => {
+  const radius = 18;
+  const strokeWidth = 3;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (percent / 100) * circumference;
+
+  return (
+    <div className="relative w-12 h-12 flex items-center justify-center shrink-0">
+      <svg className="absolute w-full h-full transform -rotate-90">
+        <circle
+          cx="24"
+          cy="24"
+          r={radius}
+          stroke="#F1F5F9"
+          strokeWidth={strokeWidth}
+          fill="transparent"
+        />
+        <circle
+          cx="24"
+          cy="24"
+          r={radius}
+          stroke={color}
+          strokeWidth={strokeWidth}
+          fill="transparent"
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+          className="transition-all duration-500 ease-out"
+        />
+      </svg>
+      <div className="relative z-10">
+        <Icon size={14} style={{ color }} strokeWidth={2.5} />
+      </div>
+    </div>
+  );
+};
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import toast, { Toaster } from "react-hot-toast";
+
+const STATUS_COLORS: Record<string, string> = {
+  REQUESTED:   "bg-orange-100 text-orange-700",
+  UPCOMING:    "bg-blue-100 text-blue-700",
+  COMPLETED:   "bg-green-100 text-green-700",
+  CANCELLED:   "bg-red-100 text-red-700",
+  RESCHEDULED: "bg-yellow-100 text-yellow-700",
+  NO_SHOW:     "bg-gray-100 text-gray-600",
+};
+
+export default function ClientMentorReviewPage() {
+  const router = useRouter();
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Tab state: "overview" or "sessions"
+  const [activeTab, setActiveTab] = useState<"overview" | "sessions">("overview");
+
+  const [showModal, setShowModal] = useState(false);
+  const [selectedTrades, setSelectedTrades] = useState<string[]>([]);
+  const [clientNotes, setClientNotes] = useState("");
+  const [submittingRequest, setSubmittingRequest] = useState(false);
+  const [availableTrades, setAvailableTrades] = useState<any[]>([]);
+
+  // Sessions Caching & State
+  const [userId, setUserId] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      const email = localStorage.getItem("trade_adhyayan_user");
+      if (email) return localStorage.getItem(`ta_cache_client_userId_${email}`);
+    }
+    return null;
+  });
+  const [mentorId, setMentorId] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      const email = localStorage.getItem("trade_adhyayan_user");
+      if (email) return localStorage.getItem(`ta_cache_client_mentorId_${email}`);
+    }
+    return null;
+  });
+  const [sessions, setSessions] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      const email = localStorage.getItem("trade_adhyayan_user");
+      if (email) {
+        const cached = localStorage.getItem(`ta_cache_client_sessions_${email}`);
+        if (cached) {
+          try { return JSON.parse(cached); } catch {}
+        }
+      }
+    }
+    return [];
+  });
+  
+  // Sessions subtab: "upcoming", "request", "history"
+  const [sessionTab, setSessionTab] = useState<"upcoming" | "request" | "history">("upcoming");
+
+  // Booking / Request form state
+  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedTime, setSelectedTime] = useState("18:00");
+  const [bookingTitle, setBookingTitle] = useState("1:1 Mentorship Session");
+  const [bookingNotes, setBookingNotes] = useState("");
+  const [booking, setBooking] = useState(false);
+
+  const openShareModal = async () => {
+    setShowModal(true);
     try {
-      const email = emailParam || userEmail || localStorage.getItem('trade_adhyayan_user') || "";
-      if (!email) return;
-      const res = await fetch(`/api/mistakes/summary?email=${encodeURIComponent(email)}`);
-      if (res.ok) {
-        const data = await res.json();
-        setMistakeSummary(data);
+      const email = localStorage.getItem('trade_adhyayan_user');
+      if (email) {
+        const res = await fetch(`/api/journal/trades?email=${email}`);
+        const json = await res.json();
+        if (json.success) {
+          setAvailableTrades(json.data.filter((t: any) => t.status === "CLOSED"));
+        }
       }
     } catch (err) {
-      console.error("Error fetching mistake summary:", err);
+      console.error("Failed to load trades for sharing:", err);
     }
   };
 
-  const fetchMentorshipData = async (emailParam?: string) => {
-    try {
-      const email = emailParam || userEmail;
-      if (!email) return;
-      setIsMentorshipLoading(true);
-      const data = await getMentorshipOverview(email);
-      setMentorshipData(data);
-    } catch (err) {
-      console.error("Error loading mentorship data:", err);
-    } finally {
-      setIsMentorshipLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab === "mentor" && userEmail) {
-      fetchMentorshipData();
-    }
-  }, [activeTab, userEmail]);
-
-  const handleSubmitReviewRequest = async (e: React.FormEvent) => {
+  const handleShareSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedReviewTradeIds.length === 0) {
-      toast.error("Please select at least one trade to submit.");
+    if (selectedTrades.length === 0) {
+      alert("Please select at least one trade to share.");
       return;
     }
+    setSubmittingRequest(true);
     try {
-      setIsSubmittingReview(true);
-      await submitReviewRequest(
-        userEmail,
-        selectedReviewTradeIds,
-        reviewNotes,
-        disciplineRating
-      );
-      toast.success("Mentorship review request submitted successfully! 🎓");
-      setSelectedReviewTradeIds([]);
-      setReviewNotes("");
-      setDisciplineRating(5);
-      setMentorshipSubTab("reviews");
-      await fetchMentorshipData();
+      const email = localStorage.getItem('trade_adhyayan_user');
+      if (email) {
+        await submitClientReviewRequest(email, selectedTrades, clientNotes);
+        alert("Review request submitted to your mentor successfully!");
+        setShowModal(false);
+        setSelectedTrades([]);
+        setClientNotes("");
+        // Refresh page data
+        const result = await getClientMentorshipOverview(email);
+        setData(result);
+      }
     } catch (err: any) {
-      toast.error(err.message || "Failed to submit review request.");
+      alert("Failed to submit request: " + err.message);
     } finally {
-      setIsSubmittingReview(false);
+      setSubmittingRequest(false);
     }
   };
 
-  // Initialize and load user data
+  async function loadSessions(uid: string, email?: string) {
+    try {
+      const res = await fetch("/api/mentorship/sessions", {
+        headers: { "x-user-id": uid, "x-user-role": "CLIENT" }
+      });
+      const data = await res.json();
+      const s = data.sessions || [];
+      setSessions(s);
+      const activeEmail = email || (typeof window !== "undefined" ? localStorage.getItem("trade_adhyayan_user") : null);
+      if (activeEmail) {
+        localStorage.setItem(`ta_cache_client_sessions_${activeEmail}`, JSON.stringify(s));
+      }
+    } catch {}
+  }
+
+  async function submitSessionRequest() {
+    if (!userId || !mentorId || !selectedDate) return;
+    setBooking(true);
+    try {
+      const startDateTimeStr = `${selectedDate}T${selectedTime}:00`;
+      const start = new Date(startDateTimeStr);
+      const end = new Date(start.getTime() + 45 * 60 * 1000); // Default 45 mins
+
+      const res = await fetch("/api/mentorship/book-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-user-id": userId, "x-user-role": "CLIENT" },
+        body: JSON.stringify({
+          mentorId,
+          title: bookingTitle,
+          startTime: start.toISOString(),
+          endTime: end.toISOString(),
+          notes: bookingNotes,
+        }),
+      });
+      const resJson = await res.json();
+      if (!res.ok) throw new Error(resJson.error);
+      toast.success("🎉 Session request submitted to your mentor!");
+      setSessionTab("upcoming");
+      setSelectedDate("");
+      setBookingNotes("");
+      await loadSessions(userId);
+    } catch (e: any) {
+      toast.error(e.message || "Request failed");
+    } finally {
+      setBooking(false);
+    }
+  }
+
+  async function cancelSession(sessionId: string) {
+    if (!userId || !confirm("Cancel this session/request?")) return;
+    try {
+      const res = await fetch(`/api/mentorship/sessions/${sessionId}/cancel`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-user-id": userId, "x-user-role": "CLIENT" },
+        body: JSON.stringify({ reason: "Cancelled by client" }),
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+      toast.success("Session cancelled");
+      await loadSessions(userId);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to cancel");
+    }
+  }
+
   useEffect(() => {
     const email = localStorage.getItem('trade_adhyayan_user');
     if (!email) {
@@ -352,1242 +240,851 @@ const fetchMistakeSummary = async (emailParam?: string) => {
       return;
     }
 
-    setUserEmail(email);
-    setIsLoading(true);
-
-    const loadAllData = async () => {
+    const loadData = async () => {
       try {
-        const data = await getDashboardData(email);
+        const result = await getClientMentorshipOverview(email);
+        setData(result);
 
-        setTrades(data.trades);
-        setStrategies(data.strategies);
-        setGoals(data.goals);
-        setCalendarEvents(data.calendarEvents);
+        const userRes = await fetch(`/api/user/me?email=${encodeURIComponent(email)}`);
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          setUserId(userData.id);
+          localStorage.setItem(`ta_cache_client_userId_${email}`, userData.id);
 
-        if (data.settings) {
-          const dbSettings = data.settings;
-          setSettings(dbSettings);
-          setSettingsTheme(dbSettings.theme);
-          setSettingsCurrency(dbSettings.currency);
-          setSettingsTimezone(dbSettings.timezone);
-          setSettingsRisk(dbSettings.defaultRisk.toString());
-          setSettingsRR(dbSettings.defaultRr === 2 ? "1:2" : `1:${dbSettings.defaultRr}`);
-          setSettingsBrokerage(dbSettings.includeBrokerage);
-          setSettingsDateRange(dbSettings.defaultDateRange);
+          const assignRes = await fetch(`/api/mentorship/my-mentor?userId=${userData.id}`);
+          if (assignRes.ok) {
+            const assignData = await assignRes.json();
+            setMentorId(assignData.mentorId);
+            localStorage.setItem(`ta_cache_client_mentorId_${email}`, assignData.mentorId);
+          }
+
+          await loadSessions(userData.id, email);
         }
-
-        setBrokerConnections(data.brokerConnections);
-        setSyncLogs(data.syncLogs);
-        setMistakes(data.mistakes);
-        setMentorReviews(data.mentorReviews);
-
-        if (data.mistakeSummary) {
-          setMistakeSummary(data.mistakeSummary);
-        }
-      } catch (err) {
-        console.error("Error loading data from database:", err);
+      } catch(e) {
+        console.error(e);
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
-
-    loadAllData();
-  }, []);
-
-  // Load mistakes when Mistakes tab is active (No heavy auto-detect scanner runs on click)
-  useEffect(() => {
-    if (activeTab === "mistakes" && userEmail) {
-      const loadMistakes = async () => {
-        try {
-          const dbMistakes = await getMistakes(userEmail);
-          setMistakes(dbMistakes);
-          await fetchMistakeSummary(userEmail);
-        } catch (e) {
-          console.error("Error loading mistakes:", e);
-        }
-      };
-      loadMistakes();
-    }
-  }, [activeTab, userEmail]);
-
-  const handleAddTradeSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!asset || !quantity || !entryPrice || !exitPrice) {
-      alert("Please fill all core fields!");
-      return;
-    }
-
-    const qty = parseInt(quantity) || 1;
-    const entry = parseFloat(entryPrice) || 0;
-    const exit = parseFloat(exitPrice) || 0;
-    const sl = parseFloat(stopLoss) || 0;
-    const tgt = parseFloat(target) || 0;
     
-    // Formula calculations
-    const pnlVal = tradeType === "BUY" ? (exit - entry) * qty : (entry - exit) * qty;
-    const brokerage = settingsBrokerage ? 40 : 0; // standard charges
-    const finalNetPnl = pnlVal - brokerage;
+    loadData();
+  }, [router]);
 
-    let rr_val = 0;
-    if (sl > 0 && tgt > 0) {
-      const risk = tradeType === "BUY" ? (entry - sl) : (sl - entry);
-      const reward = tradeType === "BUY" ? (tgt - entry) : (entry - tgt);
-      if (risk > 0) rr_val = reward / risk;
-    }
-
-    const tempId = `temp_${Date.now()}`;
-    const newTradeObj: Trade = {
-      id: tempId,
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      asset: asset.toUpperCase(),
-      type: tradeType,
-      pnl: pnlVal,
-      strategy,
-      emotion: emotion,
-      quantity: qty,
-      entryPrice: entry,
-      exitPrice: exit,
-      stopLoss: sl > 0 ? sl : undefined,
-      target: tgt > 0 ? tgt : undefined,
-      charges: brokerage,
-      netPnl: finalNetPnl,
-      rr: rr_val > 0 ? rr_val : undefined,
-      followedPlan: !emotion.includes("⚠️"),
-      notes: notes,
-      entryTime: new Date()
-    };
-
-    setTrades((prev) => [newTradeObj, ...prev]);
-    
-    // Clear inputs
-    setAsset("");
-    setPnl("");
-    setQuantity("");
-    setEntryPrice("");
-    setExitPrice("");
-    setStopLoss("");
-    setTarget("");
-    setNotes("");
-    
-    setActiveTab("journal");
-
-    try {
-      const realTrade = await addDbTrade(userEmail, {
-        asset,
-        type: tradeType,
-        pnl: pnlVal,
-        strategy,
-        emotion: newTradeObj.emotion,
-        quantity: qty,
-        entryPrice: entry,
-        exitPrice: exit,
-        stopLoss: sl > 0 ? sl : undefined,
-        target: tgt > 0 ? tgt : undefined,
-        charges: brokerage,
-        netPnl: finalNetPnl,
-        rr: rr_val > 0 ? rr_val : undefined,
-        notes: notes,
-      });
-      setTrades((prev) => prev.map((t) => (t.id === tempId ? realTrade : t)));
-    } catch (err) {
-      console.error("Database insert failed, keeping local UI state.", err);
-    }
-  };
-
-  const handleCreateStrategy = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newStratName) return;
-
-    try {
-      const newStrat = await addStrategy(userEmail, {
-        name: newStratName,
-        category: newStratCategory,
-        description: newStratDesc,
-        rulesJson: { entry: newStratEntryRules },
-      });
-      setStrategies((prev) => [newStrat, ...prev]);
-      setNewStratName("");
-      setNewStratDesc("");
-      setNewStratEntryRules("");
-      toast.success("Strategy saved to database!");
-    } catch (err) {
-      console.error("Failed to save strategy:", err);
-      toast.error("Failed to save strategy. Please try again.");
-    }
-  };
-
-  const handleCreateGoal = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newGoalTitle || !newGoalValue) return;
-
-    try {
-      const newGoal = await addGoal(userEmail, {
-        title: newGoalTitle,
-        category: newGoalCategory,
-        targetValue: parseFloat(newGoalValue),
-        targetDate: newGoalDate ? new Date(newGoalDate) : null,
-      });
-      setGoals((prev) => [newGoal, ...prev]);
-      setNewGoalTitle("");
-      setNewGoalValue("");
-      setNewGoalDate("");
-      toast.success("Goal saved successfully! 🎯");
-    } catch (err) {
-      console.error("Failed to save goal:", err);
-      toast.error("Failed to save goal.");
-    }
-  };
-
-  const handleCreateCalendarEvent = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newEvTitle || !newEvDate) return;
-
-    try {
-      const newEv = await addCalendarEvent(userEmail, {
-        title: newEvTitle,
-        eventType: newEvType,
-        startTime: new Date(newEvDate),
-      });
-      setCalendarEvents((prev) => [newEv, ...prev]);
-      setNewEvTitle("");
-      setNewEvDate("");
-      toast.success("Calendar event created! 📅");
-    } catch (err) {
-      console.error("Failed to add calendar event:", err);
-      toast.error("Failed to create event.");
-    }
-  };
-
-  const handleDeleteTradeRecord = async (tradeId: string) => {
-    const toastId = toast(
-      (t) => (
-        <span className="flex items-center gap-3">
-          Delete this trade?
-          <button
-            className="px-2 py-1 bg-[#E94B8A] text-white text-[10px] font-bold rounded-lg"
-            onClick={async () => {
-              toast.dismiss(t.id);
-              try {
-                await deleteDbTrade(tradeId);
-                setTrades((prev) => prev.filter((tr) => tr.id !== tradeId));
-                toast.success("Trade deleted.");
-              } catch (err) {
-                toast.error("Failed to delete trade.");
-              }
-            }}
-          >Delete</button>
-          <button
-            className="px-2 py-1 bg-slate-600 text-white text-[10px] font-bold rounded-lg"
-            onClick={() => toast.dismiss(t.id)}
-          >Cancel</button>
-        </span>
-      ),
-      { duration: 8000 }
+  if (loading) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-[#6D3DF5] border-t-transparent rounded-full"></div>
+      </div>
     );
-    void toastId;
-  };
+  }
 
-  const handleSaveSettings = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const riskVal = parseFloat(settingsRisk) || 1.0;
-      const rrVal = parseFloat(settingsRR.replace("1:", "")) || 2.0;
-
-      await saveUserSettings(userEmail, {
-        theme: settingsTheme,
-        currency: settingsCurrency,
-        timezone: settingsTimezone,
-        defaultRisk: riskVal,
-        defaultRr: rrVal,
-        includeBrokerage: settingsBrokerage,
-        defaultDateRange: settingsDateRange,
-      });
-      toast.success("Settings saved successfully! ⚙️");
-    } catch (err) {
-      console.error("Failed to save settings", err);
-      toast.error("Failed to save settings.");
-    }
-  };
-
-  const handleBrokerConnectionAction = async (broker: string) => {
-    try {
-      await addBrokerConnection(userEmail, broker, "CONNECTED");
-      const connections = await getBrokerConnections(userEmail);
-      setBrokerConnections(connections);
-      toast.success(`Synchronized broker account ${broker} successfully!`);
-    } catch (e) {
-      console.error(e);
-      toast.error(`Failed to connect ${broker}.`);
-    }
-  };
-
-  const handleTriggerBrokerSyncClick = async (broker: string) => {
-    try {
-      setIsLoading(true);
-      const res = await triggerBrokerSync(userEmail, broker, {});
-      if (res.success) {
-        toast.success(`Imported ${res.recordsCount} trades from ${broker}!`);
-        const dbTrades = await getTrades(userEmail);
-        setTrades(dbTrades);
-      } else {
-        toast.error(`Failed to sync from ${broker}: ${res.errorMessage}`);
-      }
-    } catch (e) {
-      console.error(e);
-      toast.error("Broker sync failed. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleAddMistake = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!mistakeTradeId || !mistakeType) return;
-    try {
-      const estimatedLossVal = parseFloat(mistakeLoss) || 0;
-      await addMistake(
-        userEmail,
-        mistakeTradeId,
-        mistakeType,
-        mistakeSeverity,
-        mistakeReason,
-        estimatedLossVal,
-        mistakeTip
-      );
-      const dbMistakes = await getMistakes(userEmail);
-      setMistakes(dbMistakes);
-      await fetchMistakeSummary();
-      setMistakeReason("");
-      setMistakeLoss("");
-      setMistakeTip("");
-      setMistakeTradeId("");
-      toast.success("Mistake logged successfully! 🧠");
-    } catch (e) {
-      console.error(e);
-      toast.error("Failed to log mistake.");
-    }
-  };
-
-  const handleConfirmMistake = async (mistakeId: string) => {
-    try {
-      const res = await fetch(`/api/mistakes/${mistakeId}/confirm`, {
-        method: "PATCH"
-      });
-      if (res.ok) {
-        const dbMistakes = await getMistakes(userEmail);
-        setMistakes(dbMistakes);
-        await fetchMistakeSummary();
-        toast.success("Mistake confirmed!");
-      } else {
-        toast.error("Failed to confirm mistake.");
-      }
-    } catch (e) {
-      console.error(e);
-      toast.error("Network error.");
-    }
-  };
-
-  const handleToggleReviewed = async (mistakeId: string) => {
-    try {
-      const res = await fetch(`/api/mistakes/${mistakeId}/reviewed`, {
-        method: "PATCH"
-      });
-      if (res.ok) {
-        const dbMistakes = await getMistakes(userEmail);
-        setMistakes(dbMistakes);
-        await fetchMistakeSummary();
-        toast.success("Marked as reviewed!");
-      } else {
-        toast.error("Failed to mark as reviewed.");
-      }
-    } catch (e) {
-      console.error(e);
-      toast.error("Network error.");
-    }
-  };
-
-  const handleDeleteMistake = async (mistakeId: string) => {
-    const toastId = toast(
-      (t) => (
-        <span className="flex items-center gap-3">
-          Delete this mistake log?
-          <button
-            className="px-2 py-1 bg-[#E94B8A] text-white text-[10px] font-bold rounded-lg"
-            onClick={async () => {
-              toast.dismiss(t.id);
-              try {
-                const res = await fetch(`/api/mistakes/${mistakeId}`, { method: "DELETE" });
-                if (res.ok) {
-                  const dbMistakes = await getMistakes(userEmail);
-                  setMistakes(dbMistakes);
-                  await fetchMistakeSummary();
-                  toast.success("Mistake deleted.");
-                } else {
-                  toast.error("Failed to delete.");
-                }
-              } catch (e) { toast.error("Network error."); }
-            }}
-          >Delete</button>
-          <button
-            className="px-2 py-1 bg-slate-600 text-white text-[10px] font-bold rounded-lg"
-            onClick={() => toast.dismiss(t.id)}
-          >Cancel</button>
-        </span>
-      ),
-      { duration: 8000 }
+  if (!data || !data.assignedMentor) {
+    return (
+      <div className="p-12 text-center max-w-[800px] mx-auto mt-20 bg-white rounded-[22px] border border-[#E9E6F5] shadow-sm">
+        <h2 className="text-[24px] font-black text-[#0F172A] mb-4">No Mentor Assigned Yet</h2>
+        <p className="text-[14px] font-medium text-[#64748B] mb-8">You are not currently enrolled in a mentorship program or your mentor assignment is pending.</p>
+        <button className="bg-[#6D3DF5] text-white px-8 py-3 rounded-full font-bold">Explore Mentorship Plans</button>
+      </div>
     );
-    void toastId;
-  };
-
-  const handleAddMentorReview = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!mentorTradeId || !mentorScore || !mentorFeedback) return;
-    try {
-      const scoreNum = parseFloat(mentorScore) || 80;
-      const strengthsArr = mentorStrengths ? mentorStrengths.split(",").map(s => s.trim()) : [];
-      const improvementsArr = mentorImprovements ? mentorImprovements.split(",").map(s => s.trim()) : [];
-
-      await addMentorReview(
-        userEmail,
-        mentorTradeId,
-        scoreNum,
-        mentorFeedback,
-        strengthsArr,
-        improvementsArr
-      );
-      const dbReviews = await getMentorReviews(userEmail);
-      setMentorReviews(dbReviews);
-      setMentorFeedback("");
-      setMentorScore("");
-      setMentorStrengths("");
-      setMentorImprovements("");
-      setMentorTradeId("");
-      toast.success("Mentor review logged successfully! 🎓");
-    } catch (e) {
-      console.error(e);
-      toast.error("Failed to log mentor review.");
-    }
-  };
-
-  const handleAutoDetectMistakes = async () => {
-    const tid = toast.loading("Scanning trades for emotional patterns...");
-    try {
-      setIsLoading(true);
-      const dbMistakes = await runAutoDetectMistakes(userEmail);
-      setMistakes(dbMistakes);
-      await fetchMistakeSummary();
-      toast.success(`Scan complete! Detected ${dbMistakes.filter(m => m.detectedAutomatically).length} patterns.`, { id: tid });
-    } catch (e) {
-      console.error(e);
-      toast.error("AI scan failed.", { id: tid });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handlePasteImportSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!pastedText.trim()) return;
-
-    const lines = pastedText.split("\n");
-    const parsed: any[] = [];
-    
-    lines.forEach((line) => {
-      const cols = line.split("	");
-      if (cols.length >= 3) {
-        const symbol = cols[0].trim();
-        const type = cols[1].toUpperCase().includes("BUY") || cols[1].toUpperCase().includes("LONG") ? "BUY" : "SELL";
-        const pnl = parseFloat(cols[2].replace(/[^0-9.-]/g, "")) || 0;
-        const strategy = cols[3] ? cols[3].trim() : "Paste Setup";
-        parsed.push({ asset: symbol, type, pnl, strategy, emotion: "Discipline ✓" });
-      }
-    });
-
-    if (parsed.length > 0) {
-      const tid = toast.loading(`Saving ${parsed.length} trades...`);
-      try {
-        const insertPromises = parsed.map(trade => 
-          addDbTrade(userEmail, {
-            asset: trade.asset,
-            type: trade.type,
-            pnl: trade.pnl,
-            strategy: trade.strategy,
-            emotion: trade.emotion,
-          })
-        );
-        await Promise.all(insertPromises);
-        const dbTrades = await getTrades(userEmail);
-        setTrades(dbTrades);
-        setPastedText("");
-        setActiveTab("journal");
-        toast.success(`Imported ${parsed.length} trades successfully! ✅`, { id: tid });
-      } catch (err) {
-        console.error("Failed to save some pasted trades to database", err);
-        toast.error("Failed to import some trades.", { id: tid });
-      }
-    } else {
-      toast.error("Invalid format. Use tabs to separate: Instrument\tType\tPnL\tStrategy");
-    }
-  };
-
-  const handleCSVUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
-      const text = evt.target?.result as string;
-      if (!text) return;
-
-      const lines = text.split("\n").map(l => l.trim()).filter(l => l);
-      if (lines.length <= 1) {
-        alert("Empty CSV file or header only.");
-        return;
-      }
-
-      // Parse headers
-      const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
-      const parsedTrades: any[] = [];
-
-      for (let i = 1; i < lines.length; i++) {
-        const cols = lines[i].split(",").map(c => c.trim());
-        if (cols.length < headers.length) continue;
-
-        const row: Record<string, string> = {};
-        headers.forEach((header, idx) => {
-          row[header] = cols[idx];
-        });
-
-        const asset = row["asset"] || row["symbol"] || row["instrument"] || "";
-        const type = (row["type"] || row["direction"] || "BUY").toUpperCase().includes("BUY") || (row["type"] || row["direction"] || "BUY").toUpperCase().includes("LONG") ? "BUY" : "SELL";
-        const quantity = parseFloat(row["quantity"] || row["qty"]) || 1;
-        const entryPrice = parseFloat(row["entryprice"] || row["entry"] || row["buyprice"]) || 100;
-        const exitPrice = parseFloat(row["exitprice"] || row["exit"] || row["sellprice"]) || 100;
-        const pnl = parseFloat(row["pnl"] || row["profit"] || row["loss"]) || 0;
-        const strategy = row["strategy"] || row["setup"] || "CSV Upload";
-        const emotion = row["emotion"] || row["mood"] || "Discipline ✓";
-
-        if (asset) {
-          parsedTrades.push({
-            asset,
-            type,
-            quantity,
-            entryPrice,
-            exitPrice,
-            pnl,
-            strategy,
-            emotion
-          });
-        }
-      }
-
-      if (parsedTrades.length > 0) {
-        try {
-          setIsLoading(true);
-          const promises = parsedTrades.map(trade => 
-            addDbTrade(userEmail, {
-              asset: trade.asset,
-              type: trade.type,
-              quantity: trade.quantity,
-              entryPrice: trade.entryPrice,
-              exitPrice: trade.exitPrice,
-              pnl: trade.pnl,
-              strategy: trade.strategy,
-              emotion: trade.emotion,
-            })
-          );
-          await Promise.all(promises);
-          const dbTrades = await getTrades(userEmail);
-          setTrades(dbTrades);
-          toast.success(`Imported ${parsedTrades.length} trades from CSV! ✅`);
-        } catch (err) {
-          console.error("Failed to import CSV trades:", err);
-          toast.error("Error saving imported trades to database.");
-        } finally {
-          setIsLoading(false);
-        }
-      } else {
-        alert("No valid trades found in CSV. Headers should include: Asset/Symbol, Type/Direction, PnL, Quantity, Entry Price, Exit Price");
-      }
-    };
-    reader.readAsText(file);
-  };
-
-  const handleExportCSV = () => {
-    if (trades.length === 0) {
-      toast.error("No trades available to export!");
-      return;
-    }
-    const headers = ["ID", "Asset", "Type", "Gross P&L", "Charges", "Net P&L", "Strategy", "Emotion", "Quantity", "Entry Price", "Exit Price", "Stop Loss", "Target", "R:R", "Date/Time"];
-    const csvRows = [headers.join(",")];
-    
-    trades.forEach((t) => {
-      const row = [
-        t.id,
-        t.asset,
-        t.type,
-        t.pnl,
-        t.charges || 20,
-        t.netPnl || t.pnl,
-        t.strategy,
-        t.emotion.replace(/,/g, " "),
-        t.quantity || 1,
-        t.entryPrice || 0,
-        t.exitPrice || 0,
-        t.stopLoss || "",
-        t.target || "",
-        t.rr || "",
-        new Date(t.entryTime || Date.now()).toLocaleString().replace(/,/g, " ")
-      ];
-      csvRows.push(row.join(","));
-    });
-
-    const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `trade_journal_${userEmail.split("@")[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  // CORE METRICS MATHEMATICS FORMULAS (NO MOCKS)
-  const totalTradesCount = trades.length;
-  const winningTradesCount = trades.filter((t) => t.pnl > 0).length;
-  const losingTradesCount = trades.filter((t) => t.pnl < 0).length;
-
-  const winRateMetric = totalTradesCount > 0 ? ((winningTradesCount / totalTradesCount) * 100).toFixed(1) : "0.0";
-  const netPnlMetric = trades.reduce((sum, t) => sum + (t.netPnl !== undefined ? t.netPnl : t.pnl - 20), 0);
-
-  const grossProfitVal = trades.filter((t) => t.pnl > 0).reduce((sum, t) => sum + t.pnl, 0);
-  const grossLossVal = Math.abs(trades.filter((t) => t.pnl < 0).reduce((sum, t) => sum + t.pnl, 0));
-  const profitFactorMetric = grossLossVal > 0 ? (grossProfitVal / grossLossVal).toFixed(2) : grossProfitVal > 0 ? "9.99" : "0.00";
-
-  // Expectancy = (Win% * AvgWin) - (Loss% * AvgLoss)
-  const winRateDec = totalTradesCount > 0 ? winningTradesCount / totalTradesCount : 0;
-  const lossRateDec = totalTradesCount > 0 ? losingTradesCount / totalTradesCount : 0;
-  const avgWinVal = winningTradesCount > 0 ? grossProfitVal / winningTradesCount : 0;
-  const avgLossVal = losingTradesCount > 0 ? grossLossVal / losingTradesCount : 0;
-  const expectancyMetric = ((winRateDec * avgWinVal) - (lossRateDec * avgLossVal)).toFixed(1);
-
-  // Discipline Score logic
-  const disciplineScoreMetric = totalTradesCount > 0 
-    ? Math.round((trades.filter((t) => t.followedPlan !== false).length / totalTradesCount) * 100) 
-    : 100;
-
-  // Trade Quality Score logic
-  const tradeQualityMetric = totalTradesCount > 0
-    ? Math.round(
-        (trades.filter((t) => t.followedPlan !== false).length * 0.4 +
-         trades.filter((t) => t.pnl > 0).length * 0.4 +
-         trades.filter((t) => t.strategy !== "None").length * 0.2) * 100 / totalTradesCount
-      )
-    : 100;
-
-  // Helper for generating sparklines
-  function getSparklinePoints(data: number[], width = 100, height = 30) {
-    if (data.length === 0) return `M 0,${height / 2} L ${width},${height / 2}`;
-    if (data.length === 1) return `M 0,${height / 2} L ${width},${height / 2}`;
-    const min = Math.min(...data);
-    const max = Math.max(...data);
-    const range = max - min || 1;
-    return data.map((val, idx) => {
-      const x = (idx / (data.length - 1)) * width;
-      const y = height - ((val - min) / range) * (height - 4) - 2;
-      return `${idx === 0 ? "M" : "L"} ${x},${y}`;
-    }).join(" ");
   }
 
-  // Dynamic starting/current capital
-  const initialCapitalValue = settings ? settings.initialCapital : 250000;
-  const currentEquityValue = initialCapitalValue + netPnlMetric;
-  const capitalPercentChange = ((netPnlMetric / initialCapitalValue) * 100).toFixed(1);
+  const mObs = data.mentorObservation;
+  const upcomingSessions = sessions.filter(s => ["REQUESTED", "UPCOMING", "RESCHEDULED"].includes(s.status));
+  const historySessions = sessions.filter(s => ["COMPLETED", "CANCELLED", "NO_SHOW"].includes(s.status));
 
-  // Equity Curve coordinates data
-  const equityCurveData = trades.slice().reverse().reduce((acc: any[], t, index) => {
-    const prevEquity = index === 0 ? initialCapitalValue : acc[index - 1].equity;
-    const currentTradePnl = t.netPnl !== undefined ? t.netPnl : t.pnl - 20;
-    acc.push({
-      name: t.time || `Trade ${index + 1}`,
-      equity: prevEquity + currentTradePnl,
-      pnl: currentTradePnl
-    });
-    return acc;
-  }, []);
-
-  // Mistakes donut chart counts
-  const mistakeCounts: Record<string, number> = {};
-  mistakes.forEach((m) => {
-    mistakeCounts[m.mistakeType] = (mistakeCounts[m.mistakeType] || 0) + 1;
-  });
-
-  const donutData = Object.keys(mistakeCounts).map((key, i) => ({
-    name: key,
-    value: mistakeCounts[key],
-    color: ["#7C4DFF", "#2563EB", "#15B77A", "#F59E0B", "#E94B8A"][i % 5]
-  }));
-
-  // Top Mistakes & AI feedback
-  const sortedMistakes = Object.entries(mistakeCounts).sort((a, b) => b[1] - a[1]);
-  const primaryMistake = sortedMistakes.length > 0 ? sortedMistakes[0][0] : "None";
-  
-  let mistakeSuggestion = "Splendid job! You are maintaining strict rule compliance in your executions.";
-  if (primaryMistake === "Revenge Trading") {
-    mistakeSuggestion = "Your revenge trading rate is high. Implement a strict rule to lock your terminal for 1 hour after any loss.";
-  } else if (primaryMistake === "FOMO Entry") {
-    mistakeSuggestion = "FOMO Entries detected. Remove all market orders. Only enter trades using pre-set limit orders at key historical support/resistance levels.";
-  } else if (primaryMistake === "Early Exit") {
-    mistakeSuggestion = "Exiting early is restricting your profit factor. Set system targets and trail your stop-loss instead of exiting manually.";
-  } else if (primaryMistake === "Overtrading") {
-    mistakeSuggestion = "Overtrading flag. Define a maximum of 3 trades per day in Settings and close your broker tab after reaching this limit.";
-  }
-
-  // Streaks calculations
-  let currentDisciplineStreak = 0;
-  for (let i = 0; i < trades.length; i++) {
-    if (trades[i].followedPlan !== false) {
-      currentDisciplineStreak++;
-    } else {
-      break;
+  // Recent Reviews data parsing & fallbacks
+  const defaultRecentReviews = [
+    {
+      date: new Date("2024-05-16"),
+      symbol: "NIFTY 22600 CE",
+      category: "Breakout Trade",
+      type: "LONG",
+      score: 8.5,
+      feedback: "Good setup and execution. Risk management was excellent.",
+      trend: [20, 35, 25, 45, 55, 40, 65]
+    },
+    {
+      date: new Date("2024-05-15"),
+      symbol: "NIFTY 22450 PE",
+      category: "Reversal Trade",
+      type: "SHORT",
+      score: 6.0,
+      feedback: "Exit could be better. Let profits run more.",
+      trend: [50, 40, 45, 30, 35, 20, 25]
+    },
+    {
+      date: new Date("2024-05-14"),
+      symbol: "NIFTY 22500 CE",
+      category: "Swing Trade",
+      type: "LONG",
+      score: 7.0,
+      feedback: "Good trade idea. Avoid early entries.",
+      trend: [10, 15, 30, 25, 45, 50, 60]
+    },
+    {
+      date: new Date("2024-05-13"),
+      symbol: "BANKNIFTY 48000 PE",
+      category: "Intraday Trade",
+      type: "SHORT",
+      score: 5.5,
+      feedback: "Too much risk for the setup. Reduce position size.",
+      trend: [60, 55, 40, 30, 25, 20, 15]
     }
-  }
+  ];
 
-  // Journal Streak
-  let journalStreak = 0;
-  const uniqueDates: string[] = [];
-  trades.forEach((t) => {
-    const dStr = new Date(t.entryTime || Date.now()).toLocaleDateString([], { month: "short", day: "numeric" });
-    if (!uniqueDates.includes(dStr)) uniqueDates.push(dStr);
-  });
+  const displayReviews = (data && data.completedReviewsData && data.completedReviewsData.length > 0)
+    ? data.completedReviewsData.map((rev: any) => ({
+        date: new Date(rev.date),
+        symbol: rev.symbol,
+        category: rev.type === "LONG" ? "Breakout Trade" : "Reversal Trade",
+        type: rev.type,
+        score: rev.score > 10 ? rev.score / 10 : rev.score,
+        feedback: rev.desc,
+        trend: rev.type === "LONG" ? [10, 20, 15, 35, 45, 30, 50] : [50, 45, 30, 35, 20, 15, 10]
+      }))
+    : defaultRecentReviews;
 
-  const checkDate = new Date();
-  for (let i = 0; i < 30; i++) {
-    const checkStr = checkDate.toLocaleDateString([], { month: "short", day: "numeric" });
-    if (uniqueDates.includes(checkStr)) {
-      journalStreak++;
-      checkDate.setDate(checkDate.getDate() - 1);
-    } else {
-      if (i === 0) {
-        checkDate.setDate(checkDate.getDate() - 1);
-        const checkYesterdayStr = checkDate.toLocaleDateString([], { month: "short", day: "numeric" });
-        if (uniqueDates.includes(checkYesterdayStr)) {
-          journalStreak++;
-          checkDate.setDate(checkDate.getDate() - 1);
-          continue;
-        }
-      }
-      break;
+  const defaultPendingReviews = [
+    {
+      symbol: "NIFTY 22700 CE",
+      date: new Date("2024-05-18T10:15:00"),
+      status: "Pending"
+    },
+    {
+      symbol: "BANKNIFTY 48200 PE",
+      date: new Date("2024-05-18T11:05:00"),
+      status: "Pending"
     }
-  }
+  ];
 
-  // Dynamic goals calculations
-  const getDynamicGoalProgress = (g: any) => {
-    let currentValue = 0;
-    if (g.category === "Performance" || g.category === "Profit Target") {
-      currentValue = netPnlMetric;
-    } else if (g.category === "Activity" || g.category === "Trades Count") {
-      currentValue = trades.length;
-    } else if (g.category === "Risk Management" || g.category === "Habit" || g.category === "Discipline") {
-      currentValue = trades.filter(t => t.followedPlan !== false).length;
-    } else {
-      currentValue = g.currentValue;
-    }
-    const progress = g.targetValue > 0 ? Math.min(100, Math.max(0, (currentValue / g.targetValue) * 100)) : 0;
-    const status = progress >= 100 ? "ACHIEVED" : progress > 50 ? "ON_TRACK" : "NOT_STARTED";
-    return { currentValue, progress, status };
-  };
-
-  const activeGoals = goals.map(getDynamicGoalProgress).filter((g) => g.progress < 100);
-  const completedGoals = goals.map(getDynamicGoalProgress).filter((g) => g.progress >= 100);
-  const displayedGoals = goalsSubTab === "active" ? goals.filter(g => getDynamicGoalProgress(g).progress < 100) : goalsSubTab === "completed" ? goals.filter(g => getDynamicGoalProgress(g).progress >= 100) : goals;
-
-  // Active / Completed Goals calculations
-  const totalGoalsProgress = goals.length > 0 
-    ? Math.round(goals.reduce((acc, g) => acc + getDynamicGoalProgress(g).progress, 0) / goals.length) 
-    : 0;
-
-  // Journal List
-  const journalTrades = trades.filter((t) => {
-    const matchesSearch = t.asset.toLowerCase().includes(filterSearch.toLowerCase()) || 
-                          t.strategy.toLowerCase().includes(filterSearch.toLowerCase());
-    const matchesSetup = filterSetup === "All" || t.strategy === filterSetup;
-    const matchesEmotion = filterEmotion === "All" || 
-      (filterEmotion === "Discipline" && t.followedPlan !== false) ||
-      (filterEmotion === "FOMO Entry" && t.emotion.includes("FOMO")) ||
-      (filterEmotion === "Early Exit" && t.emotion.includes("Early")) ||
-      (filterEmotion === "Overtrading" && t.emotion.includes("Overtrading")) ||
-      (filterEmotion === "Revenge Trade" && t.emotion.includes("Revenge"));
-    const matchesType = filterType === "All" || t.type === filterType;
-    return matchesSearch && matchesSetup && matchesEmotion && matchesType;
-  });
-
-  // Strategy setups metrics
-  const strategyStats: Record<string, { count: number; wins: number; pnl: number; grossWins: number; grossLosses: number }> = {};
-  trades.forEach((t) => {
-    const sName = t.strategy || "Unknown";
-    if (!strategyStats[sName]) {
-      strategyStats[sName] = { count: 0, wins: 0, pnl: 0, grossWins: 0, grossLosses: 0 };
-    }
-    strategyStats[sName].count += 1;
-    const tradeNetPnl = t.netPnl !== undefined ? t.netPnl : t.pnl - 20;
-    strategyStats[sName].pnl += tradeNetPnl;
-    if (tradeNetPnl > 0) {
-      strategyStats[sName].wins += 1;
-      strategyStats[sName].grossWins += tradeNetPnl;
-    } else {
-      strategyStats[sName].grossLosses += Math.abs(tradeNetPnl);
-    }
-  });
-
-  let bestStrategy = "None";
-  let maxStrategyPnl = -Infinity;
-  Object.keys(strategyStats).forEach((strat) => {
-    if (strategyStats[strat].pnl > maxStrategyPnl) {
-      maxStrategyPnl = strategyStats[strat].pnl;
-      bestStrategy = strat;
-    }
-  });
-
-  // Option Put Call Ratio (PCR) indicator
-  const optionTrades = trades.filter(t => t.asset.endsWith("CE") || t.asset.endsWith("PE") || t.asset.toUpperCase().includes("CE") || t.asset.toUpperCase().includes("PE"));
-  const ceCount = optionTrades.filter(t => t.asset.toUpperCase().endsWith("CE") || t.asset.toUpperCase().includes("CE")).length;
-  const peCount = optionTrades.filter(t => t.asset.toUpperCase().endsWith("PE") || t.asset.toUpperCase().includes("PE")).length;
-  const optionPcr = ceCount > 0 ? (peCount / ceCount).toFixed(2) : peCount > 0 ? "9.99" : "0.00";
-
-  
+  const displayPending = (data && data.pendingReviewsData && data.pendingReviewsData.length > 0)
+    ? data.pendingReviewsData.map((p: any) => ({
+        symbol: p.symbol,
+        date: new Date(p.date),
+        status: p.status === "PENDING" ? "Pending" : p.status
+      }))
+    : defaultPendingReviews;
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#FAFBFF]">
-      <div className="p-6">
+    <div className="space-y-6">
+      <Toaster position="top-right" />
 
-                <div className="space-y-8 animate-fade-in text-left">
-                  {/* Mentorship Sub-Tab Headers */}
-                  <div className="flex space-x-6 border-b border-[#E8EAF3] pb-3">
-                    {[
-                      { id: "overview", label: "Overview" },
-                      { id: "submit", label: "Submit Review" },
-                      { id: "reviews", label: "Past Reviews" }
-                    ].map((tab) => (
-                      <button
-                        key={tab.id}
-                        onClick={() => setMentorshipSubTab(tab.id as any)}
-                        className={`text-xs font-black uppercase tracking-wider pb-2 transition-all border-b-2 cursor-pointer ${
-                          mentorshipSubTab === tab.id
-                            ? "border-slate-800 text-slate-800"
-                            : "border-transparent text-[#8C8CA1] hover:text-slate-600"
-                        }`}
-                      >
-                        {tab.label}
-                      </button>
-                    ))}
-                  </div>
+      {/* Tabs Switcher */}
+      <div className="flex gap-1 bg-white border border-[#E9E6F5] rounded-[20px] p-1 w-fit shadow-sm">
+        <button
+          onClick={() => setActiveTab("overview")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-[10px] text-sm font-bold transition-all ${
+            activeTab === "overview" ? "bg-[#6D3DF5] text-white shadow-md" : "text-[#64748B] hover:text-[#0F172A] hover:bg-slate-50"
+          }`}
+        >
+          Mentorship Overview
+        </button>
+        <button
+          onClick={() => setActiveTab("sessions")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-[10px] text-sm font-bold transition-all ${
+            activeTab === "sessions" ? "bg-[#6D3DF5] text-white shadow-md" : "text-[#64748B] hover:text-[#0F172A] hover:bg-slate-50"
+          }`}
+        >
+          1:1 Sessions
+          {upcomingSessions.length > 0 && (
+            <span className={`text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center ${activeTab === "sessions" ? 'bg-white text-[#6D3DF5]' : 'bg-[#6D3DF5] text-white'}`}>
+              {upcomingSessions.length}
+            </span>
+          )}
+        </button>
+      </div>
 
-                  {isMentorshipLoading ? (
-                    <div className="space-y-6">
-                      <div className="h-32 bg-slate-50 border border-slate-100 rounded-[24px] animate-pulse" />
-                      <div className="grid grid-cols-4 gap-6">
-                        {[1, 2, 3, 4].map((i) => (
-                          <div key={i} className="h-20 bg-slate-50 border border-slate-100 rounded-[20px] animate-pulse" />
-                        ))}
+      {/* ── OVERVIEW TAB ── */}
+      {activeTab === "overview" && (
+        <div className="space-y-6">
+          {/* Top Metric Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {/* Trades Shared */}
+            <div className="bg-white p-5 rounded-[22px] border border-[#EEF0F4] shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow">
+              <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider block mb-2">Trades Shared</span>
+              <div className="flex items-end justify-between">
+                <div>
+                  <h2 className="text-[28px] font-extrabold text-[#0F172A] leading-none">
+                    {data.tradesSharedCount || 12}
+                  </h2>
+                  <span className="text-[11px] font-bold text-[#8B5CF6] block mt-2">+3 vs last week</span>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-[#F5F3FF] flex items-center justify-center shrink-0">
+                  <Share2 size={18} className="text-[#8B5CF6]" />
+                </div>
+              </div>
+            </div>
+
+            {/* Reviewed */}
+            <div className="bg-white p-5 rounded-[22px] border border-[#EEF0F4] shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow">
+              <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider block mb-2">Reviewed</span>
+              <div className="flex items-end justify-between">
+                <div>
+                  <h2 className="text-[28px] font-extrabold text-[#0F172A] leading-none">
+                    {data.reviewedCount || 10}
+                  </h2>
+                  <span className="text-[11px] font-bold text-[#10B981] block mt-2">
+                    {data.tradesSharedCount ? Math.round(((data.reviewedCount || 10) / data.tradesSharedCount) * 100) : 83}% of shared trades
+                  </span>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-[#ECFDF5] flex items-center justify-center shrink-0">
+                  <FileText size={18} className="text-[#10B981]" />
+                </div>
+              </div>
+            </div>
+
+            {/* Avg Mentor Score */}
+            <div className="bg-white p-5 rounded-[22px] border border-[#EEF0F4] shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow">
+              <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider block mb-2">Avg Mentor Score</span>
+              <div className="flex items-end justify-between">
+                <div>
+                  <h2 className="text-[28px] font-extrabold text-[#0F172A] leading-none flex items-baseline">
+                    {data.currentScore ? (data.currentScore / 10).toFixed(1) : "7.6"}
+                    <span className="text-[14px] font-medium text-[#94A3B8] ml-1">/10</span>
+                  </h2>
+                  <span className="text-[11px] font-bold text-[#F59E0B] block mt-2">+0.8 vs last week</span>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-[#FFFBEB] flex items-center justify-center shrink-0">
+                  <Star size={18} className="text-[#F59E0B]" />
+                </div>
+              </div>
+            </div>
+
+            {/* Improvement Areas */}
+            <div className="bg-white p-5 rounded-[22px] border border-[#EEF0F4] shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow">
+              <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider block mb-2">Improvement Areas</span>
+              <div className="flex items-end justify-between">
+                <div>
+                  <h2 className="text-[28px] font-extrabold text-[#0F172A] leading-none">
+                    {data.mentorObservation?.improvements ? 4 : 4}
+                  </h2>
+                  <span className="text-[11px] font-bold text-[#3B82F6] block mt-2">Focus areas identified</span>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-[#EFF6FF] flex items-center justify-center shrink-0">
+                  <AlertCircle size={18} className="text-[#3B82F6]" />
+                </div>
+              </div>
+            </div>
+
+            {/* Action Taken */}
+            <div className="bg-white p-5 rounded-[22px] border border-[#EEF0F4] shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow">
+              <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider block mb-2">Action Taken</span>
+              <div className="flex items-end justify-between">
+                <div>
+                  <h2 className="text-[28px] font-extrabold text-[#0F172A] leading-none">
+                    70%
+                  </h2>
+                  <span className="text-[11px] font-bold text-[#EF4444] block mt-2">Improved this week</span>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-[#FEF2F2] flex items-center justify-center shrink-0">
+                  <ThumbsUp size={18} className="text-[#EF4444]" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Middle Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Recent Reviews (Col span 2) */}
+            <div className="lg:col-span-2 bg-white rounded-[22px] border border-[#EEF0F4] shadow-sm p-6 flex flex-col justify-between">
+              <div>
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="font-bold text-[18px] text-[#0F172A]">Recent Reviews</h3>
+                  <button 
+                    onClick={() => setActiveTab("sessions")} 
+                    className="text-[12px] font-bold text-[#6D3DF5] hover:underline"
+                  >
+                    View All
+                  </button>
+                </div>
+                
+                <div className="space-y-4">
+                  {displayReviews.map((item: any, idx: number) => (
+                    <div key={idx} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-white hover:bg-slate-50 border border-[#EEF0F4] rounded-[18px] transition-all group cursor-pointer">
+                      <div className="flex items-center gap-4">
+                        {/* Stacked Date Box */}
+                        <div className="flex flex-col items-center justify-center shrink-0 w-12 h-14 bg-[#F5F3FF] rounded-xl border border-[#E9E6F5]">
+                          <span className="text-[18px] font-bold text-[#8B5CF6] leading-none">{item.date.getDate()}</span>
+                          <span className="text-[10px] font-semibold text-[#8B5CF6] uppercase mt-0.5">
+                            {item.date.toLocaleDateString("en-US", { month: "short" })}
+                          </span>
+                        </div>
+                        
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-[14px] font-bold text-[#0F172A]">{item.symbol}</h4>
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                              item.type === 'LONG' ? 'bg-[#ECFDF5] text-[#10B981]' : 'bg-[#FEF2F2] text-[#EF4444]'
+                            }`}>
+                              {item.type}
+                            </span>
+                          </div>
+                          <p className="text-[12px] text-[#94A3B8] font-medium mt-0.5">{item.category}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between w-full sm:w-auto gap-6 sm:gap-8 flex-1 sm:justify-end">
+                        {/* Mentor Score */}
+                        <div className="shrink-0 text-center sm:text-left">
+                          <p className="text-[9px] font-bold text-[#94A3B8] uppercase tracking-wider mb-0.5">Mentor Score</p>
+                          <span className={`inline-flex px-2 py-1 rounded-lg text-xs font-bold ${
+                            item.score >= 7.0 ? 'bg-[#E6FDF5] text-[#10B981]' : item.score >= 6.0 ? 'bg-[#FFFBEB] text-[#F59E0B]' : 'bg-[#FEF2F2] text-[#EF4444]'
+                          }`}>
+                            {item.score.toFixed(1)}/10
+                          </span>
+                        </div>
+
+                        {/* Sparkline Graph */}
+                        <div className="shrink-0 hidden md:block">
+                          <svg className="w-24 h-8" viewBox="0 0 100 30">
+                            <path
+                              d={generateSparklinePath(item.trend)}
+                              fill="none"
+                              stroke={item.score >= 7.0 ? "#10B981" : item.score >= 6.0 ? "#F59E0B" : "#EF4444"}
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </div>
+
+                        {/* Feedback Text */}
+                        <div className="flex-1 min-w-[150px] max-w-[280px]">
+                          <p className="text-[9px] font-bold text-[#94A3B8] uppercase tracking-wider mb-0.5">Feedback</p>
+                          <p className="text-[12px] font-medium text-[#475569] leading-snug truncate" title={item.feedback}>
+                            {item.feedback}
+                          </p>
+                        </div>
+
+                        {/* Chevron Link */}
+                        <ChevronRight size={16} className="text-[#94A3B8] group-hover:text-[#6D3DF5] transition-colors" />
                       </div>
                     </div>
-                  ) : (
-                    <>
-                      {/* Sub-Tab 1: Overview */}
-                      {mentorshipSubTab === "overview" && (
-                        <div className="space-y-8">
-                          {/* Mentor Profile / Status Card */}
-                          {mentorshipData?.assignedMentor ? (
-                            <div className="bg-white border border-[#E8EAF3] rounded-[24px] p-6 shadow-sm flex flex-col md:flex-row items-center md:items-start gap-6">
-                              <div className="w-24 h-24 rounded-full bg-slate-100 border border-[#E8EAF3] flex items-center justify-center overflow-hidden shrink-0">
-                                {mentorshipData.assignedMentor.profileImage ? (
-                                  <img
-                                    src={mentorshipData.assignedMentor.profileImage}
-                                    alt={mentorshipData.assignedMentor.name}
-                                    className="w-full h-full object-cover"
-                                  />
-                                ) : (
-                                  <span className="text-2xl font-black text-slate-400">
-                                    {mentorshipData.assignedMentor.name.charAt(0)}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="space-y-3.5 text-center md:text-left flex-1">
-                                <div className="space-y-1">
-                                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
-                                    <h3 className="text-base font-black text-slate-800">
-                                      {mentorshipData.assignedMentor.name}
-                                    </h3>
-                                    <span className="px-2.5 py-0.5 text-[8px] font-black bg-[#15B77A]/10 text-[#15B77A] rounded-full uppercase tracking-wider">
-                                      Assigned Coach
-                                    </span>
-                                  </div>
-                                  <p className="text-xs font-bold text-slate-500">
-                                    {mentorshipData.assignedMentor.designation || "Trading Coach"}
-                                  </p>
-                                </div>
-                                <p className="text-xs text-slate-600 font-semibold leading-relaxed max-w-2xl">
-                                  {mentorshipData.assignedMentor.bio || "Your dedicated mentor to guide your weekly performance, discipline, and execution review."}
-                                </p>
-                                <div className="flex flex-wrap gap-4 pt-1 justify-center md:justify-start">
-                                  <div className="text-[10px] font-bold text-slate-700">
-                                    <span className="text-[#8C8CA1]">Specialization: </span>
-                                    {mentorshipData.assignedMentor.specialization || "General Trading"}
-                                  </div>
-                                  <div className="text-[10px] font-bold text-slate-700">
-                                    <span className="text-[#8C8CA1]">Experience: </span>
-                                    {mentorshipData.assignedMentor.experience || "N/A"}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="bg-white border border-[#E8EAF3] rounded-[24px] p-8 shadow-sm text-center space-y-3">
-                              <div className="mx-auto w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center border border-[#E8EAF3]">
-                                <span className="text-lg">🎓</span>
-                              </div>
-                              <h4 className="text-sm font-black text-slate-800">Self-Guided Mentorship Mode</h4>
-                              <p className="text-xs text-[#8C8CA1] font-semibold max-w-md mx-auto">
-                                You do not have an assigned mentor. Submit reviews and view performance scores once assigned. Please contact details@tradeadhyayan.com to get allocated a personal trading coach.
-                              </p>
-                            </div>
-                          )}
+                  ))}
+                </div>
+              </div>
+            </div>
 
-                          {/* Scores & Performance Telemetry (Calculated from Completed Reviews) */}
-                          {(() => {
-                            const completed = mentorshipData?.reviewRequests?.filter((r: any) => r.status === "COMPLETED" && r.MentorshipReview) || [];
-                            const getAvg = (key: string) => {
-                              if (completed.length === 0) return 0;
-                              return Math.round(completed.reduce((acc: number, r: any) => acc + r.MentorshipReview[key], 0) / completed.length);
-                            };
-                            
-                            const avgExec = getAvg("executionScore");
-                            const avgRisk = getAvg("riskScore");
-                            const avgPsych = getAvg("psychologyScore");
-                            const avgDisc = getAvg("disciplineScore");
-                            const avgOverall = completed.length > 0
-                              ? (completed.reduce((acc: number, r: any) => acc + r.MentorshipReview.overallScore, 0) / completed.length).toFixed(1)
-                              : "0.0";
+            {/* Mentor's Summary (Col span 1) */}
+            <div className="bg-[#1E1B4B] rounded-[22px] shadow-sm p-6 relative overflow-hidden text-white flex flex-col justify-between min-h-[420px]">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#6D3DF5] to-transparent opacity-20 rounded-bl-[100px]"></div>
+              
+              <div>
+                <div className="flex items-center gap-4 mb-6 relative z-10">
+                  <div className="w-14 h-14 rounded-full bg-white/10 border border-white/20 p-1 shrink-0">
+                    <div className="w-full h-full rounded-full overflow-hidden">
+                      <img src={`https://api.dicebear.com/7.x/initials/svg?seed=${data.assignedMentor?.User?.name || 'Mentor'}`} alt="Mentor"/>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-[18px] font-black">{data.assignedMentor?.User?.name || 'Rahul Sharma'}</h3>
+                      <span className="text-[10px] font-bold bg-[#6D3DF5] text-white px-2 py-0.5 rounded-full">Your Mentor</span>
+                    </div>
+                    <p className="text-[11px] font-medium text-[#A5B4FC] mt-0.5">Options Trader • 8+ Years Experience</p>
+                  </div>
+                </div>
 
-                            return (
-                              <div className="space-y-6">
-                                <div>
-                                  <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Performance Scores</h3>
-                                  <p className="text-[9px] text-[#8C8CA1] font-semibold mt-0.5">Average scores assigned by your coach over past evaluations</p>
-                                </div>
+                <div className="mb-6 relative z-10 bg-white/5 border border-white/10 rounded-2xl p-4">
+                  <Quote className="text-[#6D3DF5] opacity-50 mb-2" size={24}/>
+                  <p className="text-[13px] font-medium leading-relaxed italic text-white/95">
+                    "{data.mentorObservation?.focus || 'You are improving in following your plan and managing risk better. Focus on letting your profits run and avoid overtrading after a good win.'}"
+                  </p>
+                </div>
 
-                                <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
-                                  <div className="p-5 bg-white border border-[#E8EAF3] rounded-[24px] shadow-sm space-y-1">
-                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider block">Overall Score</span>
-                                    <span className="text-2xl font-black text-slate-800 block">{avgOverall}</span>
-                                    <span className="text-[7px] text-[#8C8CA1] font-bold block uppercase">Weekly Avg</span>
-                                  </div>
-                                  {[
-                                    { label: "Execution Score", val: avgExec, color: "text-[#15B77A] bg-[#15B77A]/5" },
-                                    { label: "Risk Management", val: avgRisk, color: "text-blue-600 bg-blue-50" },
-                                    { label: "Trader Psychology", val: avgPsych, color: "text-purple-600 bg-purple-50" },
-                                    { label: "Rule Discipline", val: avgDisc, color: "text-amber-600 bg-amber-50" }
-                                  ].map((metric) => (
-                                    <div key={metric.label} className="p-5 bg-white border border-[#E8EAF3] rounded-[24px] shadow-sm space-y-2">
-                                      <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider block">{metric.label}</span>
-                                      <div className="flex items-center justify-between">
-                                        <span className="text-xl font-black text-slate-800">{metric.val}%</span>
-                                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-black ${metric.color}`}>
-                                          {metric.val >= 80 ? "A" : metric.val >= 60 ? "B" : "C"}
-                                        </span>
-                                      </div>
-                                      <div className="w-full bg-slate-50 h-1 rounded-full overflow-hidden">
-                                        <div className="bg-[#7C3AED] h-full rounded-full" style={{ width: `${metric.val}%` }} />
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            );
-                          })()}
+                {/* Strengths & Focus Areas */}
+                <div className="grid grid-cols-2 gap-4 relative z-10 mb-6">
+                  <div>
+                    <h4 className="text-[11px] font-bold text-[#A5B4FC] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <CheckCircle2 size={12} className="text-[#10B981]" /> Top Strengths
+                    </h4>
+                    <ul className="space-y-1.5 text-[12px] font-semibold text-white/90">
+                      {(data.mentorObservation?.strengths ? data.mentorObservation.strengths.split(",") : ["Risk Management", "Trade Selection", "Discipline"]).slice(0, 3).map((s: string, idx: number) => (
+                        <li key={idx} className="flex items-center gap-1.5">
+                          <span className="text-[#10B981]">•</span> {s.trim()}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="text-[11px] font-bold text-[#A5B4FC] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <AlertCircle size={12} className="text-[#F59E0B]" /> Focus Areas
+                    </h4>
+                    <ul className="space-y-1.5 text-[12px] font-semibold text-white/90">
+                      {(data.mentorObservation?.focus ? data.mentorObservation.focus.split(",") : ["Let Profits Run", "Avoid Overtrading", "Better Entries"]).slice(0, 3).map((f: string, idx: number) => (
+                        <li key={idx} className="flex items-center gap-1.5">
+                          <span className="text-[#F59E0B]">•</span> {f.trim()}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <button 
+                onClick={openShareModal}
+                className="w-full bg-[#6D3DF5] hover:bg-[#5B3FCC] text-white py-3.5 rounded-xl font-bold text-[14px] shadow-lg flex justify-center items-center gap-2 transition-all cursor-pointer relative z-10"
+              >
+                <Sparkles size={18}/>
+                Share New Trade
+              </button>
+            </div>
+          </div>
+
+          {/* Bottom Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Improvement Journey (Col span 2) */}
+            <div className="lg:col-span-2 bg-white rounded-[22px] border border-[#EEF0F4] shadow-sm p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="font-bold text-[18px] text-[#0F172A]">Improvement Journey</h3>
+                <div className="flex items-center gap-1 bg-slate-50 border border-[#EEF0F4] rounded-lg px-3 py-1.5 text-xs font-bold text-[#475569] cursor-pointer hover:bg-slate-100 transition-colors">
+                  <span>This Month</span>
+                  <span className="text-[#94A3B8] text-[8px] ml-1">▼</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                {/* Plan Followed */}
+                <div className="bg-[#F8FAFC] rounded-[20px] p-5 border border-[#EEF0F4] flex flex-col justify-between min-h-[140px] relative overflow-hidden">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-1">Plan Followed</p>
+                      <h4 className="text-[24px] font-black text-[#0F172A]">
+                        {data.scoreBreakdown?.discipline || 78}%
+                      </h4>
+                    </div>
+                    <ProgressRing percent={data.scoreBreakdown?.discipline || 78} color="#10B981" Icon={Target} />
+                  </div>
+                  <span className="text-[11px] font-bold text-[#10B981] flex items-center gap-1 mt-3">
+                    <TrendingUp size={12} /> +12% vs last month
+                  </span>
+                </div>
+
+                {/* Risk Managed */}
+                <div className="bg-[#F8FAFC] rounded-[20px] p-5 border border-[#EEF0F4] flex flex-col justify-between min-h-[140px] relative overflow-hidden">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-1">Risk Managed</p>
+                      <h4 className="text-[24px] font-black text-[#0F172A]">
+                        {data.scoreBreakdown?.risk || 82}%
+                      </h4>
+                    </div>
+                    <ProgressRing percent={data.scoreBreakdown?.risk || 82} color="#F59E0B" Icon={Shield} />
+                  </div>
+                  <span className="text-[11px] font-bold text-[#10B981] flex items-center gap-1 mt-3">
+                    <TrendingUp size={12} /> +9% vs last month
+                  </span>
+                </div>
+
+                {/* Patience Score */}
+                <div className="bg-[#F8FAFC] rounded-[20px] p-5 border border-[#EEF0F4] flex flex-col justify-between min-h-[140px] relative overflow-hidden">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-1">Patience Score</p>
+                      <h4 className="text-[24px] font-black text-[#0F172A]">
+                        {data.scoreBreakdown?.psychology || 70}%
+                      </h4>
+                    </div>
+                    <ProgressRing percent={data.scoreBreakdown?.psychology || 70} color="#8B5CF6" Icon={Clock} />
+                  </div>
+                  <span className="text-[11px] font-bold text-[#10B981] flex items-center gap-1 mt-3">
+                    <TrendingUp size={12} /> +15% vs last month
+                  </span>
+                </div>
+
+                {/* Overall Progress */}
+                <div className="bg-[#F8FAFC] rounded-[20px] p-5 border border-[#EEF0F4] flex flex-col justify-between min-h-[140px] relative overflow-hidden">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-1">Overall Progress</p>
+                      <h4 className="text-[24px] font-black text-[#0F172A] flex items-center gap-1">
+                        <span className="text-[#10B981]">↑</span> 18%
+                      </h4>
+                    </div>
+                    <ProgressRing percent={75} color="#3B82F6" Icon={TrendingUp} />
+                  </div>
+                  <span className="text-[11px] font-bold text-[#10B981] flex items-center gap-1 mt-3">
+                    Great improvement!
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Pending Reviews (Col span 1) */}
+            <div className="bg-white rounded-[22px] border border-[#EEF0F4] shadow-sm p-6 flex flex-col justify-between">
+              <div>
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="font-bold text-[18px] text-[#0F172A]">Pending Reviews</h3>
+                  <button 
+                    onClick={() => setActiveTab("sessions")} 
+                    className="text-[12px] font-bold text-[#6D3DF5] hover:underline"
+                  >
+                    View All
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {displayPending.map((p: any, idx: number) => (
+                    <div key={idx} className="flex items-center justify-between p-3.5 bg-white border border-[#EEF0F4] rounded-xl hover:border-slate-300 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-500 shrink-0">
+                          <TrendingUp size={16} />
                         </div>
-                      )}
-
-                      {/* Sub-Tab 2: Submit Review */}
-                      {mentorshipSubTab === "submit" && (
-                        <div className="bg-white border border-[#E8EAF3] rounded-[24px] p-6 shadow-sm max-w-3xl space-y-6">
-                          <div>
-                            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Weekly Trade Submission Form</h3>
-                            <p className="text-[9px] text-[#8C8CA1] font-semibold mt-0.5">Select trades from the last 7 days and submit them for manual review by your assigned mentor.</p>
-                          </div>
-
-                          {!mentorshipData?.assignedMentor ? (
-                            <div className="p-5 bg-[#E94B8A]/5 border border-[#E94B8A]/15 text-[#E94B8A] rounded-2xl text-xs font-semibold">
-                              ⚠ You cannot submit a review request until a mentor is assigned to you.
-                            </div>
-                          ) : (
-                            <form onSubmit={handleSubmitReviewRequest} className="space-y-6">
-                              {/* Trade selection list */}
-                              <div className="space-y-2">
-                                <label className="text-[8px] font-black uppercase text-[#8C8CA1] ml-1 block">
-                                  Select Trades to Submit (Recent 7 Days)
-                                </label>
-                                {(() => {
-                                  const sevenDaysAgo = new Date();
-                                  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-                                  const recentTrades = trades.filter((t: any) => new Date(t.entryTime) >= sevenDaysAgo);
-
-                                  if (recentTrades.length === 0) {
-                                    return (
-                                      <div className="p-4 border border-[#E8EAF3] rounded-xl text-center text-xs font-bold text-slate-400 bg-slate-50">
-                                        No recent trades found. Add trades in your Trade Journal first.
-                                      </div>
-                                    );
-                                  }
-
-                                  return (
-                                    <div className="border border-[#E8EAF3] rounded-2xl overflow-hidden max-h-48 overflow-y-auto divide-y divide-slate-100">
-                                      {recentTrades.map((t: any) => {
-                                        const isChecked = selectedReviewTradeIds.includes(t.id);
-                                        return (
-                                          <div
-                                            key={t.id}
-                                            onClick={() => {
-                                              if (isChecked) {
-                                                setSelectedReviewTradeIds(selectedReviewTradeIds.filter((id) => id !== t.id));
-                                              } else {
-                                                setSelectedReviewTradeIds([...selectedReviewTradeIds, t.id]);
-                                              }
-                                            }}
-                                            className={`p-3.5 flex items-center gap-4 transition-colors cursor-pointer text-xs font-bold ${
-                                              isChecked ? "bg-slate-50/80" : "hover:bg-slate-50/30"
-                                            }`}
-                                          >
-                                            <input
-                                              type="checkbox"
-                                              checked={isChecked}
-                                              onChange={() => {}} // Handled by div onClick
-                                              className="rounded border-[#E8EAF3] text-slate-800 focus:ring-slate-800"
-                                            />
-                                            <div className="flex-1 flex justify-between items-center">
-                                              <div>
-                                                <span className="text-slate-700 block">{t.asset}</span>
-                                                <span className="text-[9px] text-[#8C8CA1] font-semibold">{t.time}</span>
-                                              </div>
-                                              <div className="text-right">
-                                                <span
-                                                  className={`px-2 py-0.5 text-[8px] font-black rounded-full uppercase ${
-                                                    t.type === "BUY" ? "bg-[#15B77A]/10 text-[#15B77A]" : "bg-red-50 text-[#E94B8A]"
-                                                  }`}
-                                                >
-                                                  {t.type}
-                                                </span>
-                                                <span className="text-[10px] text-slate-700 block mt-0.5">
-                                                  P&L: ₹{t.pnl.toLocaleString()}
-                                                </span>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  );
-                                })()}
-                              </div>
-
-                              {/* Discipline Slider */}
-                              <div className="space-y-2">
-                                <div className="flex justify-between items-center ml-1">
-                                  <label className="text-[8px] font-black uppercase text-[#8C8CA1]">
-                                    Rate Your Discipline (1-10)
-                                  </label>
-                                  <span className="text-xs font-black text-slate-800">{disciplineRating} / 10</span>
-                                </div>
-                                <input
-                                  type="range"
-                                  min="1"
-                                  max="10"
-                                  value={disciplineRating}
-                                  onChange={(e) => setDisciplineRating(parseInt(e.target.value))}
-                                  className="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-slate-800"
-                                />
-                                <div className="flex justify-between text-[7px] text-[#8C8CA1] font-bold px-1">
-                                  <span>Poor Discipline (Overtraded)</span>
-                                  <span>Perfect Setup Discipline</span>
-                                </div>
-                              </div>
-
-                              {/* Notes */}
-                              <div className="space-y-1">
-                                <label className="text-[8px] font-black uppercase text-[#8C8CA1] ml-1">
-                                  Client notes & execution questions
-                                </label>
-                                <textarea
-                                  rows={4}
-                                  required
-                                  placeholder="Describe your execution, what setups you tried, and any specific questions you want the mentor to answer..."
-                                  value={reviewNotes}
-                                  onChange={(e) => setReviewNotes(e.target.value)}
-                                  className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-slate-300"
-                                />
-                              </div>
-
-                              <button
-                                type="submit"
-                                disabled={isSubmittingReview}
-                                className="w-full h-11 bg-[#7C3AED] hover:bg-[#6D28D9] text-white rounded-xl text-[10px] font-bold uppercase tracking-wider transition-colors disabled:bg-slate-200 cursor-pointer flex items-center justify-center gap-2"
-                              >
-                                {isSubmittingReview ? "Submitting Request..." : "Submit to Assigned Mentor"}
-                              </button>
-                            </form>
-                          )}
+                        <div>
+                          <h4 className="text-[13px] font-bold text-[#0F172A]">{p.symbol}</h4>
+                          <p className="text-[11px] text-[#94A3B8] font-semibold mt-0.5">
+                            {p.date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} &bull; {p.date.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                          </p>
                         </div>
-                      )}
-
-                      {/* Sub-Tab 3: Past Reviews */}
-                      {mentorshipSubTab === "reviews" && (
-                        <div className="space-y-6">
-                          <div>
-                            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Evaluation History</h3>
-                            <p className="text-[9px] text-[#8C8CA1] font-semibold mt-0.5">Status of your submitted review requests and completed grading report sheets</p>
-                          </div>
-
-                          {mentorshipData?.reviewRequests?.length > 0 ? (
-                            <div className="space-y-4 max-w-3xl">
-                              {mentorshipData.reviewRequests.map((req: any) => {
-                                const isCompleted = req.status === "COMPLETED";
-                                return (
-                                  <div
-                                    key={req.id}
-                                    className="bg-white border border-[#E8EAF3] rounded-[24px] p-6 shadow-sm space-y-4 text-xs font-bold"
-                                  >
-                                    <div className="flex justify-between items-start gap-4">
-                                      <div className="space-y-1">
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-[8px] text-[#8C8CA1] uppercase tracking-wider">
-                                            Request ID: {req.id}
-                                          </span>
-                                          <span
-                                            className={`px-2 py-0.5 text-[8px] font-black rounded-full uppercase tracking-wider ${
-                                              isCompleted
-                                                ? "bg-[#15B77A]/10 text-[#15B77A]"
-                                                : "bg-amber-50 text-amber-600 border border-amber-100"
-                                            }`}
-                                          >
-                                            {req.status}
-                                          </span>
-                                        </div>
-                                        <h4 className="text-sm font-black text-slate-800">
-                                          Weekly Review submitted on {new Date(req.submittedAt).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}
-                                        </h4>
-                                      </div>
-                                      {isCompleted && req.MentorshipReview && (
-                                        <div className="w-14 h-14 rounded-2xl bg-[#7C3AED] text-white flex flex-col items-center justify-center shadow-sm">
-                                          <span className="text-base font-black leading-none">
-                                            {req.MentorshipReview.overallScore.toFixed(1)}
-                                          </span>
-                                          <span className="text-[6px] uppercase tracking-tighter mt-1 font-bold">Overall</span>
-                                        </div>
-                                      )}
-                                    </div>
-
-                                    {/* Client Notes & details */}
-                                    <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl space-y-1.5">
-                                      <div className="text-[8px] uppercase tracking-wider text-[#8C8CA1]">Your Notes & Questions</div>
-                                      <p className="text-xs text-slate-600 font-semibold leading-relaxed">
-                                        "{req.clientNotes || "No client notes added."}"
-                                      </p>
-                                      <div className="flex flex-wrap gap-4 pt-1.5 text-[9px] font-bold text-slate-500 border-t border-slate-100/60 mt-1.5">
-                                        <div>
-                                          <span className="text-[#8C8CA1]">Discipline Rating: </span>
-                                          {req.disciplineRating}/10
-                                        </div>
-                                        <div>
-                                          <span className="text-[#8C8CA1]">Trades Submitted: </span>
-                                          {req.selectedTradeIds.length}
-                                        </div>
-                                      </div>
-                                    </div>
-
-                                    {/* Mentor evaluation sheet */}
-                                    {isCompleted && req.MentorshipReview ? (
-                                      <div className="border-t border-[#E8EAF3] pt-4 space-y-4">
-                                        <div className="grid grid-cols-4 gap-4 text-center">
-                                          {[
-                                            { label: "Execution", val: req.MentorshipReview.executionScore },
-                                            { label: "Risk Management", val: req.MentorshipReview.riskScore },
-                                            { label: "Psychology", val: req.MentorshipReview.psychologyScore },
-                                            { label: "Discipline", val: req.MentorshipReview.disciplineScore }
-                                          ].map((s) => (
-                                            <div key={s.label} className="p-2 bg-slate-50/50 border border-slate-100 rounded-xl">
-                                              <span className="text-[7px] text-[#8C8CA1] uppercase block mb-1">{s.label}</span>
-                                              <span className="text-xs font-black text-slate-800">{s.val}%</span>
-                                            </div>
-                                          ))}
-                                        </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                          <div className="space-y-1.5">
-                                            <span className="text-[8px] font-black uppercase text-slate-400">Key Strengths</span>
-                                            <p className="text-xs text-slate-600 font-semibold bg-[#15B77A]/5 border border-[#15B77A]/15 rounded-xl p-3">
-                                              {req.MentorshipReview.strengths || "N/A"}
-                                            </p>
-                                          </div>
-                                          <div className="space-y-1.5">
-                                            <span className="text-[8px] font-black uppercase text-slate-400">Improvement Areas</span>
-                                            <p className="text-xs text-slate-600 font-semibold bg-red-50 border border-red-100 rounded-xl p-3">
-                                              {req.MentorshipReview.improvements || "N/A"}
-                                            </p>
-                                          </div>
-                                        </div>
-
-                                        <div className="space-y-1.5">
-                                          <span className="text-[8px] font-black uppercase text-slate-400">Mentor Remarks & Action Plan</span>
-                                          <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 space-y-3 font-semibold text-slate-700 leading-relaxed">
-                                            {req.MentorshipReview.mistakesObserved && (
-                                              <div>
-                                                <span className="text-[8px] uppercase tracking-wider text-[#8C8CA1] block mb-0.5">Mistakes Observed</span>
-                                                <p className="text-xs text-slate-600">{req.MentorshipReview.mistakesObserved}</p>
-                                              </div>
-                                            )}
-                                            {req.MentorshipReview.actionPlan && (
-                                              <div>
-                                                <span className="text-[8px] uppercase tracking-wider text-[#8C8CA1] block mb-0.5">Action Plan</span>
-                                                <p className="text-xs text-slate-600">{req.MentorshipReview.actionPlan}</p>
-                                              </div>
-                                            )}
-                                            {req.MentorshipReview.nextWeekFocus && (
-                                              <div>
-                                                <span className="text-[8px] uppercase tracking-wider text-[#8C8CA1] block mb-0.5">Next Week's Focus</span>
-                                                <p className="text-xs text-slate-600">{req.MentorshipReview.nextWeekFocus}</p>
-                                              </div>
-                                            )}
-                                            {req.MentorshipReview.mentorRemark && (
-                                              <div className="border-t border-slate-100 pt-2.5">
-                                                <span className="text-[8px] uppercase tracking-wider text-[#8C8CA1] block mb-0.5">General Remark</span>
-                                                <p className="text-xs text-slate-600 font-bold">"{req.MentorshipReview.mentorRemark}"</p>
-                                              </div>
-                                            )}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      <div className="p-4 border border-[#E8EAF3] rounded-2xl bg-amber-50/20 text-amber-700 text-center font-bold text-xs">
-                                        ⏳ Waiting for your mentor to evaluate this request.
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            <div className="bg-white border border-[#E8EAF3] rounded-[24px] p-12 text-center text-slate-400 font-semibold max-w-3xl">
-                              🎓 No past review requests found.
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-[#FFF3E0] text-[#E65100]">
+                          {p.status}
+                        </span>
+                        <button className="text-[#94A3B8] hover:text-[#0F172A] p-1 rounded transition-colors">
+                          <MoreVertical size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {displayPending.length === 0 && (
+                    <p className="text-sm text-center text-[#64748B] py-6">All caught up! No pending reviews.</p>
                   )}
                 </div>
-              
-      </div>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-[#F1F5F9] text-center">
+                <button 
+                  onClick={() => setActiveTab("sessions")} 
+                  className="text-[13px] font-bold text-[#6D3DF5] hover:underline"
+                >
+                  View All Pending
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Tip Banner */}
+          <div className="bg-[#ECFDF5] border border-[#A7F3D0]/30 rounded-[20px] p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-start md:items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-[#D1FAE5] flex items-center justify-center text-[#10B981] shrink-0 mt-0.5 md:mt-0">
+                <Lightbulb size={18} />
+              </div>
+              <div>
+                <p className="text-[14px] text-[#065F46] font-medium leading-relaxed">
+                  <span className="font-bold">Tip from your mentor:</span> Review your losing trades more deeply. That's where the biggest growth happens.
+                </p>
+              </div>
+            </div>
+            <button className="flex items-center gap-2 border border-[#10B981] text-[#10B981] hover:bg-[#10B981] hover:text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0">
+              <BookOpen size={14} />
+              View Learning Resources
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── SESSIONS TAB ── */}
+      {activeTab === "sessions" && (
+        <div className="space-y-6 max-w-[1000px]">
+          {/* Subtabs */}
+          <div className="flex gap-1 bg-white border border-[#E9E6F5] rounded-[20px] p-1 w-fit shadow-sm">
+            {([
+              { id: "upcoming", label: "Upcoming", icon: CalendarDays },
+              { id: "request", label: "Request a Session", icon: Plus },
+              { id: "history", label: "History", icon: CheckCircle2 },
+            ] as const).map(t => (
+              <button
+                key={t.id}
+                onClick={() => setSessionTab(t.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-[10px] text-sm font-bold transition-all ${
+                  sessionTab === t.id ? "bg-[#6D3DF5] text-white shadow-md" : "text-[#64748B] hover:text-[#0F172A] hover:bg-slate-50"
+                }`}
+              >
+                <t.icon size={15} />
+                {t.label}
+                {t.id === "upcoming" && upcomingSessions.length > 0 && (
+                  <span className="bg-white text-[#6D3DF5] text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center">
+                    {upcomingSessions.length}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Upcoming & Requested */}
+          {sessionTab === "upcoming" && (
+            <div className="space-y-4">
+              {upcomingSessions.length === 0 ? (
+                <div className="bg-white rounded-[22px] border border-[#E9E6F5] shadow-sm p-12 text-center">
+                  <CalendarDays size={40} className="text-[#CBD5E1] mx-auto mb-4" />
+                  <h3 className="font-bold text-[18px] text-[#0F172A] mb-2">No Upcoming Sessions</h3>
+                  <p className="text-[#64748B] text-sm mb-6">Request a 1:1 session with your mentor to get personal guidance.</p>
+                  <button
+                    onClick={() => setSessionTab("request")}
+                    className="bg-[#6D3DF5] text-white px-6 py-3 rounded-full font-bold text-[14px] flex items-center gap-2 mx-auto hover:bg-[#5B3FCC] transition-colors shadow-md"
+                  >
+                    <Plus size={16} /> Request a Session
+                  </button>
+                </div>
+              ) : (
+                upcomingSessions.map((s: any) => (
+                  <div key={s.id} className="bg-white rounded-[22px] border border-[#E9E6F5] shadow-sm p-5 hover:border-[#6D3DF5] transition-colors">
+                    <div className="flex items-start gap-4">
+                      <div className="w-16 h-16 rounded-[20px] bg-[#F1ECFF] flex flex-col items-center justify-center shrink-0 border border-[#E4DEFF]">
+                        <span className="text-[11px] font-bold text-[#6D3DF5] uppercase">{new Date(s.startTime).toLocaleDateString("en-IN", { month: "short" })}</span>
+                        <span className="text-[24px] font-black text-[#6D3DF5] leading-none">{new Date(s.startTime).getDate()}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-bold text-[16px] text-[#0F172A]">{s.title}</h4>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${STATUS_COLORS[s.status] || 'bg-slate-100 text-slate-700'}`}>{s.status}</span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-4 text-[13px] text-[#64748B] font-medium">
+                          {s.status === "REQUESTED" ? (
+                            <span className="text-[#EA580C] font-semibold flex items-center gap-1">
+                              <Clock size={13} /> Preferred time: {new Date(s.startTime).toLocaleDateString("en-IN")} at {new Date(s.startTime).toLocaleTimeString("en-IN", { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          ) : (
+                            <>
+                              <span className="flex items-center gap-1.5"><Clock size={13} />{new Date(s.startTime).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}</span>
+                              <span className="flex items-center gap-1.5"><Clock size={13} />{new Date(s.startTime).toLocaleTimeString("en-IN", { hour: '2-digit', minute: '2-digit' })} – {new Date(s.endTime).toLocaleTimeString("en-IN", { hour: '2-digit', minute: '2-digit' })}</span>
+                            </>
+                          )}
+                          <span className="flex items-center gap-1.5"><UserCheck size={13} />{s.MentorRef?.name || s.MentorRef?.User?.name || "Mentor"}</span>
+                        </div>
+                        {s.status === "REQUESTED" ? (
+                          <p className="text-[12px] text-[#8492a6] mt-2 italic bg-orange-50 border border-orange-100 rounded-lg px-3 py-2 w-fit">
+                            Waiting for your mentor to confirm the schedule and provide meeting details.
+                          </p>
+                        ) : (
+                          s.googleMeetLink && (
+                            <a href={s.googleMeetLink} target="_blank" rel="noreferrer"
+                              className="inline-flex items-center gap-1.5 mt-3 bg-[#1a73e8] text-white px-4 py-2 rounded-[10px] text-[13px] font-bold hover:bg-[#1558b0] transition-colors">
+                              <Video size={14} /> Join Meeting
+                            </a>
+                          )
+                        )}
+                        {s.notes && (
+                          <div className="mt-2 text-[12px] text-[#64748B]">
+                            <span className="font-bold text-[#0F172A]">Your Notes:</span> "{s.notes}"
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2 shrink-0">
+                        <button
+                          onClick={() => cancelSession(s.id)}
+                          className="flex items-center gap-1.5 border border-[#E9E6F5] text-[#94A3B8] px-3 py-1.5 rounded-[8px] text-[12px] font-bold hover:border-red-200 hover:text-red-500 hover:bg-red-50 transition-colors"
+                        >
+                          <XCircle size={12} /> Cancel Request
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {/* Request Form */}
+          {sessionTab === "request" && (
+            <div className="bg-white rounded-[22px] border border-[#E9E6F5] shadow-sm p-6">
+              <h3 className="font-bold text-[18px] text-[#0F172A] mb-6">Request a 1:1 Session</h3>
+              <div className="space-y-6">
+                <div>
+                  <label className="text-[12px] font-bold text-[#64748B] uppercase tracking-wider block mb-2">Session Title</label>
+                  <input
+                    type="text"
+                    value={bookingTitle}
+                    onChange={e => setBookingTitle(e.target.value)}
+                    className="w-full border border-[#E9E6F5] rounded-[12px] px-4 py-3 text-[14px] font-semibold bg-[#F8FAFC] focus:outline-none focus:border-[#6D3DF5] transition-colors"
+                    placeholder="e.g. Weekly Trading Review, Strategy Discussion..."
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[12px] font-bold text-[#64748B] uppercase tracking-wider block mb-2">Preferred Date</label>
+                    <input
+                      type="date"
+                      min={new Date().toISOString().split("T")[0]}
+                      value={selectedDate}
+                      onChange={e => setSelectedDate(e.target.value)}
+                      className="w-full border border-[#E9E6F5] rounded-[12px] px-4 py-3 text-[14px] font-semibold bg-[#F8FAFC] focus:outline-none focus:border-[#6D3DF5] transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[12px] font-bold text-[#64748B] uppercase tracking-wider block mb-2">Preferred Time</label>
+                    <input
+                      type="time"
+                      value={selectedTime}
+                      onChange={e => setSelectedTime(e.target.value)}
+                      className="w-full border border-[#E9E6F5] rounded-[12px] px-4 py-3 text-[14px] font-semibold bg-[#F8FAFC] focus:outline-none focus:border-[#6D3DF5] transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[12px] font-bold text-[#64748B] uppercase tracking-wider block mb-2">Notes for Mentor (e.g. topic, questions)</label>
+                  <textarea
+                    rows={3}
+                    value={bookingNotes}
+                    onChange={e => setBookingNotes(e.target.value)}
+                    placeholder="Describe what you want to focus on in this session (e.g. review my trade logs, psychological blockages)..."
+                    className="w-full border border-[#E9E6F5] rounded-[12px] px-4 py-3 text-[13px] font-medium bg-[#F8FAFC] focus:outline-none focus:border-[#6D3DF5] transition-colors resize-none"
+                  />
+                </div>
+
+                <button
+                  onClick={submitSessionRequest}
+                  disabled={!selectedDate || booking}
+                  className="w-full bg-[#6D3DF5] hover:bg-[#5B3FCC] text-white py-4 rounded-[20px] font-bold text-[15px] flex items-center justify-center gap-2 transition-all shadow-md disabled:bg-slate-200 disabled:text-[#94A3B8] disabled:shadow-none disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {booking ? "Submitting Request..." : <><ArrowRight size={18} /> Submit Session Request</>}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* History */}
+          {sessionTab === "history" && (
+            <div className="space-y-3">
+              {historySessions.length === 0 ? (
+                <div className="bg-white rounded-[22px] border border-[#E9E6F5] shadow-sm p-12 text-center">
+                  <CheckCircle2 size={36} className="text-[#CBD5E1] mx-auto mb-3" />
+                  <p className="font-bold text-[#0F172A]">No past sessions yet</p>
+                </div>
+              ) : (
+                historySessions.map((s: any) => (
+                  <div key={s.id} className="bg-white rounded-[20px] border border-[#E9E6F5] shadow-sm p-5">
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-bold text-[15px] text-[#0F172A]">{s.title}</p>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${STATUS_COLORS[s.status] || 'bg-slate-100 text-slate-700'}`}>{s.status}</span>
+                        </div>
+                        <p className="text-[13px] text-[#64748B]">
+                          {new Date(s.startTime).toLocaleDateString("en-IN")} &bull; {new Date(s.startTime).toLocaleTimeString("en-IN", { hour: '2-digit', minute: '2-digit' })} – {new Date(s.endTime).toLocaleTimeString("en-IN", { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                        {s.mentorNotes && (
+                          <div className="mt-3 p-3 bg-[#F1ECFF] rounded-[10px] border border-[#E4DEFF]">
+                            <p className="text-[11px] font-bold text-[#6D3DF5] mb-1">Mentor Notes</p>
+                            <p className="text-[13px] text-[#0F172A] italic">"{s.mentorNotes}"</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Share Trade Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-[24px] border border-[#E9E6F5] shadow-2xl max-w-md w-full overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="p-6 border-b border-[#E9E6F5] flex justify-between items-center bg-[#F8FAFC]">
+              <div>
+                <h3 className="font-bold text-[18px] text-[#0F172A]">Share Trades for Review</h3>
+                <p className="text-[#64748B] text-[12px] font-medium mt-0.5">Select closed trades to share with your mentor.</p>
+              </div>
+              <button 
+                onClick={() => setShowModal(false)}
+                className="text-[#64748B] hover:text-[#0F172A] text-xl font-bold w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-4 flex-1">
+              {availableTrades.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-[14px] font-bold text-[#64748B]">No closed trades found.</p>
+                  <p className="text-[12px] text-[#64748B] mt-1">Please add some closed trades first.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <label className="text-[12px] font-bold text-[#64748B] block mb-1">Select Trades ({selectedTrades.length} selected)</label>
+                  <div className="max-h-48 overflow-y-auto border border-[#E9E6F5] rounded-xl divide-y divide-[#E9E6F5] bg-slate-50">
+                    {availableTrades.map((trade: any) => {
+                      const isSelected = selectedTrades.includes(trade.id);
+                      return (
+                        <div 
+                          key={trade.id}
+                          onClick={() => {
+                            if (isSelected) {
+                              setSelectedTrades(selectedTrades.filter(id => id !== trade.id));
+                            } else {
+                              setSelectedTrades([...selectedTrades, trade.id]);
+                            }
+                          }}
+                          className={`flex items-center gap-3 p-3 cursor-pointer transition-colors ${isSelected ? 'bg-[#F1ECFF]' : 'hover:bg-slate-100'}`}
+                        >
+                          <input 
+                            type="checkbox" 
+                            checked={isSelected}
+                            readOnly
+                            className="w-4 h-4 accent-[#6D3DF5]"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-center">
+                              <p className="text-[13px] font-bold text-[#0F172A] truncate">{trade.symbol}</p>
+                              <span className={`text-[12px] font-black ${trade.netPnl >= 0 ? 'text-[#16A34A]' : 'text-[#EF4444]'}`}>
+                                {trade.netPnl >= 0 ? '+' : ''}₹{trade.netPnl}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center mt-0.5">
+                              <p className="text-[11px] font-medium text-[#64748B]">
+                                {trade.direction} &bull; Qty {trade.quantity}
+                              </p>
+                              <p className="text-[10px] text-[#64748B]">
+                                {new Date(trade.entryTime).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <label className="text-[12px] font-bold text-[#64748B] block">Notes for Mentor</label>
+                <textarea 
+                  rows={3} 
+                  placeholder="e.g. Please review my exit strategy on these trades. I felt a bit nervous..."
+                  value={clientNotes}
+                  onChange={(e) => setClientNotes(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border border-[#E9E6F5] rounded-xl text-[13px] font-[500] focus:bg-white focus:border-[#6D3DF5] focus:outline-none transition-all resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-[#E9E6F5] flex justify-end gap-3 bg-[#F8FAFC]">
+              <button 
+                type="button" 
+                onClick={() => setShowModal(false)}
+                className="px-5 py-2.5 bg-white border border-[#E9E6F5] text-[#64748B] rounded-xl text-[13px] font-bold hover:bg-slate-50 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button 
+                type="button"
+                onClick={handleShareSubmit}
+                disabled={submittingRequest || selectedTrades.length === 0}
+                className="px-6 py-2.5 bg-[#6D3DF5] hover:bg-[#5B3FCC] text-white rounded-xl text-[13px] font-bold transition-all shadow-md disabled:bg-slate-200 disabled:text-[#64748B] disabled:shadow-none cursor-pointer disabled:cursor-not-allowed"
+              >
+                {submittingRequest ? "Submitting..." : "Submit Request"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

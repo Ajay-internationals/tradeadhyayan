@@ -19,7 +19,7 @@ export function MentorCharts({ chartType, data }: { chartType: "trend", data?: a
       <div className="w-full h-full min-h-[120px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E7EAF3" />
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E9E6F5" />
             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#64748B', fontWeight: 600 }} dy={5} />
             <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#64748B', fontWeight: 600 }} domain={[0, 100]} />
             <Tooltip 
