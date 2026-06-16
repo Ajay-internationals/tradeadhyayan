@@ -35,6 +35,7 @@ export async function getDashboardMetrics(email: string) {
     let grossLoss = 0;
     let bestTrade = -Infinity;
     let worstTrade = Infinity;
+    let totalInvested = 0;
     
     // For Equity Curve
     let currentEquity = user.initialCapital || 100000;
@@ -59,6 +60,7 @@ export async function getDashboardMetrics(email: string) {
       const t = trades[i];
       const pnl = t.netPnl || 0;
       totalPnl += pnl;
+      totalInvested += (t.entryPrice || 0) * (t.quantity || 0);
 
       // Update Equity
       currentEquity += pnl;
@@ -161,6 +163,7 @@ export async function getDashboardMetrics(email: string) {
       hasTrades: true,
       totalTrades,
       netPnl: totalPnl,
+      totalInvested,
       winRate,
       averageProfit: averageWin,
       averageLoss,

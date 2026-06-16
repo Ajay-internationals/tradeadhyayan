@@ -94,12 +94,8 @@ export default function DashboardPage() {
       return { value: (wins / subset.length) * 100 };
     });
 
-    // 3. Discipline Sparkline
-    const discSpark = metrics.recentTrades.slice(0, 7).reverse().map((t: any, idx: number, arr: any[]) => {
-      const subset = arr.slice(0, idx + 1);
-      const followed = subset.filter((x) => x.followedPlan).length;
-      return { value: (followed / subset.length) * 100 };
-    });
+    // 3. Invested Amount Sparkline: invested capital trend per recent trade
+    const investedSpark = metrics.recentTrades.slice(0, 7).reverse().map((t: any) => ({ value: (t.entryPrice || 0) * (t.quantity || 0) }));
 
     // 4. R:R Sparkline
     const rrSpark = metrics.dailyPnlChart.slice(-7).map((d: any, idx: number, arr: any[]) => {
@@ -124,7 +120,7 @@ export default function DashboardPage() {
     return {
       profit: padSparkline(profitSpark),
       winRate: padSparkline(winRateSpark),
-      discipline: padSparkline(discSpark),
+      invested: padSparkline(investedSpark),
       rr: padSparkline(rrSpark),
       trades: padSparkline(metrics.dailyPnlChart.slice(-7).map((d: any) => ({ value: Math.abs(d.pnl) % 5 + 1 })))
     };
@@ -196,7 +192,18 @@ export default function DashboardPage() {
       
       {/* 1. Top KPI Cards Row */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 xl:gap-[16px]">
-        {/* Card 1: Total Profit */}
+        {/* Card 1: Total Invested Amount */}
+        <MetricCard
+          title="Total Invested"
+          value={formatCurrency(metrics.totalInvested || 0)}
+          change={`+12.5% vs last week`}
+          changeType="up"
+          themeColor="#6D3DF5"
+          icon={<Zap size={16} />}
+          sparklineData={sparklineData.invested}
+        />
+
+        {/* Card 2: Total Profit */}
         <MetricCard
           title="Total Profit"
           value={formatCurrency(metrics.netPnl)}
@@ -207,29 +214,7 @@ export default function DashboardPage() {
           sparklineData={sparklineData.profit}
         />
 
-        {/* Card 2: Trade Quality */}
-        <MetricCard
-          title="Trade Quality"
-          value="76/100"
-          change="+8 points vs last week"
-          changeType="up"
-          themeColor="#8B5CF6"
-          icon={<Award size={16} />}
-          sparklineData={sparklineData.discipline}
-        />
-
-        {/* Card 3: Discipline */}
-        <MetricCard
-          title="Discipline"
-          value={`${metrics.disciplineScore.toFixed(0)}/100`}
-          change="+6 points vs last week"
-          changeType="up"
-          themeColor="#10B981"
-          icon={<CheckCircle2 size={16} />}
-          sparklineData={sparklineData.discipline}
-        />
-
-        {/* Card 4: Win Rate */}
+        {/* Card 3: Win Rate */}
         <MetricCard
           title="Win Rate"
           value={`${metrics.winRate.toFixed(1)}%`}
@@ -240,7 +225,7 @@ export default function DashboardPage() {
           sparklineData={sparklineData.winRate}
         />
 
-        {/* Card 5: Risk Reward */}
+        {/* Card 4: Risk Reward */}
         <MetricCard
           title="Risk Reward"
           value={metrics.riskReward.toFixed(2)}
@@ -251,7 +236,7 @@ export default function DashboardPage() {
           sparklineData={sparklineData.rr}
         />
 
-        {/* Card 6: Trades This Week */}
+        {/* Card 5: Trades This Week */}
         <MetricCard
           title="Trades This Week"
           value={metrics.totalTrades}
@@ -260,6 +245,17 @@ export default function DashboardPage() {
           themeColor="#EF4444"
           icon={<Activity size={16} />}
           sparklineData={sparklineData.trades}
+        />
+
+        {/* Card 6: Profit Factor */}
+        <MetricCard
+          title="Profit Factor"
+          value={metrics.profitFactor.toFixed(2)}
+          change="+0.24 vs last week"
+          changeType="up"
+          themeColor="#8B5CF6"
+          icon={<Award size={16} />}
+          sparklineData={sparklineData.rr}
         />
       </div>
 
