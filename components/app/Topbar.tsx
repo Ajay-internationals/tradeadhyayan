@@ -81,8 +81,8 @@ export default function Topbar({ onMenuToggle }: TopbarProps) {
     }
     if (pathname.startsWith("/dashboard/reports")) {
       return {
-        title: "Performance Reports",
-        subtitle: "Deep dive analytical scorecards and trading logs."
+        title: "Reports",
+        subtitle: "Detailed reports to help you analyze and improve."
       };
     }
     if (pathname.startsWith("/dashboard/strategies")) {
