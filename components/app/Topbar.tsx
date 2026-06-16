@@ -105,8 +105,8 @@ export default function Topbar({ onMenuToggle }: TopbarProps) {
     }
     if (pathname.startsWith("/dashboard/calendar")) {
       return {
-        title: "Trading Calendar",
-        subtitle: "Visualize day-by-day P&L distributions and journal entries."
+        title: "Calendar",
+        subtitle: "Plan your trading activities, review events and stay consistent."
       };
     }
     if (pathname.startsWith("/dashboard/settings")) {
