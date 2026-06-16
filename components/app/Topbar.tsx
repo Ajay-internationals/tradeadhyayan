@@ -112,7 +112,7 @@ export default function Topbar({ onMenuToggle }: TopbarProps) {
     if (pathname.startsWith("/dashboard/settings")) {
       return {
         title: "Settings",
-        subtitle: "Configure preferences, notification triggers, and API credentials."
+        subtitle: "Customize your experience and manage your account preferences."
       };
     }
 
