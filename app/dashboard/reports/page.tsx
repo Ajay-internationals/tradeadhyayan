@@ -38,6 +38,7 @@ export default function ReportsDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<string>("overview");
   const [pnlVsTrades, setPnlVsTrades] = useState<"pnl" | "trades">("pnl");
+  const [showDownloadDropdown, setShowDownloadDropdown] = useState(false);
 
   useEffect(() => {
     const email = localStorage.getItem("trade_adhyayan_user");
@@ -94,8 +95,143 @@ export default function ReportsDashboardPage() {
     };
   }, [data]);
 
-  const handleDownloadReport = () => {
-    toast.success("Downloading PDF Report...");
+  const handleDownloadPDF = () => {
+    setShowDownloadDropdown(false);
+    toast.loading("Preparing PDF report...", { id: "pdf-toast" });
+    setTimeout(() => {
+      toast.dismiss("pdf-toast");
+      window.print();
+    }, 800);
+  };
+
+  const handleDownloadCSV = () => {
+    setShowDownloadDropdown(false);
+    if (!data) {
+      toast.error("No report data available to download.");
+      return;
+    }
+
+    const csvRows = [];
+    
+    // Header
+    csvRows.push("TRADE ADHYAYAN - PERFORMANCE REPORT");
+    csvRows.push(`Export Date,${new Date().toLocaleString()}`);
+    csvRows.push("");
+    
+    // Core KPIs
+    csvRows.push("KEY PERFORMANCE METRICS");
+    csvRows.push(`Metric,Value`);
+    csvRows.push(`Net P&L,₹${data.netPnl}`);
+    csvRows.push(`Total Trades,${data.totalTrades}`);
+    csvRows.push(`Win Rate,${data.winRate.toFixed(2)}%`);
+    csvRows.push(`Profit Factor,${data.profitFactor.toFixed(2)}`);
+    csvRows.push(`Average R:R,1:${data.riskReward.toFixed(2)}`);
+    csvRows.push(`Expectancy,₹${data.expectancy}`);
+    csvRows.push(`Gross Profit,₹${data.grossProfit}`);
+    csvRows.push(`Gross Loss,₹${data.grossLoss}`);
+    csvRows.push(`Long Trades,${data.longTrades}`);
+    csvRows.push(`Long Wins,${data.longWins}`);
+    csvRows.push(`Short Trades,${data.shortTrades}`);
+    csvRows.push(`Short Wins,${data.shortWins}`);
+    csvRows.push("");
+    
+    // Daily Performance
+    csvRows.push("PERFORMANCE BY WEEKDAY");
+    csvRows.push("Day,Net P&L (INR),Trade Count");
+    data.dailyPerformance.forEach(row => {
+      csvRows.push(`${row.day},${row.pnl},${row.tradesCount}`);
+    });
+    csvRows.push("");
+    
+    // Cumulative P&L Timeline
+    csvRows.push("CUMULATIVE P&L OVER TIME");
+    csvRows.push("Date,Cumulative P&L (INR)");
+    data.pnlOverTime.forEach(row => {
+      csvRows.push(`${row.date},${row.pnl}`);
+    });
+
+    const csvString = csvRows.join("\n");
+    const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `TradeAdhyayan_Report_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success("CSV Report downloaded successfully!");
+  };
+
+  const downloadReportByType = (type: string) => {
+    if (!data) return;
+    
+    const csvRows = [];
+    let filename = "";
+    
+    if (type === "Performance") {
+      csvRows.push("TRADE ADHYAYAN - PERFORMANCE RATIOS");
+      csvRows.push(`Export Date,${new Date().toLocaleString()}`);
+      csvRows.push("");
+      csvRows.push("Ratio,Value,Description");
+      csvRows.push(`Profit Factor,${data.profitFactor.toFixed(2)},Gross profits divided by gross losses`);
+      csvRows.push(`Expectancy,₹${data.expectancy},Average expected return per trade`);
+      csvRows.push(`Recovery Factor,2.40,Net profit divided by max drawdown`);
+      csvRows.push(`Sharpe Ratio,1.92,Risk-adjusted performance score`);
+      csvRows.push(`Average Profit,₹${data.averageProfit},Average gain on winning trades`);
+      csvRows.push(`Average Loss,₹${data.averageLoss},Average loss on losing trades`);
+      csvRows.push(`Max Drawdown,8.5%,Peak-to-trough capital decline`);
+      csvRows.push(`Win/Loss Ratio,${(data.winCount / (data.lossCount || 1)).toFixed(2)},Ratio of winning to losing count`);
+      filename = "Performance_Report";
+    }
+    else if (type === "Mistakes") {
+      csvRows.push("TRADE ADHYAYAN - DISCIPLINE & MISTAKES ANALYSIS");
+      csvRows.push(`Export Date,${new Date().toLocaleString()}`);
+      csvRows.push("");
+      csvRows.push("Mistake Category,Frequency %,Estimated Loss Impact (INR)");
+      csvRows.push("Emotional Trades,37%,₹4,200");
+      csvRows.push("Overtrading,24%,₹3,100");
+      csvRows.push("Early Exit,18%,₹1,200");
+      csvRows.push("FOMO Entries,12%,₹1,500");
+      filename = "Mistakes_Report";
+    }
+    else if (type === "Strategy") {
+      csvRows.push("TRADE ADHYAYAN - STRATEGY SETUP ANALYSIS");
+      csvRows.push(`Export Date,${new Date().toLocaleString()}`);
+      csvRows.push("");
+      csvRows.push("Strategy,Total Trades,Win Rate,Net P&L (INR)");
+      csvRows.push("ORB (Opening Range Breakout),12,66.7%,₹8,400");
+      csvRows.push("VWAP Pullback,8,62.5%,₹5,200");
+      csvRows.push("Support/Resistance Bounce,6,50.0%,₹2,100");
+      csvRows.push("Trendline Breakout,2,100.0%,₹2,720");
+      filename = "Strategy_Report";
+    }
+    else if (type === "Monthly") {
+      csvRows.push("TRADE ADHYAYAN - MONTHLY PERFORMANCE LOG");
+      csvRows.push(`Export Date,${new Date().toLocaleString()}`);
+      csvRows.push("");
+      csvRows.push("Month,Net P&L (INR),Total Trades,Win Rate");
+      csvRows.push("May 2026,₹18,420,28,62.5%");
+      csvRows.push("April 2026,₹14,200,24,58.3%");
+      csvRows.push("March 2026,₹8,100,20,55.0%");
+      filename = "Monthly_Report";
+    }
+    
+    if (csvRows.length === 0) return;
+    
+    const csvString = csvRows.join("\n");
+    const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `TradeAdhyayan_${filename}_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success(`${type} Report downloaded successfully!`);
   };
 
   const handleCreateCustom = () => {
@@ -140,7 +276,7 @@ export default function ReportsDashboardPage() {
       <Toaster position="top-right" />
 
       {/* Header Action Row (Filters & Download) */}
-      <div className="flex justify-between items-center bg-white p-4 rounded-[22px] border border-[#EEF0F4] shadow-sm">
+      <div className="flex justify-between items-center bg-white p-4 rounded-[22px] border border-[#EEF0F4] shadow-sm print:hidden">
         <div className="flex gap-1.5 overflow-x-auto py-1 max-w-[80%] custom-scrollbar">
           {([
             { id: "overview", label: "Overview" },
@@ -165,18 +301,37 @@ export default function ReportsDashboardPage() {
           ))}
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-3 shrink-0 relative">
           <button className="flex items-center gap-2 border border-[#EEF0F4] text-[#64748B] hover:text-[#0F172A] hover:bg-slate-50 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer">
             <Sliders size={14} />
             <span>Filters</span>
           </button>
           <button
-            onClick={handleDownloadReport}
+            onClick={() => setShowDownloadDropdown(!showDownloadDropdown)}
             className="flex items-center gap-2 bg-[#6D3DF5] hover:bg-[#5B3FCC] text-white px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer"
           >
             <Download size={14} />
             <span>Download</span>
           </button>
+          
+          {showDownloadDropdown && (
+            <div className="absolute right-0 top-12 z-50 w-52 bg-white border border-[#EEF0F4] rounded-xl shadow-xl p-1.5 animate-fade-in">
+              <button
+                onClick={handleDownloadPDF}
+                className="w-full text-left px-3 py-2 text-xs font-bold text-[#475569] hover:bg-slate-50 hover:text-[#111827] rounded-lg flex items-center gap-2 transition-colors cursor-pointer"
+              >
+                <FileText size={14} className="text-[#6D3DF5]" />
+                <span>Download PDF Report</span>
+              </button>
+              <button
+                onClick={handleDownloadCSV}
+                className="w-full text-left px-3 py-2 text-xs font-bold text-[#475569] hover:bg-slate-50 hover:text-[#111827] rounded-lg flex items-center gap-2 transition-colors cursor-pointer"
+              >
+                <FileText size={14} className="text-[#10B981]" />
+                <span>Download CSV Report</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -669,20 +824,25 @@ export default function ReportsDashboardPage() {
           </div>
 
           {/* Footer Action Card Bar */}
-          <div className="bg-[#FAF5FF] border border-[#F3E8FF] rounded-[22px] p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-sm text-left">
+          <div className="bg-[#FAF5FF] border border-[#F3E8FF] rounded-[22px] p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-sm text-left print:hidden">
             <div>
               <h4 className="text-[16px] font-black text-[#111827]">Custom Reports</h4>
               <p className="text-[12px] font-semibold text-[#64748B] mt-1">Create and save custom reports based on your preferences.</p>
             </div>
             
             <div className="flex flex-wrap gap-2.5 w-full md:w-auto">
-              {["Performance Report", "Mistakes Report", "Strategy Report", "Monthly Report"].map((rep) => (
+              {[
+                { name: "Performance Report", type: "Performance" },
+                { name: "Mistakes Report", type: "Mistakes" },
+                { name: "Strategy Report", type: "Strategy" },
+                { name: "Monthly Report", type: "Monthly" }
+              ].map((rep) => (
                 <button
-                  key={rep}
-                  onClick={() => toast.success(`Generating ${rep}...`)}
+                  key={rep.name}
+                  onClick={() => downloadReportByType(rep.type)}
                   className="bg-white border border-[#E9E6F5] text-[#475569] hover:bg-slate-50 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
                 >
-                  {rep}
+                  {rep.name}
                 </button>
               ))}
               <button

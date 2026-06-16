@@ -12,11 +12,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen w-screen bg-[#F7F8FC] text-[#111827] font-sans overflow-hidden">
       
       {/* Sidebar: Desktop View (pinned left) */}
-      <Sidebar className="hidden lg:flex" />
+      <Sidebar className="hidden lg:flex print:hidden" />
 
       {/* Mobile Sidebar: Drawer Slide-Over */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 flex lg:hidden animate-fade-in bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex lg:hidden animate-fade-in bg-black/40 backdrop-blur-sm print:hidden">
           {/* Slide panel */}
           <div className="relative flex flex-col w-[264px] h-full bg-white shadow-2xl animate-scale-up">
             {/* Close button inside mobile menu */}
@@ -39,14 +39,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Main Content Area Right */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden">
+      <main className="flex-1 flex flex-col h-full overflow-hidden print:overflow-visible">
         
         {/* Scrollable Container wrapper */}
-        <div className="flex-1 overflow-y-auto px-6 py-6 lg:p-[28px]">
+        <div className="flex-1 overflow-y-auto px-6 py-6 lg:p-[28px] print:p-0 print:overflow-visible">
           {/* Centered Content Frame with Max Width 1440px */}
-          <div className="max-w-[1440px] mx-auto flex flex-col h-full space-y-[24px]">
+          <div className="max-w-[1440px] mx-auto flex flex-col h-full space-y-[24px] print:space-y-0">
             {/* Topbar layout */}
-            <Topbar onMenuToggle={() => setMobileMenuOpen(true)} />
+            <div className="print:hidden">
+              <Topbar onMenuToggle={() => setMobileMenuOpen(true)} />
+            </div>
 
             {/* Child content area */}
             <div className="flex-1 min-h-0 bg-transparent">

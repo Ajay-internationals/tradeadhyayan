@@ -61,3 +61,34 @@ body {
 .animate-fade-in {
   animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* Print Stylesheet */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 12px !important;
+  }
+  
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Ensure grid layout adapts to print page size */
+  .grid {
+    display: grid !important;
+    gap: 16px !important;
+  }
+  
+  /* Force chart text contrast */
+  .recharts-text {
+    fill: #475569 !important;
+    font-size: 9px !important;
+  }
+  
+  /* Ensure backgrounds render when converting to PDF */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
