@@ -529,6 +529,7 @@ export default function ReportsDashboardPage() {
                       strokeWidth={2.5}
                       fillOpacity={1}
                       fill="url(#pnlOverTimeGrad)"
+                      isAnimationActive={false}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -554,6 +555,7 @@ export default function ReportsDashboardPage() {
                           paddingAngle={3}
                           dataKey="value"
                           stroke="none"
+                          isAnimationActive={false}
                         >
                           {winLossPieData.map((entry, idx) => (
                             <Cell key={`cell-${idx}`} fill={entry.color} />
@@ -678,6 +680,7 @@ export default function ReportsDashboardPage() {
                           paddingAngle={3}
                           dataKey="value"
                           stroke="none"
+                          isAnimationActive={false}
                         >
                           {pnlBreakdownPieData.map((entry, idx) => (
                             <Cell key={`cell-${idx}`} fill={entry.color} />
@@ -775,6 +778,7 @@ export default function ReportsDashboardPage() {
                       <Bar
                         dataKey={pnlVsTrades === "pnl" ? "pnl" : "tradesCount"}
                         radius={[6, 6, 0, 0]}
+                        isAnimationActive={false}
                       >
                         {data.dailyPerformance.map((entry, index) => {
                           const value = pnlVsTrades === "pnl" ? entry.pnl : entry.tradesCount;

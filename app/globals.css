@@ -64,26 +64,87 @@ body {
 
 /* Print Stylesheet */
 @media print {
-  body {
+  /* Reset html, body, and major layout wrappers to allow multiple pages without clipping */
+  html, body, #__next, [data-nextjs-scroll-container] {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    position: static !important;
     background: #ffffff !important;
     color: #000000 !important;
-    font-size: 12px !important;
+    font-size: 11px !important;
   }
   
+  /* Reset AppShell viewport-locked wrappers */
+  div.flex.h-screen.w-screen {
+    height: auto !important;
+    width: 100% !important;
+    overflow: visible !important;
+    display: block !important;
+    position: static !important;
+  }
+
+  main.flex-1.flex.flex-col {
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+    position: static !important;
+  }
+
+  /* Reset scrollable container padding & scrolling behavior */
+  div.flex-1.overflow-y-auto {
+    overflow: visible !important;
+    padding: 0 !important;
+    height: auto !important;
+    position: static !important;
+  }
+
+  /* Remove maximum width constraints */
+  .max-w-\[1440px\] {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
   .print\:hidden {
     display: none !important;
   }
 
-  /* Ensure grid layout adapts to print page size */
-  .grid {
-    display: grid !important;
-    gap: 16px !important;
+  /* Re-align KPI Cards to 3 columns on paper */
+  .grid-cols-2, .md\:grid-cols-6 {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+  }
+
+  /* Re-align middle and bottom rows from 12-columns to single stacked rows */
+  .lg\:grid-cols-12 {
+    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+    gap: 20px !important;
+  }
+
+  .lg\:col-span-6, .lg\:col-span-3, .lg\:col-span-4, .lg\:col-span-5 {
+    grid-column: span 1 / span 1 !important;
+    width: 100% !important;
+  }
+
+  /* Ensure card backgrounds print and borders are thin */
+  .bg-white {
+    background-color: #ffffff !important;
+    border: 1px solid #E2E8F0 !important;
+    box-shadow: none !important;
+    padding: 16px !important;
+    border-radius: 12px !important;
+  }
+
+  /* Prevent page breaks cutting directly through cards and chart boxes */
+  .bg-white, .grid > div {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
   
   /* Force chart text contrast */
   .recharts-text {
     fill: #475569 !important;
-    font-size: 9px !important;
+    font-size: 8px !important;
   }
   
   /* Ensure backgrounds render when converting to PDF */
