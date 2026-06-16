@@ -93,8 +93,8 @@ export default function Topbar({ onMenuToggle }: TopbarProps) {
     }
     if (pathname.startsWith("/dashboard/tools")) {
       return {
-        title: "Trading Tools",
-        subtitle: "Position size calculator, margin tools, and mental logs."
+        title: "Tools",
+        subtitle: "Powerful tools to plan, analyze and improve your trading."
       };
     }
     if (pathname.startsWith("/dashboard/goals")) {
