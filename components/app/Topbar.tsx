@@ -99,8 +99,8 @@ export default function Topbar({ onMenuToggle }: TopbarProps) {
     }
     if (pathname.startsWith("/dashboard/goals")) {
       return {
-        title: "Goals & Streaks",
-        subtitle: "Set milestones, track performance metrics, and build discipline."
+        title: "Goals",
+        subtitle: "Set meaningful goals, track progress and level up your trading."
       };
     }
     if (pathname.startsWith("/dashboard/calendar")) {
