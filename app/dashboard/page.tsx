@@ -203,9 +203,9 @@ export default function DashboardPage() {
           sparklineData={sparklineData.invested}
         />
 
-        {/* Card 2: Total Profit */}
+        {/* Card 2: Total Profit/Loss */}
         <MetricCard
-          title="Total Profit"
+          title="Total Profit/Loss"
           value={formatCurrency(metrics.netPnl)}
           change={`+18.4% vs last week`}
           changeType={metrics.netPnl >= 0 ? "up" : "down"}
