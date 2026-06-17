@@ -191,7 +191,7 @@ export default function DashboardPage() {
     <div className="space-y-[24px]">
       
       {/* 1. Top KPI Cards Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 xl:gap-[16px]">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 xl:gap-[16px]">
         {/* Card 1: Total Invested Amount */}
         <MetricCard
           title="Total Invested"
@@ -245,17 +245,6 @@ export default function DashboardPage() {
           themeColor="#EF4444"
           icon={<Activity size={16} />}
           sparklineData={sparklineData.trades}
-        />
-
-        {/* Card 6: Profit Factor */}
-        <MetricCard
-          title="Profit Factor"
-          value={metrics.profitFactor.toFixed(2)}
-          change="+0.24 vs last week"
-          changeType="up"
-          themeColor="#8B5CF6"
-          icon={<Award size={16} />}
-          sparklineData={sparklineData.rr}
         />
       </div>
 
