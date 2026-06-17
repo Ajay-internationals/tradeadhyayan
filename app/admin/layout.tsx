@@ -37,17 +37,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const navItems = [
     { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
-    { label: "Users", href: "/admin/users", icon: Users },
-    { label: "Mentors", href: "/admin/mentors", icon: Contact },
-    { label: "Client Allocation", href: "/admin/client-allocation", icon: ArrowLeftRight },
-    { label: "Mentorship Clients", href: "/admin/mentorship-clients", icon: Award },
-    { label: "Reviews", href: "/admin/reviews", icon: ClipboardList },
-    { label: "Sessions", href: "/admin/sessions", icon: Video },
-    { label: "Community", href: "/admin/community", icon: MessageSquare },
-    { label: "Mentor Payouts", href: "/admin/mentor-payouts", icon: CreditCard },
-    { label: "Transactions", href: "/admin/transactions", icon: History },
-    { label: "Plans & Pricing", href: "/admin/plans-pricing", icon: Tag },
-    { label: "Settings", href: "/admin/settings", icon: Settings },
+    { label: "Users", href: "/admin/dashboard/users", icon: Users },
+    { label: "Mentors", href: "/admin/dashboard/mentors", icon: Contact },
+    { label: "Client Allocation", href: "/admin/dashboard/allocation", icon: ArrowLeftRight },
+    { label: "Mentorship Clients", href: "/admin/dashboard/clients", icon: Award },
+    { label: "Reviews", href: "/admin/dashboard/reviews", icon: ClipboardList },
+    { label: "Sessions", href: "/admin/dashboard/sessions", icon: Video },
+    { label: "Community", href: "/admin/dashboard/community", icon: MessageSquare },
+    { label: "Mentor Payouts", href: "/admin/dashboard/payouts", icon: CreditCard },
+    { label: "Transactions", href: "/admin/dashboard/transactions", icon: History },
+    { label: "Plans & Pricing", href: "/admin/dashboard/pricing", icon: Tag },
+    { label: "Settings", href: "/admin/dashboard/settings", icon: Settings },
   ];
 
   const handleQuickAction = (action: string) => {
