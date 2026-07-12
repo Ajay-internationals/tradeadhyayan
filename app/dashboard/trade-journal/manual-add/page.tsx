@@ -201,7 +201,11 @@ export default function ManualAddTradePage() {
           router.push("/dashboard/trade-journal");
         }
       } else {
-        toast.error(data.error || "Failed to save trade.");
+        if (data.error === "FREE_PLAN_LIMIT_REACHED") {
+          toast.error("You have reached your 30 trades/month limit on the Free plan. Please upgrade to Pro.");
+        } else {
+          toast.error(data.error || "Failed to save trade.");
+        }
       }
     } catch (err) {
       console.error(err);

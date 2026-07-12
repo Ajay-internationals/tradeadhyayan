@@ -308,7 +308,7 @@ export default function ClientMentorReviewPage() {
           Unlock 1:1 expert trade reviews, personalized action plans, and private mentoring sessions to accelerate your trading journey.
         </p>
         <button
-          onClick={() => initiateCashfreePayment({ planId: "mentor", email: localStorage.getItem("trade_adhyayan_user") })}
+          onClick={() => initiateCashfreePayment({ planId: "mentorship", email: localStorage.getItem("trade_adhyayan_user") })}
           className="bg-gradient-to-r from-[#6D3DF5] to-[#8B5CF6] hover:from-[#5B2FD1] hover:to-[#7C3AED] text-white font-medium py-3 px-8 rounded-xl flex items-center gap-2 transition-all shadow-md hover:shadow-lg shadow-[#6D3DF5]/20"
         >
           <Sparkles className="w-4 h-4" />

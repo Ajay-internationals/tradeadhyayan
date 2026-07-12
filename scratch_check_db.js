@@ -1,2 +1,16 @@
-"const { Client } = require('pg');\nconst fs = require('fs');\nconst path = require('path');\n\n// Manually parse .env.local file\nlet dbUrl = '';\ntry {\n  const envContent = fs.readFileSync('.env.local', 'utf8');\n  const match = envContent.match(/DATABASE_URL=[\"']?([^\"'\\r\\n]+)/);\n  if (match) {\n    dbUrl = match[1].replace(/\\\\r\\\\n/g, '').trim();\n  }\n} catch (e) {\n  console.error('Failed to read .env.local', e);\n}\n\n// Strip potential carriage returns from DATABASE_URL\nconst connectionString = dbUrl || process.env.DATABASE_URL || '';\n\nconsole.log('Connecting to database...');\n\nconst client = new Client({\n  connectionString,\n  ssl: {\n    rejectUnauthorized: false\n  }\n});\n\nasync function main() {\n  try {\n    await client.connect();\n    console.log('Connected successfully!');\n\n    // Get list of schemas\n    const schemaRes = await client.query(`\n      SELECT schema_name \n      FROM information_schema.schemata;\n    `);\n    console.log('\\n--- Schemas ---');\n    console.log(schemaRes.rows.map(r => r.schema_name));\n\n    // Get list of tables in trade_adhyayan schema and public schema\n    const tablesRes = await client.query(`\n      SELECT table_schema, table_name \n      FROM information_schema.tables \n      WHERE table_schema IN ('public', 'trade_adhyayan')\n      ORDER BY table_schema, table_name;\n    `);\n    console.log('\\n--- Tables ---');\n    console.table(tablesRes.rows);\n\n    for (const row of tablesRes.rows) {\n      const { table_schema, table_name } = row;\n      console.log(`\\n--- Structure of ${table_schema}.${table_name} ---`);\n      \n      const columnsRes = await client.query(`\n        SELECT column_name, data_type, is_nullable, column_default\n        FROM information_schema.columns\n        WHERE table_schema = $1 AND table_name = $2\n        ORDER BY ordinal_position;\n      `, [table_schema, table_name]);\n      console.table(columnsRes.rows);\n\n      // Fetch row count\n      const countRes = await client.query(`SELECT COUNT(*) as cnt FROM \"${
-<truncated 536 bytes>
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
+async function check() {
+  const usage = await prisma.featureUsage.findMany();
+  console.log("Usage:", usage);
+  const trades = await prisma.trade.groupBy({
+    by: ['userId'],
+    _count: {
+      id: true,
+    },
+  })
+  console.log("Trades count:", trades);
+}
+
+check().catch(console.error).finally(() => process.exit(0));

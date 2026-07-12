@@ -161,7 +161,7 @@ export default function SettingsPage() {
     }
   };
 
-  const handlePlanUpgrade = async (planId: "pro" | "mentor") => {
+  const handlePlanUpgrade = async (planId: "pro" | "mentorship") => {
     if (!email) return;
     await initiateCashfreePayment({
       planId,
@@ -316,7 +316,7 @@ export default function SettingsPage() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => handlePlanUpgrade("mentor")}
+                  onClick={() => handlePlanUpgrade("mentorship")}
                   disabled={plan === "MENTOR"}
                   className={`w-full py-3 font-black text-xs rounded-xl mt-6 transition-all ${
                     plan === "MENTOR"
