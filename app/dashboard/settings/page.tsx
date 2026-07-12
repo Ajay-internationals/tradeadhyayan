@@ -1,7 +1,8 @@
 "use client";
-
+ 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { initiateCashfreePayment } from "@/lib/payment-client";
 import {
   User,
   Settings,
@@ -28,7 +29,8 @@ import {
   updateSettings,
   updateProfile,
   resetPreferences,
-  UserSettingsResponse
+  UserSettingsResponse,
+  updateInitialCapital
 } from "@/app/actions/settings";
 
 export default function SettingsPage() {
@@ -41,9 +43,10 @@ export default function SettingsPage() {
   const [profileName, setProfileName] = useState("Arjun");
   const [profileEmail, setProfileEmail] = useState("arjun@tradeadhyayan.com");
   const [memberSince, setMemberSince] = useState("Jan 10, 2024");
-  const [plan, setPlan] = useState("Pro Plan");
+  const [plan, setPlan] = useState(""); // raw plan: FREE, PRO, MENTOR
   const [tradesLogged, setTradesLogged] = useState(128);
   const [winningRate, setWinningRate] = useState(62.5);
+  const [initialCapital, setInitialCapital] = useState(100000);
 
   // Form states
   const [theme, setTheme] = useState("Light");
@@ -83,10 +86,11 @@ export default function SettingsPage() {
       if (res) {
         setProfileName(res.name);
         setProfileEmail(res.email);
-        setPlan(res.plan === "PRO" ? "Pro Plan" : "Free Plan");
+        setPlan(res.plan || "FREE"); // store raw plan value
         setMemberSince(res.memberSince);
         setTradesLogged(res.tradesLogged);
         setWinningRate(res.winningRate);
+        setInitialCapital(res.initialCapital);
 
         // Settings
         setTheme(res.settings.theme);
@@ -140,6 +144,29 @@ export default function SettingsPage() {
     } catch {
       toast.error("Failed to save changes.");
     }
+  };
+
+  const handleCapitalChange = async (value: number) => {
+    if (!email) return;
+    try {
+      const res = await updateInitialCapital(email, value);
+      if (res.success) {
+        toast.success("Invested Capital updated!");
+      } else {
+        toast.error(res.error || "Failed to update capital");
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Failed to save capital change.");
+    }
+  };
+
+  const handlePlanUpgrade = async (planId: "pro" | "mentor") => {
+    if (!email) return;
+    await initiateCashfreePayment({
+      planId,
+      email
+    });
   };
 
   // Profile save
@@ -227,7 +254,82 @@ export default function SettingsPage() {
       {/* ── MAIN SETTINGS FORMS PANEL (Col span 3) ── */}
       <div className="xl:col-span-3 space-y-6">
         
-        {activeTab !== "General" ? (
+        {activeTab === "Plans & Billing" ? (
+          <div className="space-y-[24px]">
+            {/* Current Plan Card */}
+            <div className="bg-gradient-to-r from-[#6D3DF5] to-[#8F66FF] border border-[#EEF0F4] rounded-[24px] p-6 text-white shadow-md relative overflow-hidden">
+              <div className="absolute right-0 bottom-0 translate-x-10 translate-y-10 opacity-10 pointer-events-none">
+                <CreditCard size={250} />
+              </div>
+              <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div>
+                  <span className="text-[10px] uppercase font-black tracking-wider bg-white/20 px-2.5 py-1 rounded-full">Current Subscription</span>
+                  <h2 className="text-2xl font-black mt-3 uppercase tracking-tight">
+                    {plan === "PRO" ? "Pro Plan" : plan === "MENTOR" ? "Mentor Plan" : "Free Plan"}
+                  </h2>
+                  <p className="text-xs font-semibold text-white/80 mt-1">Next renewal / review date: {new Date(Date.now() + 30*24*60*60*1000).toLocaleDateString()}</p>
+                </div>
+                <div className="bg-white/10 px-4 py-3 rounded-2xl border border-white/10 text-right">
+                  <span className="text-[10px] font-black uppercase text-white/70 block">Status</span>
+                  <span className="text-sm font-black uppercase tracking-wide">ACTIVE</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Plan Options Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Pro Upgrade Card */}
+              <div className="bg-white border border-[#EEF0F4] rounded-[24px] p-6 shadow-sm flex flex-col justify-between">
+                <div>
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-base font-black text-[#0F172A]">Pro Plan</h3>
+                    <span className="text-xs font-extrabold text-[#6D3DF5]">₹499 / Mo</span>
+                  </div>
+                  <p className="text-[#64748B] text-xs font-semibold mt-2 leading-relaxed">
+                    Unlock unlimited trades, advanced analytics, strategy performance logs, Excel imports, and mistake tracking.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handlePlanUpgrade("pro")}
+                  disabled={plan === "PRO" || plan === "MENTOR"}
+                  className={`w-full py-3 font-black text-xs rounded-xl mt-6 transition-all ${
+                    plan === "PRO" || plan === "MENTOR"
+                      ? "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
+                      : "bg-[#6D3DF5] hover:bg-[#5B2FD4] text-white shadow-md shadow-[#6D3DF5]/15 cursor-pointer"
+                  }`}
+                >
+                  {plan === "PRO" || plan === "MENTOR" ? "✓ Subscribed" : "Upgrade to Pro — ₹499/mo"}
+                </button>
+              </div>
+
+              {/* Mentor Upgrade Card */}
+              <div className="bg-white border border-[#EEF0F4] rounded-[24px] p-6 shadow-sm flex flex-col justify-between">
+                <div>
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-base font-black text-[#0F172A]">Mentor Plan</h3>
+                    <span className="text-xs font-extrabold text-[#E94B8A]">₹4,999 / Mo</span>
+                  </div>
+                  <p className="text-[#64748B] text-xs font-semibold mt-2 leading-relaxed">
+                    Designed for active traders seeking expert guidance, personalized accountability reviews, and priority mentor callbacks.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handlePlanUpgrade("mentor")}
+                  disabled={plan === "MENTOR"}
+                  className={`w-full py-3 font-black text-xs rounded-xl mt-6 transition-all ${
+                    plan === "MENTOR"
+                      ? "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
+                      : "bg-gradient-to-r from-[#E94B8A] to-[#C93370] hover:opacity-90 text-white shadow-md shadow-[#E94B8A]/15 cursor-pointer"
+                  }`}
+                >
+                  {plan === "MENTOR" ? "✓ Subscribed" : "Upgrade to Mentor — ₹4,999/mo"}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : activeTab !== "General" ? (
           <div className="bg-white border border-[#EEF0F4] rounded-[24px] p-12 text-center shadow-sm">
             <Settings className="w-12 h-12 text-[#6D3DF5] mx-auto mb-4 animate-spin" style={{ animationDuration: '3s' }} />
             <h3 className="text-base font-black text-[#0F172A]">{activeTab} Settings</h3>
@@ -400,6 +502,26 @@ export default function SettingsPage() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pl-0 md:pl-16 text-xs font-semibold text-slate-700">
+                {/* Invested Capital */}
+                <div className="flex flex-col gap-1.5 sm:col-span-2">
+                  <label className="text-[10px] text-[#6D3DF5] font-black block uppercase tracking-wider">Invested Capital (Initial Balance)</label>
+                  <div className="relative flex items-center">
+                    <span className="absolute left-4 text-[#64748B] font-bold text-xs">₹</span>
+                    <input
+                      type="number"
+                      step="5000"
+                      value={initialCapital}
+                      onChange={e => {
+                        setInitialCapital(Number(e.target.value));
+                        handleCapitalChange(Number(e.target.value));
+                      }}
+                      className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-[#EEF0F4] rounded-xl text-xs font-semibold focus:outline-none focus:border-[#6D3DF5] focus:bg-white transition-colors"
+                      placeholder="e.g. 100000"
+                    />
+                  </div>
+                  <p className="text-[10px] text-[#64748B] font-semibold mt-0.5">This sets the baseline account balance used to calculate equity curves and drawdown analytics.</p>
+                </div>
+
                 {/* Default Risk */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] text-slate-400 font-semibold block uppercase">Default Risk per Trade</label>

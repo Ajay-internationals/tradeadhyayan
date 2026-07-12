@@ -159,6 +159,18 @@ export async function getDashboardMetrics(email: string) {
     // Recent trades (descending)
     const recentTrades = [...trades].sort((a, b) => new Date(b.entryTime).getTime() - new Date(a.entryTime).getTime()).slice(0, 5);
 
+    // Count mistakes by type
+    const mistakeTypeCounts: Record<string, number> = {};
+    user.Mistake.forEach(m => {
+      const type = m.mistakeType || "Unclassified";
+      mistakeTypeCounts[type] = (mistakeTypeCounts[type] || 0) + 1;
+    });
+
+    const mistakeBreakdown = Object.entries(mistakeTypeCounts).map(([name, value]) => ({
+      name,
+      value
+    })).sort((a, b) => b.value - a.value);
+
     return {
       hasTrades: true,
       totalTrades,
@@ -181,6 +193,7 @@ export async function getDashboardMetrics(email: string) {
       strategyPerf,
       instrumentPerf,
       recentTrades,
+      mistakeBreakdown
     };
 
   } catch (error) {

@@ -80,15 +80,17 @@ function BrokerSyncContent() {
         return;
       }
 
-      // Fetch active connections status
-      const res = await fetch(`/api/brokers/status?email=${encodeURIComponent(email)}`);
-      const data = await res.json();
-      if (data.success) {
-        setConnections(data.connections);
+      // Fetch active connections, stats, and logs in parallel!
+      const [connectionsRes, statsRes, logsRes] = await Promise.all([
+        fetch(`/api/brokers/status?email=${encodeURIComponent(email)}`).then(r => r.json()),
+        getBrokerSyncStats(email),
+        getSyncLogs(email)
+      ]);
+
+      if (connectionsRes.success) {
+        setConnections(connectionsRes.connections);
       }
 
-      // Fetch dynamic stats
-      const statsRes = await getBrokerSyncStats(email);
       if (statsRes.success) {
         setStats({
           totalTrades: statsRes.totalTrades,
@@ -99,9 +101,7 @@ function BrokerSyncContent() {
         });
       }
 
-      // Fetch sync logs
-      const logs = await getSyncLogs(email);
-      setSyncHistory(logs);
+      setSyncHistory(logsRes);
 
     } catch (err) {
       console.error("Failed to load broker sync page data:", err);

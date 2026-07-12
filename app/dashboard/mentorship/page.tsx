@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { initiateCashfreePayment } from "@/lib/payment-client";
 import { getClientMentorshipOverview, submitClientReviewRequest } from "@/app/actions/mentorship";
 import { 
   CheckCircle2, AlertCircle, Quote, Sparkles, TrendingUp,
@@ -205,7 +206,16 @@ export default function ClientMentorshipPage() {
       });
       const resJson = await res.json();
       if (!res.ok) throw new Error(resJson.error);
-      toast.success("🎉 Session request submitted to your mentor!");
+
+      // Redirect to Cashfree payment for this session
+      const activeEmail = (typeof window !== "undefined" ? localStorage.getItem("trade_adhyayan_user") : "") || "";
+      await initiateCashfreePayment({
+        planId: "mentorship",
+        email: activeEmail,
+        mentorId
+      });
+
+      toast.success("🎉 Session requested! Pay to confirm booking.");
       setSessionTab("upcoming");
       setSelectedDate("");
       setBookingNotes("");

@@ -39,6 +39,7 @@ export default function ReportsDashboardPage() {
   const [activeTab, setActiveTab] = useState<string>("overview");
   const [pnlVsTrades, setPnlVsTrades] = useState<"pnl" | "trades">("pnl");
   const [showDownloadDropdown, setShowDownloadDropdown] = useState(false);
+  const [access, setAccess] = useState<any>(null);
 
   useEffect(() => {
     const email = localStorage.getItem("trade_adhyayan_user");
@@ -49,8 +50,17 @@ export default function ReportsDashboardPage() {
 
     const loadData = async () => {
       try {
-        const reportsData = await getReportsData(email);
+        const [reportsData, accessRes] = await Promise.all([
+          getReportsData(email),
+          fetch("/api/subscription/my-access")
+        ]);
+        
         setData(reportsData);
+
+        if (accessRes.ok) {
+          const { access } = await accessRes.json();
+          setAccess(access);
+        }
       } catch (err) {
         console.error("Failed to load reports data:", err);
         toast.error("Failed to load reports metrics.");
@@ -97,6 +107,10 @@ export default function ReportsDashboardPage() {
 
   const handleDownloadPDF = () => {
     setShowDownloadDropdown(false);
+    if (access && !access.exports) {
+      toast.error("PDF Export is available on PRO and MENTORSHIP plans.");
+      return;
+    }
     toast.loading("Preparing PDF report...", { id: "pdf-toast" });
     setTimeout(() => {
       toast.dismiss("pdf-toast");
@@ -106,6 +120,10 @@ export default function ReportsDashboardPage() {
 
   const handleDownloadCSV = () => {
     setShowDownloadDropdown(false);
+    if (access && !access.exports) {
+      toast.error("CSV Export is available on PRO and MENTORSHIP plans.");
+      return;
+    }
     if (!data) {
       toast.error("No report data available to download.");
       return;

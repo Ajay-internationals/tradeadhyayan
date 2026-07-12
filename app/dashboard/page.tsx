@@ -27,7 +27,8 @@ import {
   ExternalLink,
   Flame,
   CheckCircle2,
-  Lightbulb
+  Lightbulb,
+  Plus
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -130,7 +131,15 @@ export default function DashboardPage() {
   const donutData = useMemo(() => {
     if (!metrics) return [];
     
-    // We break down emotional / discipline mistakes. If user has database mistakes, load them:
+    if (metrics.mistakeBreakdown && metrics.mistakeBreakdown.length > 0) {
+      const colors = ["#8B5CF6", "#EF4444", "#F59E0B", "#2563EB", "#10B981", "#EC4899", "#14B8A6"];
+      return metrics.mistakeBreakdown.map((m: any, idx: number) => ({
+        name: m.name,
+        value: m.value,
+        color: colors[idx % colors.length]
+      }));
+    }
+    
     // Fallback default distribution matching the exact screenshot categories if none exist in DB:
     const categories = [
       { name: "Emotional Trades", value: 37, color: "#8B5CF6" },
@@ -176,13 +185,33 @@ export default function DashboardPage() {
   if (!metrics || !metrics.hasTrades) {
     return (
       <div className="flex-1 bg-[#F7F8FC] p-6 min-h-[70vh] flex flex-col items-center justify-center">
-        <EmptyState
-          title="Welcome to your Dashboard"
-          desc="It looks like you haven't recorded any trades yet. Sync your broker or add a trade manually to unlock powerful analytics and insights."
-          actionText="Sync Broker"
-          onAction={() => router.push("/dashboard/trade-journal/broker-sync")}
-          icon={<BarChart2 size={28} />}
-        />
+        <div className="bg-white border border-[#EEF0F4] rounded-[24px] p-10 text-center flex flex-col items-center justify-center min-h-[350px] shadow-[0_12px_30px_rgba(15,23,42,0.04)] w-full max-w-lg">
+          <div className="w-16 h-16 bg-[#EFF6FF] rounded-2xl flex items-center justify-center text-[#2563EB] mb-5 shadow-[0_4px_12px_rgba(37,99,235,0.04)]">
+            <BarChart2 size={28} />
+          </div>
+          <h3 className="text-base font-black text-[#111827] tracking-tight mb-2">
+            Welcome to your Dashboard
+          </h3>
+          <p className="text-xs font-semibold text-[#6B7280] max-w-sm leading-relaxed mb-6">
+            It looks like you haven't recorded any trades yet. Sync your broker or add a trade manually to unlock powerful analytics and insights.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={() => router.push("/dashboard/trade-journal/broker-sync")}
+              className="px-6 py-3 bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-black rounded-xl shadow-lg shadow-[#2563EB]/15 transition-all cursor-pointer flex items-center gap-2 justify-center"
+            >
+              <Zap size={14} />
+              Sync Broker
+            </button>
+            <button
+              onClick={() => router.push("/dashboard/trade-journal/manual-add")}
+              className="px-6 py-3 bg-white border border-[#EEF0F4] hover:border-slate-300 text-[#4B5563] text-xs font-black rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-2 justify-center"
+            >
+              <Plus size={14} />
+              Add Trade Manually
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -333,7 +362,7 @@ export default function DashboardPage() {
                       dataKey="value"
                       stroke="none"
                     >
-                      {donutData.map((entry, idx) => (
+                      {donutData.map((entry: any, idx: number) => (
                         <Cell key={`cell-${idx}`} fill={entry.color} />
                       ))}
                     </Pie>
@@ -348,7 +377,7 @@ export default function DashboardPage() {
 
               {/* Legends details */}
               <div className="flex-1 space-y-2 max-h-[140px] overflow-y-auto w-full pr-1">
-                {donutData.map((entry, idx) => (
+                {donutData.map((entry: any, idx: number) => (
                   <div key={idx} className="flex justify-between items-center text-[10px] font-semibold text-[#6B7280]">
                     <div className="flex items-center gap-1.5 min-w-0">
                       <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: entry.color }}></div>

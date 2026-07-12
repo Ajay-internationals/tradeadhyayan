@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { ZerodhaAdapter } from "@/lib/brokers/zerodha.adapter";
 import { UpstoxAdapter } from "@/lib/brokers/upstox.adapter";
 import { FyersAdapter } from "@/lib/brokers/fyers.adapter";
-
 import { prisma } from "@/lib/db";
+import { getUserPlan } from "@/lib/subscription/access";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +39,11 @@ export async function GET(req: Request) {
       if (user) {
         userId = user.id;
       }
+    }
+
+    const access = await getUserPlan(userId);
+    if (!access.brokerSync) {
+      return NextResponse.json({ error: "UPGRADE_REQUIRED" }, { status: 403 });
     }
 
     // Pass the base URL so adapters know where to redirect back

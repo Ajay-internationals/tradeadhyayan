@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createMentorshipGoogleMeetSession } from "@/lib/session-booking";
 import { z } from "zod";
+import { getUserPlan } from "@/lib/subscription/access";
 
 const BookSessionSchema = z.object({
   mentorId: z.string().min(1),
@@ -20,6 +21,11 @@ export async function POST(req: Request) {
     const userRole = req.headers.get("x-user-role") || "CLIENT";
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const access = await getUserPlan(userId);
+    if (!access.mentorAccess && userRole === "CLIENT") {
+      return NextResponse.json({ error: "UPGRADE_REQUIRED" }, { status: 403 });
     }
 
     const body = await req.json();

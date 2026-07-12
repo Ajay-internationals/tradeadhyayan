@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { ZerodhaAdapter } from "@/lib/brokers/zerodha.adapter";
 import { UpstoxAdapter } from "@/lib/brokers/upstox.adapter";
 import { FyersAdapter } from "@/lib/brokers/fyers.adapter";
+import { getUserPlan } from "@/lib/subscription/access";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,11 @@ export async function POST(req: Request) {
       if (user) {
         userId = user.id;
       }
+    }
+
+    const access = await getUserPlan(userId);
+    if (!access.brokerSync) {
+      return NextResponse.json({ success: false, error: "UPGRADE_REQUIRED" }, { status: 403 });
     }
 
     let adapter;

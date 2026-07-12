@@ -1,472 +1,501 @@
-"use client";
-
+import type { Metadata } from "next";
 import Link from "next/link";
-import { 
-  Lock, 
-  RefreshCw, 
-  BarChart2, 
-  BookOpen, 
-  LineChart, 
-  AlertTriangle, 
-  Target, 
-  Users, 
-  Brain, 
-  TrendingDown, 
-  Crosshair, 
-  Ban, 
-  CheckCircle2, 
+import {
   ArrowRight,
-  ShieldAlert,
-  Sparkles
+  BarChart3,
+  BookOpen,
+  Brain,
+  CheckCircle2,
+  ChevronDown,
+  LineChart,
+  Shield,
+  Sparkles,
+  Star,
+  Target,
+  TrendingUp,
+  Users,
+  Zap,
+  AlertTriangle,
+  Trophy,
+  Clock,
+  RefreshCw,
 } from "lucide-react";
 
-export default function Home() {
+// ─── SEO METADATA ───────────────────────────────────────────────────────────
+export const metadata: Metadata = {
+  title: "Trade Adhyayan | #1 Trading Journal & Analytics Platform for Indian Traders",
+  description:
+    "The most powerful trading journal built for Indian traders. Track every trade, identify costly mistakes, master trading psychology, and grow consistently with AI-powered analytics and expert mentorship.",
+  keywords: [
+    "trading journal India",
+    "trade journal app",
+    "trading analytics platform",
+    "NSE BSE trade tracker",
+    "trading mistake tracker",
+    "trading psychology app",
+    "trading mentor India",
+    "Zerodha journal",
+    "Upstox trade journal",
+    "Fyers trading journal",
+  ].join(", "),
+  openGraph: {
+    title: "Trade Adhyayan — The Ultimate Trading Journal for Indian Traders",
+    description:
+      "Track trades, fix mistakes, improve discipline. Join 100+ traders who grow with Trade Adhyayan.",
+    url: "https://trade-adhyayan-next.vercel.app",
+    siteName: "Trade Adhyayan",
+    type: "website",
+    locale: "en_IN",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Trade Adhyayan — Trading Journal & Analytics",
+    description: "Track every trade. Fix every mistake. Grow consistently.",
+  },
+  alternates: {
+    canonical: "https://trade-adhyayan-next.vercel.app",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
+  },
+};
+
+// ─── DATA ────────────────────────────────────────────────────────────────────
+const stats = [
+  { value: "100+", label: "Active Traders", icon: Users },
+  { value: "10,000+", label: "Trades Recorded", icon: Shield },
+  { value: "₹1+ Crore", label: "Performance Tracked", icon: Target },
+  { value: "4.9/5", label: "Average Rating", icon: Star },
+];
+
+const features = [
+  {
+    icon: BookOpen,
+    title: "Smart Trade Journal",
+    desc: "Log every trade in seconds with auto-import from Zerodha, Upstox, Fyers & more. No manual data entry.",
+    color: "from-violet-500 to-purple-600",
+    shadow: "shadow-violet-500/20",
+  },
+  {
+    icon: AlertTriangle,
+    title: "AI Mistake Detector",
+    desc: "Our AI flags rule violations, emotional trades, and pattern mistakes — showing exactly how much they cost you.",
+    color: "from-rose-500 to-pink-600",
+    shadow: "shadow-rose-500/20",
+  },
+  {
+    icon: BarChart3,
+    title: "Deep Analytics & Reports",
+    desc: "Win rate, R-multiple, streak analysis, strategy performance, and 30+ metrics on a beautiful dashboard.",
+    color: "from-blue-500 to-cyan-600",
+    shadow: "shadow-blue-500/20",
+  },
+  {
+    icon: Brain,
+    title: "Psychology Tracker",
+    desc: "Tag emotional states on trades. Discover patterns in fear, greed, and overconfidence that sabotage your PnL.",
+    color: "from-amber-500 to-orange-600",
+    shadow: "shadow-amber-500/20",
+  },
+  {
+    icon: Target,
+    title: "Strategy Builder",
+    desc: "Define and track multiple trading strategies with entry/exit rules and live performance metrics.",
+    color: "from-emerald-500 to-green-600",
+    shadow: "shadow-emerald-500/20",
+  },
+  {
+    icon: Users,
+    title: "1-on-1 Mentorship",
+    desc: "Get personalised guidance from verified professional traders who review your journal and provide actionable feedback.",
+    color: "from-indigo-500 to-violet-600",
+    shadow: "shadow-indigo-500/20",
+  },
+];
+
+const problems = [
+  { icon: AlertTriangle, text: "Repeating the same costly mistakes every week" },
+  { icon: Brain, text: "Trading emotionally without realising it" },
+  { icon: LineChart, text: "No idea which strategy actually works" },
+  { icon: Clock, text: "Wasting hours manually tracking trades in Excel" },
+  { icon: TrendingUp, text: "Growing account size but not growing as a trader" },
+  { icon: Users, text: "No accountability or expert feedback on your trades" },
+];
+
+const testimonials = [
+  {
+    name: "Rohan Mehta",
+    role: "Full-time Trader, NSE Options",
+    avatar: "RM",
+    color: "from-violet-500 to-purple-600",
+    text: "Trade Adhyayan showed me that 68% of my losses came from just 2 recurring mistakes. Fixing those two things turned my account around completely within 3 months.",
+    rating: 5,
+  },
+  {
+    name: "Priya Sharma",
+    role: "Swing Trader, BSE Equity",
+    avatar: "PS",
+    color: "from-rose-500 to-pink-600",
+    text: "The psychology tagging feature is a game changer. I discovered I was overtrading every Monday after a weekend of over-analysis. Just being aware of it changed everything.",
+    rating: 5,
+  },
+  {
+    name: "Karthik Nair",
+    role: "F&O Trader, Zerodha",
+    avatar: "KN",
+    color: "from-blue-500 to-cyan-600",
+    text: "The mentor review feature is incredible. My mentor spotted in 10 minutes what I had been missing for 2 years — I was placing stops too tight on gap-up opens.",
+    rating: 5,
+  },
+];
+
+const faqs = [
+  {
+    q: "Which brokers does Trade Adhyayan support?",
+    a: "We support Zerodha, Upstox, Fyers, Angel One, Groww, and more. Trades can be imported automatically or logged manually.",
+  },
+  {
+    q: "Is my trading data secure?",
+    a: "Yes. We use AES-256 bank-level encryption and only ever request read-only access to your broker account. Your data is never sold.",
+  },
+  {
+    q: "Do I need to be an advanced trader to use this?",
+    a: "Absolutely not. Trade Adhyayan is built for beginners and professionals alike. The simpler your journaling habit, the faster you improve.",
+  },
+  {
+    q: "What is included in the Mentorship plan?",
+    a: "You get matched with a verified professional trader for monthly 1-on-1 video sessions, journal reviews, strategy feedback, and a private accountability channel.",
+  },
+  {
+    q: "Can I try it before paying?",
+    a: "Yes. Our Free plan is permanent — no credit card required, no time limit. You can explore and log up to 30 trades completely free.",
+  },
+];
+
+// ─── COMPONENT ────────────────────────────────────────────────────────────────
+export default function HomePage() {
   return (
-    <div className="min-h-screen bg-[#FAFBFF] text-[#0F172A] selection:bg-[#7C3AED]/20 selection:text-[#7C3AED]">
-      
-      {/* NAVBAR */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-[#E9E6F5]">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#7C3AED] to-[#5B21B6] text-white flex items-center justify-center font-black text-sm shadow-md shadow-[#7C3AED]/20">
+    <div className="min-h-screen bg-[#060918] text-white overflow-x-hidden">
+
+      {/* ── NAVBAR ─────────────────────────────────────────────────────────── */}
+      <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-[#060918]/80 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto px-6 h-18 flex items-center justify-between" style={{ height: "72px" }}>
+          <Link href="/" className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-700 flex items-center justify-center font-black text-sm shadow-lg shadow-violet-500/30">
               TA
             </div>
-            <span className="font-black text-xl tracking-tight text-[#0F172A]">Trade Adhyayan</span>
-          </div>
-          
-          <nav className="hidden md:flex items-center gap-8 font-bold text-sm text-[#64748B]">
-            <a href="#features" className="hover:text-[#7C3AED] transition-colors">Features</a>
-            <a href="#problems" className="hover:text-[#7C3AED] transition-colors">Methodology</a>
-            <a href="#dashboard" className="hover:text-[#7C3AED] transition-colors">Dashboard</a>
-            <a href="#stats" className="hover:text-[#7C3AED] transition-colors">Impact</a>
+            <span className="font-black text-xl tracking-tight">Trade Adhyayan</span>
+          </Link>
+
+          <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-white/60">
+            <a href="#features" className="hover:text-white transition-colors">Features</a>
+            <a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a>
+            <a href="#testimonials" className="hover:text-white transition-colors">Testimonials</a>
+            <Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link>
+            <Link href="/about" className="hover:text-white transition-colors">About Us</Link>
+            <Link href="/contact" className="hover:text-white transition-colors">Contact</Link>
           </nav>
 
-          <div className="flex items-center gap-4">
-            <Link href="/login" className="hidden md:block font-bold text-sm text-[#475569] hover:text-[#7C3AED] transition-colors">
+          <div className="flex items-center gap-3">
+            <Link href="/login" className="hidden md:block text-sm font-semibold text-white/60 hover:text-white transition-colors px-4 py-2">
               Login
             </Link>
-            <Link href="/signup" className="px-5 py-2.5 bg-[#0F172A] hover:bg-[#1E293B] text-white font-bold text-sm rounded-xl transition-all shadow-md">
-              Start Free Trial
+            <Link
+              href="/signup"
+              className="px-5 py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-violet-500/25 transition-all hover:shadow-violet-500/40 hover:-translate-y-0.5"
+            >
+              Start Free →
             </Link>
           </div>
         </div>
       </header>
 
-      {/* HERO SECTION */}
-      <section className="pt-24 pb-32 px-6 overflow-hidden relative">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-[#7C3AED]/5 blur-[100px] rounded-full pointer-events-none -z-10"></div>
-        <div className="max-w-4xl mx-auto text-center">
-          
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-[#E9E6F5] shadow-sm mb-8">
-            <Sparkles className="w-4 h-4 text-[#7C3AED]" />
-            <span className="text-sm font-bold text-[#475569]">Built for Traders. Designed for Growth.</span>
+      {/* ── HERO ───────────────────────────────────────────────────────────── */}
+      <section className="relative pt-36 pb-28 px-6 overflow-hidden">
+        {/* Background glows */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[600px] bg-violet-600/10 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute top-40 left-1/4 w-[400px] h-[400px] bg-blue-600/8 blur-[100px] rounded-full pointer-events-none" />
+        <div className="absolute top-40 right-1/4 w-[400px] h-[400px] bg-rose-600/8 blur-[100px] rounded-full pointer-events-none" />
+
+        {/* Grid pattern overlay */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.03]"
+          style={{
+            backgroundImage: `linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)`,
+            backgroundSize: "60px 60px",
+          }}
+        />
+
+        <div className="relative max-w-5xl mx-auto text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm mb-8">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-sm font-semibold text-white/70">Trusted by 100+ traders across India</span>
           </div>
 
-          <h1 className="text-5xl md:text-7xl font-black tracking-tight text-[#0F172A] mb-6 leading-tight">
-            The Ultimate Trading <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#7C3AED] to-[#DB2777]">Journal</span>
+          <h1 className="text-5xl md:text-7xl font-black tracking-tight leading-[1.05] mb-7">
+            The Ultimate{" "}
+            <span className="relative inline-block">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-pink-400 font-black">
+                Journal
+              </span>
+            </span>
           </h1>
-          
-          <h2 className="text-2xl md:text-3xl font-bold text-[#475569] mb-8">
-            To Track, Review & Improve.
-          </h2>
 
-          <p className="text-lg md:text-xl text-[#64748B] max-w-2xl mx-auto mb-12 leading-relaxed">
-            Track trades, review mistakes, improve discipline, and build better trading habits through journaling and analytics.
+          <p className="text-xl md:text-2xl text-white/60 max-w-3xl mx-auto mb-4 leading-relaxed font-medium">
+            India's most powerful trading journal. Track every trade, detect costly patterns,
+            and transform your trading with AI analytics and expert mentorship.
+          </p>
+          <p className="text-base text-white/40 mb-12 font-medium">
+            Works with Zerodha, Upstox, Fyers, Angel One & more.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-            <Link href="/signup" className="w-full sm:w-auto px-8 py-4 bg-[#7C3AED] hover:bg-[#6D28D9] text-white font-black text-lg rounded-2xl shadow-xl shadow-[#7C3AED]/25 transition-all flex items-center justify-center gap-2 group">
-              Start Free Trial <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link
+              href="/signup"
+              id="hero-cta-primary"
+              className="group w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-black text-lg rounded-2xl shadow-2xl shadow-violet-500/30 transition-all hover:shadow-violet-500/50 hover:-translate-y-1 flex items-center justify-center gap-2"
+            >
+              Start Journaling Free
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
-            <button className="w-full sm:w-auto px-8 py-4 bg-white hover:bg-slate-50 text-[#0F172A] border-2 border-[#E9E6F5] font-black text-lg rounded-2xl transition-all shadow-sm">
-              Watch Demo
-            </button>
+            <Link
+              href="/features"
+              id="hero-cta-secondary"
+              className="w-full sm:w-auto px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white font-bold text-lg rounded-2xl transition-all flex items-center justify-center gap-2"
+            >
+              See All Features
+            </Link>
           </div>
+        </div>
+      </section>
 
-          <div className="grid md:grid-cols-3 gap-6 max-w-3xl mx-auto text-left">
-            <div className="bg-white p-5 rounded-2xl shadow-sm border border-[#E9E6F5]">
-              <Lock className="w-6 h-6 text-[#15B77A] mb-3" />
-              <h3 className="font-bold text-[#0F172A] mb-1">Secure & Private</h3>
-              <p className="text-sm text-[#64748B] leading-relaxed">Your trading data is fully encrypted and protected.</p>
+      {/* ── STATS BAR ──────────────────────────────────────────────────────── */}
+      <section className="py-14 px-6 border-y border-white/5 bg-white/[0.02]">
+        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
+          {stats.map((s) => (
+            <div key={s.label} className="text-center">
+              <div className="text-4xl font-black text-white mb-1">{s.value}</div>
+              <div className="text-sm text-white/50 font-semibold">{s.label}</div>
             </div>
-            <div className="bg-white p-5 rounded-2xl shadow-sm border border-[#E9E6F5]">
-              <RefreshCw className="w-6 h-6 text-[#3B82F6] mb-3" />
-              <h3 className="font-bold text-[#0F172A] mb-1">Auto Broker Sync</h3>
-              <p className="text-sm text-[#64748B] leading-relaxed">Import trades automatically from supported brokers.</p>
+          ))}
+        </div>
+      </section>
+
+      {/* ── PROBLEM SECTION ────────────────────────────────────────────────── */}
+      <section className="py-28 px-6" id="how-it-works">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid lg:grid-cols-12 gap-12 items-center">
+            
+            {/* Left side problem description */}
+            <div className="lg:col-span-5 text-left">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-rose-500/10 border border-rose-500/20 mb-6">
+                <AlertTriangle className="w-4 h-4 text-rose-400" />
+                <span className="text-sm font-bold text-rose-400">Sound Familiar?</span>
+              </div>
+              <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-6 leading-tight">
+                Most traders keep losing because they{" "}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-pink-400">
+                  never review.
+                </span>
+              </h2>
+              <p className="text-lg text-white/50 font-medium leading-relaxed mb-6">
+                Without a structured journal, every trading mistake repeats itself indefinitely — costing you money week after week.
+              </p>
+              <div className="inline-flex items-center gap-3 px-6 py-4 rounded-xl bg-gradient-to-r from-violet-900/40 to-purple-900/40 border border-violet-500/20 text-white font-bold text-sm">
+                <Sparkles className="w-5 h-5 text-violet-400" />
+                Trade Adhyayan solves all of these.
+              </div>
             </div>
-            <div className="bg-white p-5 rounded-2xl shadow-sm border border-[#E9E6F5]">
-              <BarChart2 className="w-6 h-6 text-[#7C3AED] mb-3" />
-              <h3 className="font-bold text-[#0F172A] mb-1">Smart Insights</h3>
-              <p className="text-sm text-[#64748B] leading-relaxed">Understand performance through meaningful analytics.</p>
+
+            {/* Right side diagnostics items */}
+            <div className="lg:col-span-7 grid sm:grid-cols-2 gap-4">
+              {problems.map((p, idx) => (
+                <div key={idx} className="p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06] hover:bg-[#1E112A]/40 hover:border-violet-500/30 transition-all flex flex-col justify-between">
+                  <div className="flex items-start gap-3 mb-4">
+                    <p.icon className="w-5 h-5 text-rose-400 mt-0.5 flex-shrink-0" />
+                    <span className="text-white/80 font-black text-sm">{p.text}</span>
+                  </div>
+                  <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden">
+                    <div className="bg-rose-500 h-full rounded-full" style={{ width: `${(idx + 1) * 15 + 30}%` }}></div>
+                  </div>
+                </div>
+              ))}
             </div>
+
           </div>
+        </div>
+      </section>
 
-          <div className="mt-16 flex flex-col items-center gap-4">
-            <div className="flex -space-x-3">
-              <img src="https://i.pravatar.cc/100?img=33" alt="Trader" className="w-10 h-10 rounded-full border-2 border-white object-cover" />
-              <img src="https://i.pravatar.cc/100?img=47" alt="Trader" className="w-10 h-10 rounded-full border-2 border-white object-cover" />
-              <img src="https://i.pravatar.cc/100?img=12" alt="Trader" className="w-10 h-10 rounded-full border-2 border-white object-cover" />
-              <img src="https://i.pravatar.cc/100?img=59" alt="Trader" className="w-10 h-10 rounded-full border-2 border-white object-cover" />
-              <div className="w-10 h-10 rounded-full border-2 border-white bg-[#F4F0FF] flex items-center justify-center text-xs font-bold text-[#7C3AED]">+9k</div>
+      {/* ── FEATURES ───────────────────────────────────────────────────────── */}
+      <section className="py-28 px-6 relative" id="features">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-violet-600/5 blur-[100px] rounded-full pointer-events-none" />
+        <div className="relative max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-500/10 border border-violet-500/20 mb-6">
+              <Sparkles className="w-4 h-4 text-violet-400" />
+              <span className="text-sm font-bold text-violet-400">Everything You Need</span>
             </div>
-            <p className="font-bold text-[#475569] text-sm">Trusted by <span className="text-[#0F172A]">10,000+</span> traders across India.</p>
-          </div>
-
-          <div className="mt-12 inline-flex items-start text-left gap-3 p-4 bg-slate-50 border border-slate-200 rounded-xl max-w-2xl mx-auto">
-            <ShieldAlert className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" />
-            <p className="text-xs text-slate-500 leading-relaxed font-medium">
-              <strong>Compliance Note:</strong> Trade Adhyayan is a trading journal and self-analysis platform designed for educational and review purposes. We do not provide investment advice, stock recommendations, or trading tips.
+            <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-5">
+              Built for traders who take{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-purple-400">
+                growth seriously
+              </span>
+            </h2>
+            <p className="text-lg text-white/50 max-w-2xl mx-auto font-medium">
+              Every feature is purpose-built to help you find your edge, fix your weaknesses, and compound your gains.
             </p>
-          </div>
-
-        </div>
-      </section>
-
-      {/* FEATURES SECTION */}
-      <section id="features" className="py-24 bg-white border-y border-[#E9E6F5]">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-black text-[#0F172A] tracking-tight mb-4">Master Every Aspect of Your Trading</h2>
-            <p className="text-lg text-[#64748B] max-w-2xl mx-auto">Everything you need to turn raw data into actionable discipline.</p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6">
-            <div className="bg-[#FAFBFF] p-6 rounded-3xl border border-[#E9E6F5] hover:shadow-lg hover:shadow-[#7C3AED]/5 transition-all">
-              <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mb-6">
-                <BookOpen className="w-6 h-6" />
-              </div>
-              <h3 className="font-black text-lg text-[#0F172A] mb-3">Journal Every Trade</h3>
-              <p className="text-[#64748B] text-sm leading-relaxed">Capture every trade with complete details and build a habit of reviewing your trading decisions.</p>
-            </div>
-
-            <div className="bg-[#FAFBFF] p-6 rounded-3xl border border-[#E9E6F5] hover:shadow-lg hover:shadow-[#7C3AED]/5 transition-all">
-              <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center mb-6">
-                <LineChart className="w-6 h-6" />
-              </div>
-              <h3 className="font-black text-lg text-[#0F172A] mb-3">Powerful Analytics</h3>
-              <p className="text-[#64748B] text-sm leading-relaxed">Advanced reports and visual analytics to help you understand your strengths and weaknesses.</p>
-            </div>
-
-            <div className="bg-[#FAFBFF] p-6 rounded-3xl border border-[#E9E6F5] hover:shadow-lg hover:shadow-[#7C3AED]/5 transition-all">
-              <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mb-6">
-                <AlertTriangle className="w-6 h-6" />
-              </div>
-              <h3 className="font-black text-lg text-[#0F172A] mb-3">Mistake Tracking</h3>
-              <p className="text-[#64748B] text-sm leading-relaxed">Identify recurring mistakes such as overtrading, emotional trading, and rule violations.</p>
-            </div>
-
-            <div className="bg-[#FAFBFF] p-6 rounded-3xl border border-[#E9E6F5] hover:shadow-lg hover:shadow-[#7C3AED]/5 transition-all">
-              <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mb-6">
-                <Target className="w-6 h-6" />
-              </div>
-              <h3 className="font-black text-lg text-[#0F172A] mb-3">Goal & Discipline</h3>
-              <p className="text-[#64748B] text-sm leading-relaxed">Set measurable goals, monitor progress, and build long-term trading discipline.</p>
-            </div>
-
-            <div className="bg-[#FAFBFF] p-6 rounded-3xl border border-[#E9E6F5] hover:shadow-lg hover:shadow-[#7C3AED]/5 transition-all">
-              <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mb-6">
-                <Users className="w-6 h-6" />
-              </div>
-              <h3 className="font-black text-lg text-[#0F172A] mb-3">Mentor Review</h3>
-              <p className="text-[#64748B] text-sm leading-relaxed">Receive structured feedback from experienced mentors and improve faster.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* PROBLEM SECTION */}
-      <section id="problems" className="py-24 bg-[#0F172A] text-white">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <span className="text-[#7C3AED] font-bold tracking-wider uppercase text-sm mb-2 block">The Reality Check</span>
-            <h2 className="text-3xl md:text-4xl font-black tracking-tight mb-4">The Problems Traders Face Every Day</h2>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="bg-white/5 border border-white/10 p-6 rounded-3xl backdrop-blur-sm">
-              <Brain className="w-8 h-8 text-rose-400 mb-4" />
-              <h3 className="font-black text-lg mb-2">Emotional Trading</h3>
-              <p className="text-slate-400 text-sm leading-relaxed">Fear, greed, and emotions often lead to poor trading decisions.</p>
-            </div>
-            <div className="bg-white/5 border border-white/10 p-6 rounded-3xl backdrop-blur-sm">
-              <TrendingDown className="w-8 h-8 text-orange-400 mb-4" />
-              <h3 className="font-black text-lg mb-2">Overtrading</h3>
-              <p className="text-slate-400 text-sm leading-relaxed">Taking too many low-quality trades reduces overall profitability.</p>
-            </div>
-            <div className="bg-white/5 border border-white/10 p-6 rounded-3xl backdrop-blur-sm">
-              <RefreshCw className="w-8 h-8 text-red-500 mb-4" />
-              <h3 className="font-black text-lg mb-2">Revenge Trading</h3>
-              <p className="text-slate-400 text-sm leading-relaxed">Trying to recover losses quickly often creates larger losses.</p>
-            </div>
-            <div className="bg-white/5 border border-white/10 p-6 rounded-3xl backdrop-blur-sm lg:col-start-2">
-              <Ban className="w-8 h-8 text-yellow-400 mb-4" />
-              <h3 className="font-black text-lg mb-2">No Risk Management</h3>
-              <p className="text-slate-400 text-sm leading-relaxed">Poor position sizing and risk control damage trading accounts.</p>
-            </div>
-            <div className="bg-white/5 border border-white/10 p-6 rounded-3xl backdrop-blur-sm">
-              <Crosshair className="w-8 h-8 text-slate-300 mb-4" />
-              <h3 className="font-black text-lg mb-2">No Review Process</h3>
-              <p className="text-slate-400 text-sm leading-relaxed">Most traders never review their trades and keep repeating the same mistakes.</p>
-            </div>
+            {features.map((f) => (
+              <div
+                key={f.title}
+                className="group relative p-7 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] hover:border-white/10 transition-all hover:-translate-y-1"
+              >
+                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${f.color} flex items-center justify-center mb-5 shadow-lg ${f.shadow}`}>
+                  <f.icon className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-xl font-black text-white mb-3">{f.title}</h3>
+                <p className="text-white/55 leading-relaxed font-medium text-sm">{f.desc}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* STATISTICS SECTION */}
-      <section id="stats" className="py-20 bg-[#7C3AED]">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-8 text-center divide-x divide-white/20">
-            <div className="flex flex-col">
-              <span className="text-3xl md:text-4xl font-black text-white mb-2">10,000+</span>
-              <span className="text-purple-200 font-bold text-sm uppercase tracking-wider">Active Traders</span>
+      {/* ── TESTIMONIALS ───────────────────────────────────────────────────── */}
+      <section className="py-28 px-6 border-t border-white/5" id="testimonials">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/20 mb-6">
+              <Trophy className="w-4 h-4 text-amber-400" />
+              <span className="text-sm font-bold text-amber-400">Real Traders. Real Results.</span>
             </div>
-            <div className="flex flex-col">
-              <span className="text-3xl md:text-4xl font-black text-white mb-2">1 Lakh+</span>
-              <span className="text-purple-200 font-bold text-sm uppercase tracking-wider">Trades Analyzed</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-3xl md:text-4xl font-black text-[#15B77A] mb-2">78%</span>
-              <span className="text-purple-200 font-bold text-sm uppercase tracking-wider">Improved Consistency</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-3xl md:text-4xl font-black text-white mb-2">4.8/5</span>
-              <span className="text-purple-200 font-bold text-sm uppercase tracking-wider">Average Rating</span>
-            </div>
-            <div className="flex flex-col hidden md:flex border-none">
-              <span className="text-3xl md:text-4xl font-black text-white mb-2">₹1.81 Cr+</span>
-              <span className="text-purple-200 font-bold text-sm uppercase tracking-wider">P&L Tracked</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* DASHBOARD SECTION */}
-      <section id="dashboard" className="py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
-          <div>
-            <h2 className="text-3xl md:text-4xl font-black text-[#0F172A] tracking-tight mb-8">
-              Everything You Need To Review Your Trading
+            <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-5">
+              Traders who{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-400">
+                turned it around
+              </span>
             </h2>
-            <div className="space-y-8">
-              <div className="flex gap-4">
-                <div className="w-10 h-10 rounded-xl bg-[#F4F0FF] text-[#7C3AED] flex items-center justify-center shrink-0">
-                  <BookOpen className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-black text-lg text-[#0F172A] mb-1">Trade Journal</h4>
-                  <p className="text-[#64748B] text-sm leading-relaxed">Add trades manually, upload Excel files, paste trade data, or sync directly from your broker.</p>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="w-10 h-10 rounded-xl bg-[#F4F0FF] text-[#7C3AED] flex items-center justify-center shrink-0">
-                  <BarChart2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-black text-lg text-[#0F172A] mb-1">Performance Analytics</h4>
-                  <p className="text-[#64748B] text-sm leading-relaxed">Track P&L, win rate, risk-reward ratio, expectancy, profit factor, and drawdown.</p>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="w-10 h-10 rounded-xl bg-[#F4F0FF] text-[#7C3AED] flex items-center justify-center shrink-0">
-                  <AlertTriangle className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-black text-lg text-[#0F172A] mb-1">Mistake Analysis</h4>
-                  <p className="text-[#64748B] text-sm leading-relaxed">Understand where losses occur and identify patterns affecting performance.</p>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="w-10 h-10 rounded-xl bg-[#F4F0FF] text-[#7C3AED] flex items-center justify-center shrink-0">
-                  <Target className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-black text-lg text-[#0F172A] mb-1">Strategy Performance</h4>
-                  <p className="text-[#64748B] text-sm leading-relaxed">Compare strategies and discover what actually works for your trading style.</p>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="w-10 h-10 rounded-xl bg-[#F4F0FF] text-[#7C3AED] flex items-center justify-center shrink-0">
-                  <LineChart className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-black text-lg text-[#0F172A] mb-1">Reports & Insights</h4>
-                  <p className="text-[#64748B] text-sm leading-relaxed">Generate daily, weekly, monthly, and yearly performance reports.</p>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="w-10 h-10 rounded-xl bg-[#F4F0FF] text-[#7C3AED] flex items-center justify-center shrink-0">
-                  <CheckCircle2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-black text-lg text-[#0F172A] mb-1">Goals & Consistency</h4>
-                  <p className="text-[#64748B] text-sm leading-relaxed">Stay accountable with measurable goals and progress tracking.</p>
-                </div>
-              </div>
-            </div>
           </div>
-          <div className="bg-[#FAFBFF] rounded-[2rem] border border-[#E9E6F5] p-8 shadow-xl shadow-[#7C3AED]/5 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-400/10 blur-[80px] rounded-full pointer-events-none"></div>
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 relative z-10">
-              <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
-                <h5 className="font-black text-slate-800">Performance Mockup</h5>
-                <span className="text-xs font-bold text-emerald-500 bg-emerald-50 px-2 py-1 rounded-md">Live Sync</span>
-              </div>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
-                  <span className="text-sm font-bold text-slate-600">Total Net P&L</span>
-                  <span className="font-black text-emerald-600">+₹1,42,500</span>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {testimonials.map((t) => (
+              <div key={t.name} className="p-7 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:border-white/10 transition-all flex flex-col">
+                <div className="flex gap-1 mb-5">
+                  {Array(t.rating).fill(0).map((_, i) => (
+                    <Star key={i} className="w-4 h-4 text-amber-400 fill-amber-400" />
+                  ))}
                 </div>
-                <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
-                  <span className="text-sm font-bold text-slate-600">Win Rate</span>
-                  <span className="font-black text-slate-800">68.4%</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
-                  <span className="text-sm font-bold text-slate-600">Profit Factor</span>
-                  <span className="font-black text-slate-800">2.14</span>
+                <p className="text-white/70 text-sm leading-relaxed font-medium flex-grow mb-6">"{t.text}"</p>
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${t.color} flex items-center justify-center text-white text-xs font-black`}>
+                    {t.avatar}
+                  </div>
+                  <div>
+                    <div className="text-white font-bold text-sm">{t.name}</div>
+                    <div className="text-white/40 text-xs font-semibold">{t.role}</div>
+                  </div>
                 </div>
               </div>
-              <div className="mt-6 h-32 bg-gradient-to-r from-emerald-50 to-blue-50 rounded-xl border border-slate-100 flex flex-col items-center justify-center">
-                <LineChart className="w-8 h-8 text-emerald-400 mb-2" />
-                <span className="text-xs font-bold text-slate-400">Equity Curve Visualization</span>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* MENTOR REVIEW SECTION */}
-      <section className="py-24 bg-[#FAFBFF] border-t border-[#E9E6F5]">
-        <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
-          <div className="order-2 lg:order-1 bg-white rounded-[2rem] border border-[#E9E6F5] p-8 shadow-xl shadow-[#7C3AED]/5 relative overflow-hidden">
-            <div className="absolute bottom-0 left-0 w-64 h-64 bg-amber-400/10 blur-[80px] rounded-full pointer-events-none"></div>
-            <div className="bg-slate-50 rounded-2xl shadow-sm border border-slate-200 p-6 relative z-10">
-              <div className="flex gap-4 items-start mb-4">
-                <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center shrink-0 border border-amber-200">
-                  <span className="text-xl">👨‍🏫</span>
-                </div>
-                <div>
-                  <h5 className="font-black text-slate-800">Mentor Feedback</h5>
-                  <p className="text-xs text-slate-500 font-bold mt-1">Reviewing: Breakout Strategy</p>
-                </div>
-              </div>
-              <div className="p-4 bg-white rounded-xl border border-slate-200 text-sm text-slate-600 leading-relaxed font-medium">
-                "Your entry here was structurally perfect, but you exited prematurely due to the minor pullback. Next time, trust the 21 EMA trailing stop rule we discussed. Stop letting fear cut your winners short!"
-              </div>
-            </div>
-          </div>
-          <div className="order-1 lg:order-2">
-            <span className="text-[#7C3AED] font-bold tracking-wider uppercase text-sm mb-2 block">Professional Growth</span>
-            <h2 className="text-3xl md:text-4xl font-black text-[#0F172A] tracking-tight mb-8">
-              Learn From Your Trading Data
+      {/* ── FAQ ────────────────────────────────────────────────────────────── */}
+      <section className="py-28 px-6 border-t border-white/5" id="faq">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-14">
+            <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-4">
+              Frequently Asked{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-purple-400">
+                Questions
+              </span>
             </h2>
-            <p className="text-[#64748B] text-lg mb-8 leading-relaxed">Get structured feedback on:</p>
-            <ul className="space-y-4 mb-8">
-              {['Trade execution', 'Risk management', 'Strategy selection', 'Discipline issues', 'Psychological mistakes', 'Performance improvement opportunities'].map((item, i) => (
-                <li key={i} className="flex items-center gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-[#15B77A] shrink-0" />
-                  <span className="font-bold text-[#0F172A]">{item}</span>
-                </li>
-              ))}
-            </ul>
-            <p className="text-lg font-black text-[#7C3AED] bg-[#F4F0FF] inline-block px-4 py-2 rounded-xl">
-              Turn your trading journal into a complete learning system.
-            </p>
+          </div>
+          <div className="space-y-4">
+            {faqs.map((faq) => (
+              <details
+                key={faq.q}
+                className="group p-6 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:border-white/10 transition-all cursor-pointer"
+              >
+                <summary className="flex items-center justify-between font-bold text-white text-base list-none">
+                  {faq.q}
+                  <ChevronDown className="w-5 h-5 text-white/40 group-open:rotate-180 transition-transform flex-shrink-0" />
+                </summary>
+                <p className="mt-4 text-white/55 text-sm leading-relaxed font-medium">{faq.a}</p>
+              </details>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* CTA SECTION */}
-      <section className="py-24 bg-white border-y border-[#E9E6F5]">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <h2 className="text-3xl md:text-5xl font-black text-[#0F172A] tracking-tight mb-6 leading-tight">
-            Start Your Trading Improvement Journey Today
-          </h2>
-          <p className="text-[#64748B] text-lg md:text-xl mb-10 max-w-2xl mx-auto leading-relaxed">
-            Join thousands of traders who are building consistency, improving discipline, and making better trading decisions through structured review.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/signup" className="w-full sm:w-auto px-10 py-4 bg-[#7C3AED] hover:bg-[#6D28D9] text-white font-black text-lg rounded-2xl shadow-xl shadow-[#7C3AED]/25 transition-all">
-              Start Free Trial
+      {/* ── CTA BANNER ─────────────────────────────────────────────────────── */}
+      <section className="py-24 px-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="relative p-12 md:p-16 rounded-3xl bg-gradient-to-br from-violet-900/60 to-purple-900/60 border border-violet-500/20 text-center overflow-hidden">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-violet-500/10 blur-[80px] rounded-full pointer-events-none" />
+            <div className="relative">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-500/20 border border-violet-500/30 mb-7">
+                <Zap className="w-4 h-4 text-violet-300" />
+                <span className="text-sm font-bold text-violet-300">Start in under 2 minutes</span>
+              </div>
+              <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-5">
+                Ready to trade smarter?
+              </h2>
+              <p className="text-lg text-white/60 mb-10 font-medium max-w-xl mx-auto">
+                Join active traders who review their trades, fix their mistakes, and grow their account with Trade Adhyayan.
+              </p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <Link
+                  href="/signup"
+                  id="bottom-cta-primary"
+                  className="group w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-400 hover:to-purple-400 text-white font-black text-lg rounded-2xl shadow-xl shadow-violet-500/30 transition-all hover:-translate-y-1 flex items-center justify-center gap-2"
+                >
+                  Create Free Account
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </Link>
+                <Link
+                  href="/pricing"
+                  id="bottom-cta-pricing"
+                  className="w-full sm:w-auto px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-lg rounded-2xl transition-all"
+                >
+                  View Pricing
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── FOOTER ─────────────────────────────────────────────────────────── */}
+      <footer className="border-t border-white/5 py-14 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-8 mb-10">
+            <Link href="/" className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-700 flex items-center justify-center font-black text-sm shadow-lg shadow-violet-500/30">
+                TA
+              </div>
+              <span className="font-black text-xl tracking-tight">Trade Adhyayan</span>
             </Link>
-            <button className="w-full sm:w-auto px-10 py-4 bg-white hover:bg-slate-50 text-[#0F172A] border-2 border-[#E9E6F5] font-black text-lg rounded-2xl transition-all shadow-sm">
-              Explore Features
-            </button>
+            <nav className="flex flex-wrap items-center gap-6 text-sm font-semibold text-white/40">
+              <Link href="/features" className="hover:text-white transition-colors">Features</Link>
+              <Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link>
+              <Link href="/about" className="hover:text-white transition-colors">About Us</Link>
+              <Link href="/contact" className="hover:text-white transition-colors">Contact</Link>
+              <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
+              <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
+            </nav>
           </div>
-        </div>
-      </section>
-
-      {/* FOOTER */}
-      <footer className="bg-[#FAFBFF] pt-20 pb-10">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-12 mb-16">
-            <div className="col-span-2">
-              <div className="flex items-center gap-2 mb-6">
-                <div className="w-8 h-8 rounded-lg bg-[#0F172A] text-white flex items-center justify-center font-black text-sm">
-                  TA
-                </div>
-                <span className="font-black text-xl tracking-tight text-[#0F172A]">Trade Adhyayan</span>
-              </div>
-              <p className="font-black text-[#7C3AED] mb-4">Track. Review. Improve.</p>
-              <p className="text-sm text-[#64748B] leading-relaxed max-w-sm mb-6">
-                A trading journal and analytics platform built for traders who want to learn, reflect, and grow consistently.
-              </p>
-              <div className="text-sm text-[#64748B]">
-                <a href="mailto:support@tradeadhyayan.com" className="block hover:text-[#7C3AED] font-bold mb-1">support@tradeadhyayan.com</a>
-                <p className="font-bold">+91 73000 12345</p>
-                <p className="mt-2 text-xs">Monday – Saturday<br/>10:00 AM – 7:00 PM</p>
-              </div>
-            </div>
-            
-            <div>
-              <h4 className="font-black text-[#0F172A] mb-6">Product</h4>
-              <ul className="space-y-4 text-sm font-bold text-[#64748B]">
-                <li><a href="#" className="hover:text-[#7C3AED]">Features</a></li>
-                <li><a href="#" className="hover:text-[#7C3AED]">Modules</a></li>
-                <li><a href="#" className="hover:text-[#7C3AED]">Pricing</a></li>
-                <li><a href="#" className="hover:text-[#7C3AED]">Updates</a></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-black text-[#0F172A] mb-6">Resources</h4>
-              <ul className="space-y-4 text-sm font-bold text-[#64748B]">
-                <li><a href="#" className="hover:text-[#7C3AED]">Blog</a></li>
-                <li><a href="#" className="hover:text-[#7C3AED]">Help Center</a></li>
-                <li><a href="#" className="hover:text-[#7C3AED]">Trading Guide</a></li>
-                <li><a href="#" className="hover:text-[#7C3AED]">Glossary</a></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-black text-[#0F172A] mb-6">Company</h4>
-              <ul className="space-y-4 text-sm font-bold text-[#64748B]">
-                <li><a href="#" className="hover:text-[#7C3AED]">About Us</a></li>
-                <li><a href="#" className="hover:text-[#7C3AED]">Contact Us</a></li>
-                <li><a href="#" className="hover:text-[#7C3AED]">Careers</a></li>
-                <li><a href="#" className="hover:text-[#7C3AED]">Privacy Policy</a></li>
-                <li><a href="#" className="hover:text-[#7C3AED]">Terms & Conditions</a></li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="border-t border-[#E9E6F5] pt-10">
-            <div className="bg-slate-100 p-6 rounded-2xl mb-8 border border-slate-200">
-              <h5 className="font-black text-slate-800 mb-2 text-sm flex items-center gap-2">
-                <ShieldAlert className="w-4 h-4 text-slate-500" /> SEBI Compliance
-              </h5>
-              <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                Educational and self-analysis platform. No tips, recommendations, advisory services, portfolio management services, or investment advice are provided through Trade Adhyayan.
-              </p>
-            </div>
-            
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-bold text-[#64748B]">
-              <p className="text-center md:text-left">Investment in securities markets is subject to market risks. Read all related documents carefully before investing.</p>
-              <p className="shrink-0">© 2026 Trade Adhyayan. All rights reserved.</p>
-            </div>
+          <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-white/30 font-semibold">
+            <p>© {new Date().getFullYear()} Trade Adhyayan. All rights reserved.</p>
+            <p>Built for Indian traders. Made with ❤️ in India.</p>
           </div>
         </div>
       </footer>
-
     </div>
   );
 }

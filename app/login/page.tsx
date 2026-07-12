@@ -212,6 +212,61 @@ export default function LoginPage() {
           </button>
         </form>
 
+        {/* Demo Credentials Helper */}
+        <div style={{
+          marginTop: "20px",
+          padding: "14px",
+          background: "#F8FAFC",
+          border: "1px solid #E2E8F0",
+          borderRadius: "14px",
+        }}>
+          <span style={{ fontSize: "10px", fontWeight: 800, textTransform: "uppercase", color: "#475569", letterSpacing: "0.5px", display: "block", marginBottom: "8px", textAlign: "left" }}>
+            Quick Demo Access
+          </span>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            {[
+              { label: "Admin Portal", email: "ajay@tradeadhyayan.com", pass: "Admin@123", color: "#7C4DFF" },
+              { label: "Mentor Workspace", email: "test_mentor@example.com", pass: "Admin@123", color: "#E94B8A" },
+              { label: "Client Dashboard", email: "test_client@example.com", pass: "Admin@123", color: "#10B981" }
+            ].map((demo, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => {
+                  setEmail(demo.email);
+                  setPassword(demo.pass);
+                  toast.success(`${demo.label} filled! Click Sign In.`);
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  width: "100%",
+                  padding: "8px 10px",
+                  background: "#ffffff",
+                  border: "1px solid #E2E8F0",
+                  borderRadius: "8px",
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  color: "#0F172A",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  transition: "border-color 0.2s",
+                  fontFamily: "inherit",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = demo.color; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#E2E8F0"; }}
+              >
+                <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: demo.color }}></span>
+                  {demo.label}
+                </span>
+                <span style={{ color: "#64748B", fontSize: "9px", fontWeight: 500 }}>Click to fill</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div style={{
           marginTop: "24px",
           paddingTop: "20px",

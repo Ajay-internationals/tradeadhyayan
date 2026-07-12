@@ -1,5 +1,6 @@
 import React from "react";
 import { getAdminMentorshipDashboard } from "@/app/actions/mentorship";
+import { getAdminRevenueDashboard } from "@/app/actions/revenue";
 import { 
   Users, UserCheck, Crown, Hourglass, ClipboardCheck, IndianRupee, UserCircle2,
   Calendar, Bell, Search, Activity, Mail, Server, ShieldCheck, Plus, CheckCircle, UserPlus, User
@@ -10,7 +11,10 @@ import { AdminCharts } from "./AdminCharts";
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
-  const data = await getAdminMentorshipDashboard();
+  const [data, revenue] = await Promise.all([
+    getAdminMentorshipDashboard(),
+    getAdminRevenueDashboard()
+  ]);
 
   return (
     <div className="p-6 max-w-[1600px] mx-auto space-y-6" style={{ backgroundColor: "#F8FAFC", minHeight: "100vh" }}>
@@ -54,7 +58,8 @@ export default async function AdminDashboardPage() {
           { label: "Active Mentorship Clients", val: data.kpis.activeClients.toLocaleString(), sub: "+25 this week", icon: Crown, bg: "bg-[#DBEAFE]", iconColor: "text-[#2563EB]", col: "flex-1" },
           { label: "Pending Reviews", val: data.kpis.pendingReviews.toLocaleString(), sub: "Needs attention", icon: Hourglass, bg: "bg-[#FFEDD5]", iconColor: "text-[#EA580C]", col: "flex-1" },
           { label: "Completed Reviews", val: data.kpis.completedReviews.toLocaleString(), sub: "This week", icon: ClipboardCheck, bg: "bg-[#F3E8FF]", iconColor: "text-[#9333EA]", col: "flex-1" },
-          { label: "Monthly Revenue", val: "₹" + data.kpis.monthlyRevenue.toLocaleString(), sub: "+12.4% vs last month", icon: IndianRupee, bg: "bg-[#DCFCE7]", iconColor: "text-[#16A34A]", col: "flex-1" },
+          { label: "MRR", val: "₹" + revenue.currentMrr.toLocaleString(), sub: `${revenue.activeSubCount} active subs`, icon: IndianRupee, bg: "bg-[#DCFCE7]", iconColor: "text-[#16A34A]", col: "flex-1" },
+          { label: "Monthly Revenue", val: "₹" + revenue.thisMonthRevenue.toLocaleString(), sub: `Total: ₹${revenue.totalRevenue.toLocaleString()}`, icon: IndianRupee, bg: "bg-[#DBEAFE]", iconColor: "text-[#2563EB]", col: "flex-1" },
           { label: "Mentor Capacity Used", val: data.kpis.capacityUsedPercent.toFixed(0) + "%", sub: "Average utilization", icon: UserCircle2, bg: "bg-[#FFEDD5]", iconColor: "text-[#EA580C]", col: "flex-1" },
         ].map((kpi, idx) => (
           <div key={idx} className={`${kpi.col} min-w-[140px] bg-white p-5 rounded-[22px] border border-[#E9E6F5] shadow-sm hover:shadow-md transition-shadow relative overflow-hidden`}>

@@ -1,10 +1,11 @@
 const { PrismaClient } = require('@prisma/client');
 
 async function main() {
-  const directUrl = "postgresql://postgres:Ajay%40trade2529@db.kdrvqtptpymaoekiwirf.supabase.co:5432/postgres?schema=trade_adhyayan";
+  const directUrl = "postgresql://postgres:Ajay%40tradeadhyayan2529@127.0.0.1:5433/postgres?schema=trade_adhyayan&sslmode=no-verify";
   console.log("Connecting using direct URL on port 5432...");
   
   const prisma = new PrismaClient({
+    log: ['query', 'info', 'warn', 'error'],
     datasources: {
       db: {
         url: directUrl

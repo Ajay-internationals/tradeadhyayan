@@ -1,13 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 
-const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: "postgresql://postgres:Ajay%40trade2529@db.kdrvqtptpymaoekiwirf.supabase.co:5432/postgres?schema=trade_adhyayan"
-    }
-  }
-});
+const prisma = new PrismaClient();
 
 async function main() {
   console.log("Seeding admin and mentor roles...");

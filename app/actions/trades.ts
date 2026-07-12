@@ -587,12 +587,8 @@ export async function disconnectBroker(email: string, brokerName: string) {
 export async function getSyncLogs(email: string) {
   try {
     const user = await getOrCreateUser(email);
-    const connections = await prisma.brokerConnection.findMany({
-      where: { userId: user.id },
-    });
-    const connectionIds = connections.map(c => c.id);
     return await prisma.syncLog.findMany({
-      where: { connectionId: { in: connectionIds } },
+      where: { BrokerConnection: { userId: user.id } },
       orderBy: { createdAt: "desc" },
     });
   } catch (error) {
@@ -604,25 +600,21 @@ export async function getSyncLogs(email: string) {
 export async function getBrokerSyncStats(email: string) {
   try {
     const user = await getOrCreateUser(email);
-    const totalTrades = await prisma.trade.count({
-      where: { userId: user.id }
-    });
-    const syncedTrades = await prisma.trade.count({
-      where: { userId: user.id, source: { in: ["BROKER", "ZERODHA", "UPSTOX", "FYERS"] } }
-    });
-    const positions = await prisma.brokerPosition.count({
-      where: { userId: user.id }
-    });
+    const userId = user.id;
+    
+    const [totalTrades, syncedTrades, positions, trades] = await Promise.all([
+      prisma.trade.count({ where: { userId } }),
+      prisma.trade.count({ where: { userId, source: { in: ["BROKER", "ZERODHA", "UPSTOX", "FYERS"] } } }),
+      prisma.brokerPosition.count({ where: { userId } }),
+      prisma.trade.findMany({
+        where: { userId, status: "CLOSED" },
+        select: { entryTime: true, exitTime: true }
+      })
+    ]);
     
     // For account capital/balance
     const accountBalance = user.initialCapital || 248560;
 
-    // Data breakdown
-    const trades = await prisma.trade.findMany({
-      where: { userId: user.id, status: "CLOSED" },
-      select: { entryTime: true, exitTime: true }
-    });
-    
     let intradayCount = 0;
     let swingCount = 0;
     let positionalCount = 0;

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { initiateCashfreePayment } from "@/lib/payment-client";
 import { getClientMentorshipOverview, submitClientReviewRequest } from "@/app/actions/mentorship";
 import { 
   CheckCircle2, AlertCircle, Quote, Sparkles, TrendingUp,
@@ -97,6 +98,7 @@ export default function ClientMentorReviewPage() {
     }
     return null;
   });
+  const [access, setAccess] = useState<any>(null);
   const [mentorId, setMentorId] = useState<string | null>(() => {
     if (typeof window !== "undefined") {
       const email = localStorage.getItem("trade_adhyayan_user");
@@ -205,7 +207,12 @@ export default function ClientMentorReviewPage() {
       });
       const resJson = await res.json();
       if (!res.ok) throw new Error(resJson.error);
-      toast.success("🎉 Session request submitted to your mentor!");
+
+      // Trigger Cashfree payment for this session booking
+      const activeEmail = typeof window !== "undefined" ? localStorage.getItem("trade_adhyayan_user") : null;
+      await initiateCashfreePayment({ planId: "mentorship", email: activeEmail, mentorId });
+
+      toast.success("🎉 Session requested! Complete payment to confirm.");
       setSessionTab("upcoming");
       setSelectedDate("");
       setBookingNotes("");
@@ -242,8 +249,20 @@ export default function ClientMentorReviewPage() {
 
     const loadData = async () => {
       try {
-        const result = await getClientMentorshipOverview(email);
+        const [result, accessRes] = await Promise.all([
+          getClientMentorshipOverview(email),
+          fetch("/api/subscription/my-access")
+        ]);
         setData(result);
+
+        if (accessRes.ok) {
+          const { access } = await accessRes.json();
+          setAccess(access);
+          if (!access.mentorAccess) {
+            setLoading(false);
+            return; // Stop loading data if they don't have access
+          }
+        }
 
         const userRes = await fetch(`/api/user/me?email=${encodeURIComponent(email)}`);
         if (userRes.ok) {
@@ -274,6 +293,27 @@ export default function ClientMentorReviewPage() {
     return (
       <div className="flex h-[80vh] items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-[#6D3DF5] border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
+
+  if (access && !access.mentorAccess) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[80vh] text-center max-w-lg mx-auto">
+        <div className="w-16 h-16 bg-[#F8FAFC] rounded-2xl flex items-center justify-center mb-6 border border-[#E2E8F0]">
+          <BookOpen className="w-8 h-8 text-[#6D3DF5]" />
+        </div>
+        <h2 className="text-2xl font-bold text-[#0F172A] mb-3">Professional Mentorship</h2>
+        <p className="text-[#64748B] mb-8 leading-relaxed">
+          Unlock 1:1 expert trade reviews, personalized action plans, and private mentoring sessions to accelerate your trading journey.
+        </p>
+        <button
+          onClick={() => initiateCashfreePayment({ planId: "mentor", email: localStorage.getItem("trade_adhyayan_user") })}
+          className="bg-gradient-to-r from-[#6D3DF5] to-[#8B5CF6] hover:from-[#5B2FD1] hover:to-[#7C3AED] text-white font-medium py-3 px-8 rounded-xl flex items-center gap-2 transition-all shadow-md hover:shadow-lg shadow-[#6D3DF5]/20"
+        >
+          <Sparkles className="w-4 h-4" />
+          <span>Upgrade to Mentorship</span>
+        </button>
       </div>
     );
   }

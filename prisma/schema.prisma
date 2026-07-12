@@ -312,6 +312,10 @@ model User {
   GoogleCalendarConnection                  GoogleCalendarConnection?
   MentorshipSession_AsClient                MentorshipSession[] @relation("MentorshipSessionClient")
   Watchlist                                 Watchlist[]
+  Subscription                              Subscription?
+  Payments                                  Payment[]
+  FeatureUsage                              FeatureUsage[]
+  Notification                              Notification[]
 }
 
 model UserSetting {
@@ -1088,3 +1092,83 @@ model OptionChainSnapshot {
   createdAt DateTime @default(now())
 }
 
+// ─── SUBSCRIPTION & MONETIZATION ──────────────────────────────────────────────
+
+model SubscriptionPlan {
+  id           String   @id @default(cuid())
+  name         String
+  slug         String   @unique
+  price        Float
+  tradeLimit   Int      // 999999 for unlimited
+  brokerSync   Boolean  @default(false)
+  analytics    Boolean  @default(false)
+  reports      Boolean  @default(false)
+  exports      Boolean  @default(false)
+  mentorAccess Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  Subscriptions Subscription[]
+}
+
+model Subscription {
+  id                     String   @id @default(cuid())
+  userId                 String   @unique
+  planId                 String
+  status                 String   @default("ACTIVE") // ACTIVE, CANCELLED, EXPIRED, PAYMENT_FAILED, TRIALING
+  cashfreeSubscriptionId String?
+  cashfreeCustomerId     String?
+  startDate              DateTime @default(now())
+  endDate                DateTime?
+  nextBillingDate        DateTime?
+  cancelAtPeriodEnd      Boolean  @default(false)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  User User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Plan SubscriptionPlan @relation(fields: [planId], references: [id])
+  Payments Payment[]
+}
+
+model Payment {
+  id                  String   @id @default(cuid())
+  userId              String
+  subscriptionId      String?
+  cashfreeOrderId     String   @unique
+  cashfreePaymentId   String?
+  amount              Float
+  currency            String   @default("INR")
+  status              String   @default("PENDING") // SUCCESS, FAILED, PENDING
+  paymentMethod       String?
+  paidAt              DateTime?
+  createdAt           DateTime @default(now())
+
+  User         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+}
+
+model FeatureUsage {
+  id               String   @id @default(cuid())
+  userId           String
+  month            Int
+  year             Int
+  manualTradeCount Int      @default(0)
+  reportExports    Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  User User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, month, year])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String   @default("INFO") // INFO, WARNING, SUCCESS, ERROR
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  User User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

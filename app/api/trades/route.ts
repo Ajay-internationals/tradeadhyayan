@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { detectAndSaveMistakesForTrade } from "@/app/actions/trades";
+import { getUserPlan } from "@/lib/subscription/access";
 
 async function getUserFromSession() {
   return await prisma.user.findFirst();
@@ -48,6 +49,21 @@ export async function POST(req: Request) {
     // Validate minimum required fields
     if (!symbol || !direction || !entryPrice || !quantity || !entryTime) {
       return NextResponse.json({ success: false, error: "Missing required fields" }, { status: 400 });
+    }
+
+    // Trade Limit Check
+    const access = await getUserPlan(user.id);
+    const date = new Date();
+    const month = date.getMonth() + 1;
+    const year = date.getFullYear();
+
+    if (access.tradeLimit !== 999999) {
+      const usage = await prisma.featureUsage.findUnique({
+        where: { userId_month_year: { userId: user.id, month, year } }
+      });
+      if (usage && usage.manualTradeCount >= access.tradeLimit) {
+        return NextResponse.json({ success: false, error: "FREE_PLAN_LIMIT_REACHED" }, { status: 403 });
+      }
     }
 
     // Trade Calculation Algorithms
@@ -129,6 +145,13 @@ export async function POST(req: Request) {
 
     // Run mistake detector on this manual trade (legacy)
     await detectAndSaveMistakesForTrade(user.id, trade.id);
+
+    // Update feature usage
+    await prisma.featureUsage.upsert({
+      where: { userId_month_year: { userId: user.id, month, year } },
+      update: { manualTradeCount: { increment: 1 } },
+      create: { userId: user.id, month, year, manualTradeCount: 1 }
+    });
 
     // Trigger the new TradeMistake auto-detection in the background
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3000}`;

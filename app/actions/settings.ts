@@ -10,6 +10,7 @@ export interface UserSettingsResponse {
   memberSince: string;
   tradesLogged: number;
   winningRate: number;
+  initialCapital: number;
   settings: {
     theme: string;
     currency: string;
@@ -63,6 +64,7 @@ export async function getSettings(email: string): Promise<UserSettingsResponse |
       memberSince: user.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
       tradesLogged,
       winningRate,
+      initialCapital: user.initialCapital || 100000,
       settings: {
         theme: settings.theme,
         currency: settings.currency,
@@ -159,6 +161,23 @@ export async function resetPreferences(email: string) {
     return { success: true, settings: reset };
   } catch (error: any) {
     console.error("Failed to reset settings:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function updateInitialCapital(email: string, initialCapital: number) {
+  try {
+    const updatedUser = await prisma.user.update({
+      where: { email: email.trim().toLowerCase() },
+      data: {
+        initialCapital,
+        updatedAt: new Date()
+      }
+    });
+
+    return { success: true, initialCapital: updatedUser.initialCapital };
+  } catch (error: any) {
+    console.error("Failed to update initial capital:", error);
     return { success: false, error: error.message };
   }
 }
