@@ -1,68 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getMarketQuotes } from "@/lib/market-cache";
 
 export const dynamic = "force-dynamic";
-
-// Baseline stock price map to simulate live rates
-const STOCK_BASELINES: Record<string, { price: number; changePct: number; volume: string; signal: string }> = {
-  RELIANCE: { price: 2950.20, changePct: 1.20, volume: "45L", signal: "Bullish" },
-  HDFCBANK: { price: 1585.40, changePct: -0.40, volume: "31L", signal: "Weak" },
-  TCS: { price: 3820.60, changePct: 0.85, volume: "18L", signal: "Bullish" },
-  INFY: { price: 1510.80, changePct: -1.10, volume: "22L", signal: "Weak" },
-  ICICIBANK: { price: 1125.50, changePct: 1.48, volume: "29L", signal: "Bullish" },
-  SBIN: { price: 830.15, changePct: 2.10, volume: "55L", signal: "Bullish" },
-  TATASTEEL: { price: 182.40, changePct: 3.45, volume: "85L", signal: "Bullish" },
-  BHARTIARTL: { price: 1422.50, changePct: 1.85, volume: "18L", signal: "Bullish" },
-  WIPRO: { price: 478.20, changePct: 2.34, volume: "24L", signal: "Bullish" },
-  LT: { price: 3512.00, changePct: -1.22, volume: "12L", signal: "Weak" },
-  ITC: { price: 428.60, changePct: -0.95, volume: "41L", signal: "Sideways" },
-  AXISBANK: { price: 1178.50, changePct: -0.82, volume: "19L", signal: "Sideways" }
-};
-
-function checkMarketOpen() {
-  const now = new Date();
-  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
-  const ist = new Date(utc + 3600000 * 5.5);
-  
-  const day = ist.getDay();
-  const hours = ist.getHours();
-  const minutes = ist.getMinutes();
-  const timeNum = hours * 100 + minutes;
-
-  return day >= 1 && day <= 5 && timeNum >= 915 && timeNum <= 1530;
-}
-
-function getStockData(symbol: string, isLive: boolean) {
-  const cleanSym = symbol.toUpperCase().trim();
-  const base = STOCK_BASELINES[cleanSym] || { price: 150.0, changePct: 0.5, volume: "10L", signal: "Sideways" };
-  
-  // Fluctuate price
-  const changePctRange = 0.002;
-  const randOffset = isLive ? (Math.random() - 0.5) * 2 * changePctRange : 0;
-  const ltp = parseFloat((base.price * (1 + randOffset)).toFixed(2));
-  
-  const originalClose = parseFloat((base.price / (1 + base.changePct / 100)).toFixed(2));
-  const change = parseFloat((ltp - originalClose).toFixed(2));
-  const changePercent = parseFloat(((change / originalClose) * 100).toFixed(2));
-
-  const dayHigh = parseFloat((Math.max(ltp, originalClose) + (isLive ? Math.random() * 10 : 1.5)).toFixed(2));
-  const dayLow = parseFloat((Math.min(ltp, originalClose) - (isLive ? Math.random() * 10 : 1.5)).toFixed(2));
-  
-  let signal = base.signal;
-  if (changePercent > 1) signal = "Bullish";
-  else if (changePercent < -1) signal = "Bearish";
-  else if (Math.abs(changePercent) <= 0.5) signal = "Sideways";
-
-  return {
-    ltp,
-    change,
-    changePercent,
-    volume: base.volume,
-    dayHigh,
-    dayLow,
-    signal
-  };
-}
 
 const MOCK_USER_ID = "cmp86dqje0000l2040im7xgg1";
 
@@ -80,12 +20,18 @@ async function getUserIdByEmail(email: string): Promise<string> {
   return MOCK_USER_ID;
 }
 
+function formatVolume(vol: number | undefined): string {
+  if (!vol) return "0";
+  if (vol >= 10000000) return (vol / 10000000).toFixed(1) + " Cr";
+  if (vol >= 100000) return (vol / 100000).toFixed(1) + " L";
+  if (vol >= 1000) return (vol / 1000).toFixed(1) + " K";
+  return vol.toString();
+}
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const email = searchParams.get("email") || "";
-    const sandbox = searchParams.get("sandbox") === "true";
-    const isLive = checkMarketOpen() || sandbox;
     const userId = await getUserIdByEmail(email);
 
     // Fetch watchlists for user
@@ -116,13 +62,60 @@ export async function GET(req: Request) {
       watchlists = [defaultWatchlist];
     }
 
+    // Collect all unique symbols to fetch from Yahoo Finance
+    const symbolsToFetch = new Set<string>();
+    watchlists.forEach(w => {
+      w.items.forEach(item => {
+        let sym = item.symbol.toUpperCase().trim();
+        if (item.exchange === "NSE" && !sym.endsWith(".NS")) {
+          sym += ".NS";
+        } else if (item.exchange === "BSE" && !sym.endsWith(".BO")) {
+          sym += ".BO";
+        }
+        symbolsToFetch.add(sym);
+      });
+    });
+
+    const quotes = await getMarketQuotes(Array.from(symbolsToFetch));
+
     // Map watchlists and populate live prices
     const watchlistsWithData = watchlists.map(w => {
       const itemsWithRates = w.items.map(item => {
-        const rates = getStockData(item.symbol, isLive);
+        let yahooSym = item.symbol.toUpperCase().trim();
+        if (item.exchange === "NSE" && !yahooSym.endsWith(".NS")) {
+          yahooSym += ".NS";
+        } else if (item.exchange === "BSE" && !yahooSym.endsWith(".BO")) {
+          yahooSym += ".BO";
+        }
+
+        const q = quotes[yahooSym];
+        if (!q) {
+          return {
+            ...item,
+            ltp: 0, change: 0, changePercent: 0, volume: "0", dayHigh: 0, dayLow: 0, signal: "Sideways"
+          };
+        }
+
+        const ltp = q.regularMarketPrice || 0;
+        const prev = q.regularMarketPreviousClose || ltp;
+        const change = parseFloat((ltp - prev).toFixed(2));
+        const changePercent = parseFloat(q.regularMarketChangePercent?.toFixed(2) || "0");
+        const dayHigh = q.regularMarketDayHigh || ltp;
+        const dayLow = q.regularMarketDayLow || ltp;
+
+        let signal = "Sideways";
+        if (changePercent > 1) signal = "Bullish";
+        else if (changePercent < -1) signal = "Bearish";
+
         return {
           ...item,
-          ...rates
+          ltp,
+          change,
+          changePercent,
+          volume: formatVolume(q.regularMarketVolume),
+          dayHigh,
+          dayLow,
+          signal
         };
       });
       return {

@@ -1,58 +1,37 @@
 import { NextResponse } from "next/server";
+import { getMarketQuotes } from "@/lib/market-cache";
 
 export const dynamic = "force-dynamic";
 
-// Baseline prices and simulated weights
-const SECTOR_BASELINES: Record<string, { base: number; prev: number }> = {
-  "Nifty IT": { base: 35420.50, prev: 35110.00 },
-  "Nifty Bank": { base: 49850.30, prev: 49725.80 },
-  "Nifty Auto": { base: 21800.80, prev: 21530.00 },
-  "Nifty FMCG": { base: 54900.40, prev: 55120.00 },
-  "Nifty Pharma": { base: 19100.60, prev: 19045.00 },
-  "Nifty Realty": { base: 920.15, prev: 898.00 },
-  "Nifty Metal": { base: 8750.40, prev: 8890.00 },
-  "Nifty Energy": { base: 39200.20, prev: 39020.00 },
-  "Nifty PSU Bank": { base: 7200.75, prev: 7080.00 },
-  "Nifty Financial Services": { base: 22800.50, prev: 22840.00 }
+const SECTOR_SYMBOLS: Record<string, string> = {
+  "Nifty IT": "^CNXIT",
+  "Nifty Bank": "^NSEBANK",
+  "Nifty Auto": "^CNXAUTO",
+  "Nifty FMCG": "^CNXFMCG",
+  "Nifty Pharma": "^CNXPHARMA",
+  "Nifty Realty": "^CNXREALTY",
+  "Nifty Metal": "^CNXMETAL",
+  "Nifty Energy": "^CNXENERGY",
+  "Nifty PSU Bank": "^CNXPSUBANK",
+  "Nifty Financial Services": "NIFTY_FIN_SERVICE.NS"
 };
-
-function checkMarketOpen() {
-  const now = new Date();
-  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
-  const ist = new Date(utc + 3600000 * 5.5);
-  
-  const day = ist.getDay();
-  const hours = ist.getHours();
-  const minutes = ist.getMinutes();
-  const timeNum = hours * 100 + minutes;
-
-  return day >= 1 && day <= 5 && timeNum >= 915 && timeNum <= 1530;
-}
-
-// Helper to fluctuate prices slightly
-function fluctuate(base: number, isLive: boolean, range = 0.002) {
-  if (!isLive) return base;
-  const offset = (Math.random() - 0.5) * 2 * range;
-  return parseFloat((base * (1 + offset)).toFixed(2));
-}
 
 export async function GET(req: Request) {
   try {
-    const { searchParams } = new URL(req.url);
-    const sandbox = searchParams.get("sandbox") === "true";
-    const isLive = checkMarketOpen() || sandbox;
+    const symbols = Object.values(SECTOR_SYMBOLS);
+    const quotes = await getMarketQuotes(symbols);
 
-    const sectors = Object.entries(SECTOR_BASELINES).map(([name, data]) => {
-      const ltp = fluctuate(data.base, isLive);
-      const prev = data.prev;
+    const sectors = Object.entries(SECTOR_SYMBOLS).map(([name, symbol]) => {
+      const q = quotes[symbol];
+      if (!q) {
+        return { name, ltp: 0, change: 0, changePercent: 0, heatColor: "neutral" };
+      }
+
+      const ltp = q.regularMarketPrice || 0;
+      const prev = q.regularMarketPreviousClose || ltp;
       const change = parseFloat((ltp - prev).toFixed(2));
-      const changePercent = parseFloat(((change / prev) * 100).toFixed(2));
+      const changePercent = parseFloat(q.regularMarketChangePercent?.toFixed(2) || "0");
 
-      // Calculate heat color coding
-      // if changePercent > 1 => strong green
-      // if changePercent > 0 => light green
-      // if changePercent < -1 => strong red
-      // if changePercent < 0 => light red
       let heatColor = "neutral";
       if (changePercent >= 1.0) {
         heatColor = "strong-green";

@@ -85,6 +85,8 @@ export default function MarketViewPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [triggeredAlertBanner, setTriggeredAlertBanner] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+  const [marketOpenStatus, setMarketOpenStatus] = useState(false);
 
   // Check if Indian market is currently open (9:15 AM - 3:30 PM, Mon-Fri IST)
   const isMarketOpenIST = () => {
@@ -100,10 +102,14 @@ export default function MarketViewPage() {
 
   // Retrieve user email from localStorage
   useEffect(() => {
+    setIsMounted(true);
     const email = localStorage.getItem("trade_adhyayan_user") || "default_user@tradeadhyayan.com";
     setUserEmail(email);
+    
+    const isOpen = isMarketOpenIST();
+    setMarketOpenStatus(isOpen);
     // Initialize sandbox simulation to true if market is open, otherwise false (static)
-    setSandboxTicks(isMarketOpenIST());
+    setSandboxTicks(isOpen);
   }, []);
 
   // Fetch all live market components
@@ -213,7 +219,7 @@ export default function MarketViewPage() {
 
     const interval = setInterval(() => {
       fetchAllData(true);
-    }, 4000);
+    }, 10000);
 
     return () => clearInterval(interval);
   }, [userEmail, optionChainSymbol, optionChainExpiry, sandboxTicks]);
@@ -391,7 +397,7 @@ export default function MarketViewPage() {
             <div className="flex items-center gap-2.5 flex-wrap">
               <h1 className="text-3xl font-black text-[#0F172A] tracking-tight">Market View</h1>
               
-              {isMarketOpenIST() ? (
+              {!isMounted ? null : marketOpenStatus ? (
                 <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-full text-[10px] font-black tracking-wider uppercase">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span> Market Open
                 </div>

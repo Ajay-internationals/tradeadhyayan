@@ -320,13 +320,13 @@ export default function MistakesPage() {
     }
   };
 
-  // Calculations & Fallbacks to match screenshot mockup values exactly when DB is empty
-  const displayTotalMistakes = mistakeSummary?.totalMistakes || 34;
-  const displayMistakeTrades = mistakes.length > 0 ? Array.from(new Set(mistakes.map(m => m.tradeId))).length : 28;
-  const displayLossDueToMistakes = mistakeSummary?.lossDueToMistakes || 12450;
-  const displayRepeatMistakes = mistakes.length > 0 ? Math.max(0, mistakes.length - displayMistakeTrades) : 10;
-  const displayMistakeRate = trades.length > 0 ? Math.round((displayMistakeTrades / trades.length) * 100) : 32;
-  const displayImprovementScore = mistakeSummary?.disciplineScore || 68;
+  // Calculations
+  const displayTotalMistakes = mistakeSummary?.totalMistakes || 0;
+  const displayMistakeTrades = mistakes.length > 0 ? Array.from(new Set(mistakes.map(m => m.tradeId))).length : 0;
+  const displayLossDueToMistakes = mistakeSummary?.lossDueToMistakes || 0;
+  const displayRepeatMistakes = mistakes.length > 0 ? Math.max(0, mistakes.length - displayMistakeTrades) : 0;
+  const displayMistakeRate = trades.length > 0 ? Math.round((displayMistakeTrades / trades.length) * 100) : 0;
+  const displayImprovementScore = mistakeSummary?.disciplineScore || 0;
 
   // Format Currency
   const formatCurrency = (val: number) => {
@@ -337,13 +337,13 @@ export default function MistakesPage() {
     }).format(val);
   };
 
-  // Sparkline point arrays matching screenshot colors/shapes
-  const totalMistakesSparkline = [{ value: 15 }, { value: 18 }, { value: 24 }, { value: 20 }, { value: 26 }, { value: 30 }, { value: 34 }];
-  const mistakeTradesSparkline = [{ value: 10 }, { value: 12 }, { value: 18 }, { value: 15 }, { value: 20 }, { value: 24 }, { value: 28 }];
-  const lossSparkline = [{ value: 14000 }, { value: 13500 }, { value: 15000 }, { value: 13800 }, { value: 14200 }, { value: 13000 }, { value: 12450 }];
-  const repeatMistakesSparkline = [{ value: 4 }, { value: 6 }, { value: 8 }, { value: 5 }, { value: 9 }, { value: 8 }, { value: 10 }];
-  const mistakeRateSparkline = [{ value: 28 }, { value: 30 }, { value: 35 }, { value: 29 }, { value: 32 }, { value: 30 }, { value: 32 }];
-  const improvementSparkline = [{ value: 55 }, { value: 58 }, { value: 60 }, { value: 59 }, { value: 64 }, { value: 66 }, { value: 68 }];
+  // Empty Sparkline point arrays
+  const totalMistakesSparkline = [{ value: 0 }, { value: 0 }];
+  const mistakeTradesSparkline = [{ value: 0 }, { value: 0 }];
+  const lossSparkline = [{ value: 0 }, { value: 0 }];
+  const repeatMistakesSparkline = [{ value: 0 }, { value: 0 }];
+  const mistakeRateSparkline = [{ value: 0 }, { value: 0 }];
+  const improvementSparkline = [{ value: 0 }, { value: 0 }];
 
   // Mistakes Breakdown Data
   const breakdownData = (mistakeSummary?.breakdown && mistakeSummary.breakdown.length > 0)
@@ -353,27 +353,12 @@ export default function MistakesPage() {
         lossImpact: b.lossImpact || 0,
         color: DONUT_COLORS[index % DONUT_COLORS.length]
       }))
-    : [
-        { name: "Emotional Trading", count: 12, lossImpact: 4280, color: "#F43F5E" },
-        { name: "Overtrading", count: 7, lossImpact: 2650, color: "#FB923C" },
-        { name: "Early Exit", count: 5, lossImpact: 1890, color: "#FBBF24" },
-        { name: "FOMO Entries", count: 4, lossImpact: 1750, color: "#C084FC" },
-        { name: "Revenge Trading", count: 3, lossImpact: 1150, color: "#60A5FA" },
-        { name: "Other", count: 3, lossImpact: 730, color: "#34D399" }
-      ];
+    : [];
 
   const totalDonutCount = breakdownData.reduce((sum: number, item: any) => sum + item.count, 0);
 
   // Mistakes over time chart data
-  const mistakesOverTimeData = [
-    { day: "12 May", mistakes: 18 },
-    { day: "13 May", mistakes: 22 },
-    { day: "14 May", mistakes: 26 },
-    { day: "15 May", mistakes: 21 },
-    { day: "16 May", mistakes: 28 },
-    { day: "17 May", mistakes: 30 },
-    { day: "18 May", mistakes: 34 }
-  ];
+  const mistakesOverTimeData: any[] = [];
 
   let chartDataOverTime = mistakesOverTimeData;
   if (mistakes.length > 0) {
@@ -418,13 +403,7 @@ export default function MistakesPage() {
           iconColor
         };
       })
-    : [
-        { name: "Emotional Trading", whatItMeans: "Taking trades in anger, fear or excitement", count: 12, lossImpact: 4280, iconColor: "text-[#F43F5E]" },
-        { name: "Overtrading", whatItMeans: "Taking more trades than your plan", count: 7, lossImpact: 2650, iconColor: "text-[#FB923C]" },
-        { name: "Early Exit", whatItMeans: "Exiting before the plan target", count: 5, lossImpact: 1890, iconColor: "text-[#FBBF24]" },
-        { name: "FOMO Entries", whatItMeans: "Jumping into trades without confirmation", count: 4, lossImpact: 1750, iconColor: "text-[#C084FC]" },
-        { name: "Revenge Trading", whatItMeans: "Trying to recover losses immediately", count: 3, lossImpact: 1150, iconColor: "text-[#60A5FA]" }
-      ];
+    : [];
 
   // Insights List
   const insightsList = (mistakeSummary?.insights && mistakeSummary.insights.length > 0)
@@ -435,11 +414,7 @@ export default function MistakesPage() {
         else if (idx === 1) { iconColor = "text-[#FB923C]"; bgColor = "bg-orange-50 border-orange-100"; }
         return { text: insight, iconColor, bgColor };
       })
-    : [
-        { text: "You make more mistakes after 2 consecutive winning trades. Stay alert and follow your plan.", iconColor: "text-[#F43F5E]", bgColor: "bg-rose-50 border-rose-100" },
-        { text: "Most of your losses come from emotional decisions. Pause. Breathe. Then trade.", iconColor: "text-[#FB923C]", bgColor: "bg-orange-50 border-orange-100" },
-        { text: "You exit early in winning trades. Let your winners run. Trust your setup.", iconColor: "text-[#10B981]", bgColor: "bg-emerald-50 border-emerald-100" }
-      ];
+    : [];
 
   return (
     <div className="space-y-4 font-sans text-left">

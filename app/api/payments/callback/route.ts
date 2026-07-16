@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+export const dynamic = "force-dynamic";
 import { getCashfreeOrder } from "@/lib/cashfree";
 import { prisma } from "@/lib/db";
 

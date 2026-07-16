@@ -14,63 +14,7 @@ export interface GoalData {
   targetDate: string | null;
 }
 
-// Fallback seed goals matching the mockup exactly
-const MOCK_GOALS: Omit<GoalData, "id">[] = [
-  {
-    title: "Achieve ₹50,000 Profit",
-    category: "Performance",
-    targetValue: 50000,
-    currentValue: 34200,
-    progress: 68,
-    status: "ON_TRACK",
-    targetDate: "2024-05-31"
-  },
-  {
-    title: "Win Rate of 60%+",
-    category: "Performance",
-    targetValue: 60,
-    currentValue: 62.5,
-    progress: 104,
-    status: "ACHIEVED",
-    targetDate: "2024-05-18"
-  },
-  {
-    title: "Max Drawdown < 10%",
-    category: "Risk",
-    targetValue: 10,
-    currentValue: 12.3,
-    progress: 62,
-    status: "AT_RISK",
-    targetDate: "2024-05-31"
-  },
-  {
-    title: "Trade 20 Setups",
-    category: "Activity",
-    targetValue: 20,
-    currentValue: 15,
-    progress: 75,
-    status: "ON_TRACK",
-    targetDate: "2024-05-25"
-  },
-  {
-    title: "Daily Journal Streak",
-    category: "Habit",
-    targetValue: 15,
-    currentValue: 12,
-    progress: 80,
-    status: "ON_TRACK",
-    targetDate: "2024-05-20"
-  },
-  {
-    title: "Complete 5 Courses",
-    category: "Learning",
-    targetValue: 5,
-    currentValue: 2,
-    progress: 40,
-    status: "ON_TRACK",
-    targetDate: "2024-06-10"
-  }
-];
+// Removed mock goals
 
 export async function getGoals(email: string): Promise<GoalData[]> {
   try {
@@ -88,10 +32,7 @@ export async function getGoals(email: string): Promise<GoalData[]> {
     }
 
     if (user.Goal.length === 0) {
-      return MOCK_GOALS.map((g, idx) => ({
-        id: `mock_goal_${idx + 1}`,
-        ...g
-      }));
+      return [];
     }
 
     return user.Goal.map(g => ({

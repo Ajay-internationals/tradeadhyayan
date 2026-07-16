@@ -46,49 +46,30 @@ export async function getReportsData(email: string): Promise<ReportMetricsData> 
 
     const trades = user.Trade;
 
-    // Fallback Mock Data matching the user's mockup image
-    const mockupData: ReportMetricsData = {
-      hasTrades: false,
-      totalTrades: 28,
-      netPnl: 18420,
-      winRate: 62.5,
-      winCount: 17,
-      lossCount: 11,
-      breakevenCount: 0,
-      profitFactor: 1.85,
-      averageProfit: 1692,
-      averageLoss: 940,
-      riskReward: 2.18,
-      expectancy: 658,
-      grossProfit: 28760,
-      grossLoss: 10340,
-      longTrades: 18,
-      longWins: 11,
-      shortTrades: 10,
-      shortWins: 6,
-      disciplineScore: 76,
-      pnlOverTime: [
-        { date: "12 May", pnl: -3500 },
-        { date: "13 May", pnl: 4500 },
-        { date: "14 May", pnl: 2800 },
-        { date: "15 May", pnl: 9200 },
-        { date: "16 May", pnl: 7500 },
-        { date: "17 May", pnl: 13500 },
-        { date: "18 May", pnl: 18420 },
-      ],
-      dailyPerformance: [
-        { day: "Mon", pnl: 2800, tradesCount: 4 },
-        { day: "Tue", pnl: 6900, tradesCount: 6 },
-        { day: "Wed", pnl: 7200, tradesCount: 5 },
-        { day: "Thu", pnl: -1200, tradesCount: 4 },
-        { day: "Fri", pnl: 3400, tradesCount: 5 },
-        { day: "Sat", pnl: -800, tradesCount: 4 },
-        { day: "Sun", pnl: 0, tradesCount: 0 },
-      ],
-    };
-
     if (trades.length === 0) {
-      return mockupData;
+      return {
+        hasTrades: false,
+        totalTrades: 0,
+        netPnl: 0,
+        winRate: 0,
+        winCount: 0,
+        lossCount: 0,
+        breakevenCount: 0,
+        profitFactor: 0,
+        averageProfit: 0,
+        averageLoss: 0,
+        riskReward: 0,
+        expectancy: 0,
+        grossProfit: 0,
+        grossLoss: 0,
+        longTrades: 0,
+        longWins: 0,
+        shortTrades: 0,
+        shortWins: 0,
+        disciplineScore: 0,
+        pnlOverTime: [],
+        dailyPerformance: [],
+      };
     }
 
     // Dynamic Calculations

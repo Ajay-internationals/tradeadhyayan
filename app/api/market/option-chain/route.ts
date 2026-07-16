@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getMarketQuotes } from "@/lib/market-cache";
 
 export const dynamic = "force-dynamic";
 
@@ -20,48 +21,35 @@ function getNextThursdays(count = 4) {
   return dates;
 }
 
-function checkMarketOpen() {
-  const now = new Date();
-  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
-  const ist = new Date(utc + 3600000 * 5.5);
-  
-  const day = ist.getDay();
-  const hours = ist.getHours();
-  const minutes = ist.getMinutes();
-  const timeNum = hours * 100 + minutes;
-
-  return day >= 1 && day <= 5 && timeNum >= 915 && timeNum <= 1530;
-}
-
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const symbol = (searchParams.get("symbol") || "NIFTY").toUpperCase();
     const expiryParam = searchParams.get("expiry");
-    const sandbox = searchParams.get("sandbox") === "true";
-    const isLive = checkMarketOpen() || sandbox;
 
     const expiries = getNextThursdays();
     const expiry = expiryParam || expiries[0];
 
     // Determine base parameters based on symbol
-    let indexLtp = 23210.50;
+    let yahooSymbol = "^NSEI";
     let strikeGap = 50;
     
     if (symbol === "BANKNIFTY" || symbol === "BANK NIFTY") {
-      indexLtp = 49850.30;
+      yahooSymbol = "^NSEBANK";
       strikeGap = 100;
     } else if (symbol === "SENSEX") {
-      indexLtp = 76450.40;
+      yahooSymbol = "^BSESN";
       strikeGap = 100;
     } else if (symbol === "FINNIFTY" || symbol === "FIN NIFTY") {
-      indexLtp = 21950.20;
+      yahooSymbol = "NIFTY_FIN_SERVICE.NS";
+      strikeGap = 50;
+    } else if (symbol === "MIDCPNIFTY") {
+      yahooSymbol = "^CRSMID";
       strikeGap = 50;
     }
 
-    // Fluctuate the index slightly to feel live
-    const randOffset = isLive ? (Math.random() - 0.5) * 0.0006 * indexLtp : 0;
-    const ltp = parseFloat((indexLtp + randOffset).toFixed(2));
+    const quotes = await getMarketQuotes([yahooSymbol]);
+    const ltp = quotes[yahooSymbol]?.regularMarketPrice || 23210.50;
 
     const atmStrike = Math.round(ltp / strikeGap) * strikeGap;
 
@@ -83,27 +71,27 @@ export async function GET(req: Request) {
 
       // Base LTP calculations
       const ivVal = 12.5 + Math.abs(diff) / 1000;
-      const iv = parseFloat((isLive ? (ivVal + (Math.random() - 0.5)) : ivVal).toFixed(2));
+      const iv = parseFloat(ivVal.toFixed(2));
       
       // Call LTP: high for low strikes (deep ITM), decays to near 0 for high strikes (OTM)
       const ceBasePrice = Math.max(5, (ltp - strike) + 120 * Math.exp(-Math.abs(diff) / 300));
-      const ceLtp = parseFloat(fluctuateValue(ceBasePrice, isLive ? 0.02 : 0).toFixed(2));
+      const ceLtp = parseFloat(fluctuateValue(ceBasePrice, 0.02).toFixed(2));
 
       // Put LTP: high for high strikes (deep ITM), decays to near 0 for low strikes (OTM)
       const peBasePrice = Math.max(5, (strike - ltp) + 120 * Math.exp(-Math.abs(diff) / 300));
-      const peLtp = parseFloat(fluctuateValue(peBasePrice, isLive ? 0.02 : 0).toFixed(2));
+      const peLtp = parseFloat(fluctuateValue(peBasePrice, 0.02).toFixed(2));
 
       // Open Interest: Peak near ATM, lower further away
       const ceOiBase = Math.floor(4000000 * Math.exp(-Math.pow(diff / 400, 2)));
-      const ceOi = Math.floor(fluctuateValue(ceOiBase, isLive ? 0.05 : 0));
-      const ceOiChange = Math.floor(ceOi * (isLive ? (0.05 + (Math.random() - 0.5) * 0.1) : 0.05));
+      const ceOi = Math.floor(fluctuateValue(ceOiBase, 0.05));
+      const ceOiChange = Math.floor(ceOi * (0.05 + (Math.random() - 0.5) * 0.1));
 
       const peOiBase = Math.floor(4200000 * Math.exp(-Math.pow(diff / 400, 2)));
-      const peOi = Math.floor(fluctuateValue(peOiBase, isLive ? 0.05 : 0));
-      const peOiChange = Math.floor(peOi * (isLive ? (0.04 + (Math.random() - 0.5) * 0.1) : 0.04));
+      const peOi = Math.floor(fluctuateValue(peOiBase, 0.05));
+      const peOiChange = Math.floor(peOi * (0.04 + (Math.random() - 0.5) * 0.1));
 
-      const ceVolume = Math.floor(ceOi * (1.2 + (isLive ? Math.random() : 0.2)));
-      const peVolume = Math.floor(peOi * (1.1 + (isLive ? Math.random() : 0.2)));
+      const ceVolume = Math.floor(ceOi * (1.2 + Math.random()));
+      const peVolume = Math.floor(peOi * (1.1 + Math.random()));
 
       // Option Greeks (approximations)
       const deltaFactor = 1 / (1 + Math.exp(diff / 150));
@@ -114,9 +102,9 @@ export async function GET(req: Request) {
       const peGamma = ceGamma;
 
       const ceThetaVal = -15 * Math.exp(-Math.pow(diff / 250, 2));
-      const ceTheta = parseFloat((isLive ? (ceThetaVal - Math.random() * 2) : ceThetaVal).toFixed(2));
+      const ceTheta = parseFloat((ceThetaVal - Math.random() * 2).toFixed(2));
       const peThetaVal = -14 * Math.exp(-Math.pow(diff / 250, 2));
-      const peTheta = parseFloat((isLive ? (peThetaVal - Math.random() * 2) : peThetaVal).toFixed(2));
+      const peTheta = parseFloat((peThetaVal - Math.random() * 2).toFixed(2));
 
       const ceVega = parseFloat((0.25 * Math.exp(-Math.pow(diff / 180, 2))).toFixed(2));
       const peVega = ceVega;

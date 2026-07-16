@@ -44,15 +44,15 @@ export default function CalendarPage() {
   const [activeTab, setActiveTab] = useState<"month" | "week" | "agenda">("month");
   const [selectedFilter, setSelectedFilter] = useState<string>("all");
   
-  // Date states (default to May 2024 to match the mockup exactly)
-  const [currentYear, setCurrentYear] = useState(2024);
-  const [currentMonth, setCurrentMonth] = useState(4); // 0-indexed (May = 4)
+  // Date states (default to current month/year)
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   
   // Modal state
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newType, setNewType] = useState("TRADING_PLAN");
-  const [newDate, setNewDate] = useState("2024-05-12");
+  const [newDate, setNewDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [newTime, setNewTime] = useState("09:00");
   const [submitting, setSubmitting] = useState(false);
 
@@ -110,13 +110,7 @@ export default function CalendarPage() {
   const handleToggleStatus = async (evt: CalendarEventData) => {
     if (!email) return;
     
-    // For mock events, toggle state locally since they don't persist in DB
-    if (evt.id.startsWith("mock_evt_")) {
-      const nextStatus = evt.status === "COMPLETED" ? "UPCOMING" : "COMPLETED";
-      setEvents(prev => prev.map(e => e.id === evt.id ? { ...e, status: nextStatus } : e));
-      toast.success("Status updated (local demo)!");
-      return;
-    }
+
 
     try {
       const res = await toggleCalendarEventStatus(email, evt.id);
@@ -134,11 +128,7 @@ export default function CalendarPage() {
     if (!email) return;
     if (!confirm("Are you sure you want to delete this event?")) return;
 
-    if (eventId.startsWith("mock_evt_")) {
-      setEvents(prev => prev.filter(e => e.id !== eventId));
-      toast.success("Event removed (local demo)!");
-      return;
-    }
+
 
     try {
       const res = await deleteCalendarEvent(email, eventId);
@@ -229,7 +219,7 @@ export default function CalendarPage() {
 
   // Summary Metrics calculations
   const metrics = useMemo(() => {
-    // filter events in current month (May 2024)
+    // filter events in current month
     const currentMonthEvents = events.filter(e => {
       const d = new Date(e.startTime);
       return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
@@ -625,7 +615,7 @@ export default function CalendarPage() {
                 return d.getDate() === cell.date && d.getMonth() === cell.month && d.getFullYear() === cell.year;
               });
 
-              const isCurrentSelected = cell.date === 12 && cell.month === 4 && cell.year === 2024; // Mock highlights May 12
+              const isCurrentSelected = cell.date === new Date().getDate() && cell.month === new Date().getMonth() && cell.year === new Date().getFullYear();
 
               return (
                 <div

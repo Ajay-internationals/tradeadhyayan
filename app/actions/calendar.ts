@@ -10,25 +10,7 @@ export interface CalendarEventData {
   status: string; // UPCOMING, COMPLETED
 }
 
-// Mock fallback events matching mockup exactly
-const MOCK_EVENTS: Omit<CalendarEventData, "id">[] = [
-  { eventType: "TRADING_PLAN", title: "Trading Plan Review", startTime: "2024-05-01T09:00:00.000Z", status: "COMPLETED" },
-  { eventType: "EVENT", title: "Weekly Market Analysis", startTime: "2024-05-03T08:30:00.000Z", status: "COMPLETED" },
-  { eventType: "REVIEW", title: "Review Trades (May)", startTime: "2024-05-06T19:00:00.000Z", status: "COMPLETED" },
-  { eventType: "GOAL", title: "Goal Check-in", startTime: "2024-05-07T20:00:00.000Z", status: "COMPLETED" },
-  { eventType: "MENTOR", title: "Mentor Call", startTime: "2024-05-09T19:30:00.000Z", status: "COMPLETED" },
-  { eventType: "EVENT", title: "Backtest Strategy", startTime: "2024-05-11T10:00:00.000Z", status: "COMPLETED" },
-  { eventType: "TRADING_PLAN", title: "Trading Plan", startTime: "2024-05-12T09:00:00.000Z", status: "UPCOMING" },
-  { eventType: "REVIEW", title: "Journal Review", startTime: "2024-05-12T20:00:00.000Z", status: "UPCOMING" },
-  { eventType: "GOAL", title: "Risk Management Review", startTime: "2024-05-14T19:00:00.000Z", status: "UPCOMING" },
-  { eventType: "GOAL", title: "Goal Progress Review", startTime: "2024-05-16T20:00:00.000Z", status: "UPCOMING" },
-  { eventType: "MENTOR", title: "Mentor Review Submission", startTime: "2024-05-17T18:00:00.000Z", status: "UPCOMING" },
-  { eventType: "REVIEW", title: "Review Losing Trades", startTime: "2024-05-20T19:00:00.000Z", status: "UPCOMING" },
-  { eventType: "EVENT", title: "Strategy Backtest", startTime: "2024-05-22T10:00:00.000Z", status: "UPCOMING" },
-  { eventType: "EVENT", title: "Monthly Reflection", startTime: "2024-05-24T19:30:00.000Z", status: "UPCOMING" },
-  { eventType: "EVENT", title: "Economic Calendar Prep", startTime: "2024-05-28T09:00:00.000Z", status: "UPCOMING" },
-  { eventType: "MENTOR", title: "Mentor Call", startTime: "2024-05-30T19:30:00.000Z", status: "UPCOMING" }
-];
+// Removed MOCK_EVENTS
 
 export async function getCalendarEvents(email: string): Promise<CalendarEventData[]> {
   try {
@@ -46,10 +28,7 @@ export async function getCalendarEvents(email: string): Promise<CalendarEventDat
     }
 
     if (user.CalendarEvent.length === 0) {
-      return MOCK_EVENTS.map((e, idx) => ({
-        id: `mock_evt_${idx + 1}`,
-        ...e
-      }));
+      return [];
     }
 
     return user.CalendarEvent.map(e => ({
@@ -98,9 +77,7 @@ export async function addCalendarEvent(
 
 export async function toggleCalendarEventStatus(email: string, eventId: string) {
   try {
-    if (eventId.startsWith("mock_evt_")) {
-      return { success: true, isMock: true };
-    }
+
 
     const event = await prisma.calendarEvent.findUnique({
       where: { id: eventId }
@@ -125,9 +102,7 @@ export async function toggleCalendarEventStatus(email: string, eventId: string) 
 
 export async function deleteCalendarEvent(email: string, eventId: string) {
   try {
-    if (eventId.startsWith("mock_evt_")) {
-      return { success: true, isMock: true };
-    }
+
 
     await prisma.calendarEvent.delete({
       where: { id: eventId }

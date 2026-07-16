@@ -73,35 +73,31 @@ export default function ReportsDashboardPage() {
   }, [router]);
 
   const sparklines = useMemo(() => {
-    // Fallbacks matching mockup styles
-    const defaultSparklines = {
-      pnl: [10, 15, 8, 20, 18, 25, 30],
-      trades: [5, 8, 12, 16, 20, 24, 28],
-      winRate: [50, 52, 48, 55, 58, 60, 62.5],
-      profitFactor: [1.4, 1.5, 1.45, 1.7, 1.65, 1.8, 1.85],
-      rr: [1.8, 1.9, 1.85, 2.0, 2.05, 2.1, 2.18],
-      expectancy: [500, 520, 480, 580, 600, 630, 658]
-    };
-
     if (!data || !data.hasTrades) {
-      return defaultSparklines;
+      return {
+        pnl: [0, 0],
+        trades: [0, 0],
+        winRate: [0, 0],
+        profitFactor: [0, 0],
+        rr: [0, 0],
+        expectancy: [0, 0]
+      };
     }
 
-    // Dynamic generation if database trades exist (use timeline path values)
     const pnlTrend = data.pnlOverTime.map(d => d.pnl);
     const tradesTrend = Array.from({ length: Math.max(pnlTrend.length, 2) }, (_, i) => i + 1);
     
     return {
-      pnl: pnlTrend.length >= 2 ? pnlTrend : defaultSparklines.pnl,
-      trades: tradesTrend,
+      pnl: pnlTrend.length >= 2 ? pnlTrend : [0, 0],
+      trades: tradesTrend.length >= 2 ? tradesTrend : [0, 0],
       winRate: pnlTrend.length >= 2 ? pnlTrend.map((_, idx) => {
         const subset = pnlTrend.slice(0, idx + 1);
         const wins = subset.filter(p => p > 0).length;
         return (wins / subset.length) * 100;
-      }) : defaultSparklines.winRate,
-      profitFactor: defaultSparklines.profitFactor, // fallback as profit factor timeline is complex
-      rr: defaultSparklines.rr,
-      expectancy: pnlTrend.length >= 2 ? pnlTrend.map(p => p / (tradesTrend.length || 1)) : defaultSparklines.expectancy
+      }) : [0, 0],
+      profitFactor: [0, 0],
+      rr: [0, 0],
+      expectancy: pnlTrend.length >= 2 ? pnlTrend.map(p => p / (tradesTrend.length || 1)) : [0, 0]
     };
   }, [data]);
 
@@ -278,14 +274,14 @@ export default function ReportsDashboardPage() {
 
   // Win vs Loss donut chart data mapping
   const winLossPieData = [
-    { name: "Winning Trades", value: data.winCount || 17, color: "#10B981" },
-    { name: "Losing Trades", value: data.lossCount || 11, color: "#EF4444" }
+    { name: "Winning Trades", value: data.winCount || 0, color: "#10B981" },
+    { name: "Losing Trades", value: data.lossCount || 0, color: "#EF4444" }
   ];
 
   // P&L Breakdown donut chart data mapping
   const pnlBreakdownPieData = [
-    { name: "Winning Trades", value: data.grossProfit || 28760, color: "#10B981" },
-    { name: "Losing Trades", value: data.grossLoss || 10340, color: "#EF4444" },
+    { name: "Winning Trades", value: data.grossProfit || 0, color: "#10B981" },
+    { name: "Losing Trades", value: data.grossLoss || 0, color: "#EF4444" },
     { name: "Breakeven Trades", value: data.breakevenCount || 0, color: "#F59E0B" }
   ];
 
@@ -596,7 +592,7 @@ export default function ReportsDashboardPage() {
                           <span>{entry.name}</span>
                         </div>
                         <span className="font-bold text-[#111827]">
-                          {entry.value} ({((entry.value / data.totalTrades) * 100).toFixed(1)}%)
+                          {entry.value} ({((entry.value / (data.totalTrades || 1)) * 100).toFixed(1)}%)
                         </span>
                       </div>
                     ))}
@@ -832,8 +828,8 @@ export default function ReportsDashboardPage() {
                     { label: "Winning Trades", val: `${data.winCount} (${data.winRate.toFixed(1)}%)`, color: "text-[#10B981]" },
                     { label: "Losing Trades", val: `${data.lossCount} (${(100 - data.winRate).toFixed(1)}%)`, color: "text-[#EF4444]" },
                     { label: "Breakeven Trades", val: `${data.breakevenCount} (0%)`, color: "text-[#F59E0B]" },
-                    { label: "Long Trades", val: `${data.longTrades} (${((data.longTrades / data.totalTrades) * 100).toFixed(1)}%)` },
-                    { label: "Short Trades", val: `${data.shortTrades} (${((data.shortTrades / data.totalTrades) * 100).toFixed(1)}%)` }
+                    { label: "Long Trades", val: `${data.longTrades} (${((data.longTrades / (data.totalTrades || 1)) * 100).toFixed(1)}%)` },
+                    { label: "Short Trades", val: `${data.shortTrades} (${((data.shortTrades / (data.totalTrades || 1)) * 100).toFixed(1)}%)` }
                   ].map((row, idx) => (
                     <div key={idx} className="flex justify-between py-2.5">
                       <span>{row.label}</span>

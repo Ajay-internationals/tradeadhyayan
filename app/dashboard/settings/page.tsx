@@ -208,7 +208,7 @@ export default function SettingsPage() {
     toast.success("Local cache cleared successfully!");
   };
 
-  // Export Mock CSV Data
+  // Export Settings Data
   const handleExportData = () => {
     const dataString = "Name,Email,Plan,Trades Logged,Winning Rate\n" + 
                        `"${profileName}","${profileEmail}","${plan}",${tradesLogged},${winningRate}%`;

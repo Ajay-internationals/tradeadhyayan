@@ -82,3 +82,27 @@ export async function getCashfreeOrder(orderId: string) {
     throw error;
   }
 }
+
+export async function getCashfreeOrderPayments(orderId: string) {
+  try {
+    const url = `${BASE_URL}/orders/${orderId}/payments`;
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "x-client-id": CASHFREE_APP_ID,
+        "x-client-secret": CASHFREE_SECRET_KEY,
+        "x-api-version": "2023-08-01",
+        "Content-Type": "application/json"
+      }
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to fetch Cashfree payments");
+    }
+    return data;
+  } catch (error: any) {
+    console.error("Cashfree fetch payments error:", error);
+    throw error;
+  }
+}

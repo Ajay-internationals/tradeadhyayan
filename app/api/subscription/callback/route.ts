@@ -1,13 +1,7 @@
 import { NextResponse } from "next/server";
+export const dynamic = "force-dynamic";
 import { prisma } from "@/lib/db";
-import { Cashfree } from "cashfree-pg";
-
-// Configure Cashfree instance for verifications
-Cashfree.XClientId = process.env.CASHFREE_APP_ID || "";
-Cashfree.XClientSecret = process.env.CASHFREE_SECRET_KEY || "";
-Cashfree.XEnvironment = process.env.NEXT_PUBLIC_CASHFREE_MODE === "production"
-  ? Cashfree.Environment.PRODUCTION
-  : Cashfree.Environment.SANDBOX;
+import { getCashfreeOrderPayments } from "@/lib/cashfree";
 
 export async function GET(req: Request) {
   try {
@@ -19,10 +13,9 @@ export async function GET(req: Request) {
     }
 
     // Verify order status with Cashfree
-    const response = await Cashfree.PGOrderFetchPayments("2023-08-01", orderId);
+    const payments = await getCashfreeOrderPayments(orderId);
     
     // Find successful payment
-    const payments = response.data;
     const successfulPayment = payments?.find((p: any) => p.payment_status === "SUCCESS");
 
     if (!successfulPayment) {
