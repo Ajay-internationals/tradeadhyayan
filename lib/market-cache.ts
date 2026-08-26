@@ -38,9 +38,9 @@ export async function getMarketQuotes(symbols: string[]) {
 
   if (toFetch.length > 0) {
     try {
-      const quotes = await yahooFinance.quote(toFetch);
+      const quotes: any = await yahooFinance.quote(toFetch);
       // quote returns array if multiple symbols requested, or single object if 1 symbol.
-      const quotesArray = Array.isArray(quotes) ? quotes : [quotes];
+      const quotesArray: any[] = Array.isArray(quotes) ? quotes : [quotes];
       for (const q of quotesArray) {
         if (q && q.symbol) {
           cache[q.symbol] = { data: q, timestamp: now };
